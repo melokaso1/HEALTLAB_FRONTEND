@@ -1,0 +1,558 @@
+/* ============================================
+   LOGIN PAGE - HEALTLAB
+   ============================================ */
+
+/* --- Layout principal --- */
+.login-page {
+  height: 100vh;
+  background: #FFFFFF url('../../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+  background-attachment: fixed;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  padding: 20px;
+}
+
+/* --- Columna Izquierda: Imagen del médico --- */
+.login-image-panel {
+  display: none;
+}
+
+.login-image-panel__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+/* --- Columna Derecha: Header + Formulario --- */
+.login-form-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  width: 100%;
+  max-width: 500px;
+  position: relative;
+}
+
+.login-form-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+}
+
+.login-form-wrapper {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* --- Pill "Sistema de Gestión Clínica" --- */
+.login-badge {
+  display: none;
+}
+
+.login-badge__icon {
+  color: #00A896;
+  flex-shrink: 0;
+}
+
+.login-badge__text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #00A896;
+  letter-spacing: 0.01em;
+}
+
+/* --- Título y subtítulo --- */
+.login-title {
+  display: none;
+}
+
+.login-subtitle {
+  display: none;
+}
+
+/* --- Tarjeta del formulario --- */
+.login-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 28px 22px 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* --- Avatar circle --- */
+.login-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  background: #00A896;
+  border-radius: 50%;
+  margin: 0 auto 24px;
+  box-shadow: 0 4px 14px rgba(0, 168, 150, 0.25);
+}
+
+.login-avatar svg {
+  color: #ffffff;
+}
+
+/* --- Campos del formulario --- */
+.login-field {
+  margin-bottom: 18px;
+}
+
+.login-field__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.login-field__label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.login-field__forgot {
+  font-size: 12px;
+  font-weight: 500;
+  color: #00A896;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  transition: color 0.2s ease;
+}
+
+.login-field__forgot:hover {
+  color: #008F7F;
+  text-decoration: underline;
+}
+
+.login-field__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-field__input-icon {
+  position: absolute;
+  left: 14px;
+  color: #94A3B8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.login-field__input-wrapper:focus-within .login-field__input-icon {
+  color: #00A896;
+}
+
+.login-field__input {
+  width: 100%;
+  height: 38px;
+  padding: 0 14px 0 42px;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #0F172A;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.login-field__input::placeholder {
+  color: #CBD5E1;
+  font-size: 13px;
+}
+
+.login-field__input:focus {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.1);
+}
+
+.login-field__input--error {
+  border-color: #E82C6A;
+}
+
+.login-field__input--error:focus {
+  border-color: #E82C6A;
+  box-shadow: 0 0 0 3px rgba(232, 44, 106, 0.1);
+}
+
+.login-field__error {
+  font-size: 12px;
+  color: #E82C6A;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+/* --- Checkbox Recordarme --- */
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-remember__checkbox {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.login-remember__checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  margin: 0;
+}
+
+.login-remember__checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border: 2px solid #E2E8F0;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-remember__checkbox input:checked + .login-remember__checkmark {
+  background: #00A896;
+  border-color: #00A896;
+}
+
+.login-remember__checkmark::after {
+  content: '';
+  display: none;
+  width: 5px;
+  height: 9px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+
+.login-remember__checkbox input:checked + .login-remember__checkmark::after {
+  display: block;
+}
+
+.login-remember__text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #00A896;
+}
+
+/* --- Botón Iniciar sesión --- */
+.login-btn {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #00A896;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 168, 150, 0.25);
+  margin-bottom: 12px;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #009485;
+  box-shadow: 0 4px 12px rgba(0, 168, 150, 0.35);
+}
+
+.login-btn:active:not(:disabled) {
+  background: #008374;
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 168, 150, 0.2);
+}
+
+.login-btn:disabled {
+  background: #94D4CC;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.login-btn--loading {
+  position: relative;
+}
+
+.login-btn__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: login-spin 0.6s linear infinite;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Botón Google --- */
+.login-google-btn {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #F8F8F8;
+  color: #0F172A;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-google-btn:hover {
+  background: #F1F1F1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.login-google-btn:active {
+  transform: scale(0.98);
+}
+
+.login-google-btn__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* --- Error global --- */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(232, 44, 106, 0.06);
+  border: 1px solid rgba(232, 44, 106, 0.2);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.login-error__icon {
+  color: #E82C6A;
+  flex-shrink: 0;
+}
+
+.login-error__text {
+  font-size: 13px;
+  color: #E82C6A;
+  font-weight: 500;
+}
+
+/* --- Éxito global --- */
+.login-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.login-success__icon {
+  color: #10B981;
+  flex-shrink: 0;
+}
+
+.login-success__text {
+  font-size: 13px;
+  color: #10B981;
+  font-weight: 500;
+}
+
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+.dark-mode .login-page {
+  background: #1E293B url('../../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+  background-attachment: fixed;
+}
+
+.dark-mode .login-form-panel {
+  background: transparent;
+}
+
+.dark-mode .login-title {
+  color: #F1F5F9;
+}
+
+.dark-mode .login-subtitle {
+  color: #94A3B8;
+}
+
+.dark-mode .login-card {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .login-field__label {
+  color: #E2E8F0;
+}
+
+.dark-mode .login-field__input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F1F5F9;
+}
+
+.dark-mode .login-field__input::placeholder {
+  color: #475569;
+}
+
+.dark-mode .login-field__input:focus {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.dark-mode .login-field__input-icon {
+  color: #64748B;
+}
+
+.dark-mode .login-field__input-wrapper:focus-within .login-field__input-icon {
+  color: #00A896;
+}
+
+.dark-mode .login-remember__checkmark {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .login-google-btn {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F1F5F9;
+}
+
+.dark-mode .login-google-btn:hover {
+  background: #253049;
+}
+
+.dark-mode .login-badge {
+  background: rgba(0, 168, 150, 0.12);
+}
+
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .login-image-panel {
+    flex: 0 0 42%;
+    max-width: 42%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .login-image-panel {
+    display: none;
+  }
+
+  .login-form-panel {
+    padding: 24px 16px;
+  }
+
+  .login-form-wrapper {
+    max-width: 90%;
+  }
+
+  .login-title {
+    font-size: 24px;
+  }
+
+  .login-subtitle {
+    font-size: 14px;
+  }
+
+  .login-card {
+    padding: 24px 18px 18px;
+  }
+
+  .login-avatar {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 20px;
+  }
+
+  .login-btn,
+  .login-google-btn {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .login-field__input {
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .login-form-wrapper {
+    max-width: 100%;
+  }
+
+  .login-form-panel {
+    padding: 20px 12px;
+  }
+}
