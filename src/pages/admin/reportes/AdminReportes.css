@@ -1,0 +1,1155 @@
+/* Main Layout Container */
+.reportes-historial-page {
+  width: 100%;
+  padding-bottom: 24px;
+}
+
+/* 2-Column Split Grid (45% Left / 55% Right) */
+.reportes-historial-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+/* Column Wrapper Base */
+.col-reportes,
+.col-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Column Headers */
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.col-header__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.col-header__icon--teal {
+  background: rgba(0, 168, 150, 0.12);
+  color: #00A896;
+}
+
+.col-header__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.col-header__subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+/* Historial Top Bar (Header + Tabs inline) */
+.historial-top-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Historial Sub-tabs Segment */
+.hist-subtabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 2px solid #E2E8F0;
+  padding-bottom: 2px;
+}
+
+.hist-subtab-btn {
+  background: transparent;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  padding: 6px 4px 10px 4px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.hist-subtab-btn:hover {
+  color: #0F172A;
+}
+
+.hist-subtab-btn--active {
+  color: #00A896;
+}
+
+.hist-subtab-btn--active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #00A896;
+  border-radius: 3px 3px 0 0;
+}
+
+/* Base Card Style */
+.card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.section-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 14px 0;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background: #00A896;
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 168, 150, 0.2);
+}
+
+.btn--primary:hover {
+  background: #008F7F;
+}
+
+.btn--secondary {
+  background: #FFFFFF;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.btn--secondary:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* ========================================================= */
+/* 1. REPORTES FILTERS & SUMMARY TABLE                       */
+/* ========================================================= */
+.reportes-filters-card {
+  padding: 14px 16px;
+}
+
+.rep-filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.rep-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 115px;
+  min-width: 105px;
+}
+
+.rep-filter-item label,
+.hist-filter-item label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.rep-filter-item input,
+.rep-filter-item select,
+.hist-filter-item input,
+.hist-filter-item select,
+.hist-search-box input {
+  height: 36px;
+  padding: 0 8px;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rep-filter-item input:focus,
+.rep-filter-item select:focus,
+.hist-filter-item input:focus,
+.hist-filter-item select:focus,
+.hist-search-box input:focus {
+  background: #FFFFFF;
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.12);
+}
+
+.rep-filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Summary Table */
+.reportes-summary-card {
+  padding: 16px 18px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.summary-table th {
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #64748B;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  text-align: left;
+}
+
+.summary-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+  vertical-align: middle;
+}
+
+.status-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-indicator--blue {
+  background: #3B82F6;
+}
+
+.dot-indicator--green {
+  background: #10B981;
+}
+
+.dot-indicator--red {
+  background: #EF4444;
+}
+
+.dot-indicator--amber {
+  background: #F59E0B;
+}
+
+.summary-count {
+  text-align: right;
+  font-weight: 600;
+}
+
+.summary-total-row td {
+  border-top: 2px solid #E2E8F0;
+  background: #F8FAFC;
+  font-size: 14px;
+}
+
+/* ========================================================= */
+/* MONTHLY CALENDAR OF ATTENDED APPOINTMENTS                 */
+/* ========================================================= */
+.calendar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.calendar-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.calendar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-icon-bg {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.calendar-subtitle {
+  font-size: 11.5px;
+  color: #64748B;
+  margin: 1px 0 0 0;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-nav-btn {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.month-nav-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.month-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+/* Calendar Day Grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.calendar-cell {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.calendar-cell--adjacent {
+  background: #FAFAFA;
+  opacity: 0.4;
+}
+
+.calendar-cell--has-citas {
+  background: #FFFFFF;
+  border-color: rgba(0, 168, 150, 0.3);
+  cursor: pointer;
+}
+
+.calendar-cell--has-citas:hover {
+  background: rgba(0, 168, 150, 0.06);
+  border-color: #00A896;
+  transform: translateY(-1px);
+}
+
+.cell-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.cell-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.cell-count--dim {
+  color: #94A3B8;
+}
+
+.count-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ========================================================= */
+/* 2. HISTORIAL SECTION & TABLES                             */
+/* ========================================================= */
+.historial-main-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+/* Filters Grid for Actions & Past Appointments */
+.hist-filter-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.citas-filter-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.hist-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 110px;
+  min-width: 105px;
+}
+
+.hist-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 170px;
+  min-width: 150px;
+}
+
+.hist-search-box .search-icon {
+  position: absolute;
+  left: 10px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.hist-search-box input {
+  padding-left: 32px !important;
+}
+
+.hist-filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Historial Table */
+.historial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.historial-table th {
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #64748B;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+
+.historial-table td {
+  padding: 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+  vertical-align: middle;
+}
+
+.td-datetime {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.user-profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.user-role {
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+.td-profesional {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.td-detalles {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+/* Action Badges */
+.action-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.action-badge--creada {
+  background: rgba(0, 168, 150, 0.12);
+  color: #008F7F;
+}
+
+.action-badge--atendida {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563EB;
+}
+
+.action-badge--nota {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7C3AED;
+}
+
+.action-badge--cancelada {
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+}
+
+.action-badge--reprogramada {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge--atendida {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.status-badge--agendada {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563EB;
+}
+
+.status-badge--cancelada {
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+}
+
+.status-badge--no-asistio {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+}
+
+/* Action Button */
+.btn-ver-cita {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #00A896;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-ver-cita:hover {
+  background: rgba(0, 168, 150, 0.08);
+  color: #008F7F;
+}
+
+/* Pagination */
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pagination-info {
+  font-size: 12.5px;
+  color: #64748B;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pag-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pag-btn:hover:not(:disabled) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.pag-btn--active {
+  background: #00A896;
+  border-color: #00A896;
+  color: #FFFFFF;
+}
+
+.pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Bottom Info Banner */
+.historial-info-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(0, 168, 150, 0.06);
+  border: 1px solid rgba(0, 168, 150, 0.2);
+  border-radius: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #008F7F;
+  flex: 1;
+}
+
+.banner-icon-bg {
+  color: #00A896;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn--banner {
+  height: 34px;
+  font-size: 12.5px;
+}
+
+/* ========================================================= */
+/* 3. MODAL STYLES                                           */
+/* ========================================================= */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-container {
+  background: #FFFFFF;
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-container--sm {
+  max-width: 440px;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-icon-bg {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(0, 168, 150, 0.12);
+  color: #00A896;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.modal-code {
+  font-size: 12px;
+  font-family: monospace;
+  color: #64748B;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.modal-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.info-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.info-sub {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.modal-divider {
+  height: 1px;
+  background: #E2E8F0;
+}
+
+.modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-section-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.modal-section-box {
+  font-size: 13px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.5;
+  background: #F8FAFC;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.modal-section-box--highlight {
+  background: rgba(0, 168, 150, 0.04);
+  border-color: rgba(0, 168, 150, 0.2);
+}
+
+.modal-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 168, 150, 0.08);
+  border: 1px solid rgba(0, 168, 150, 0.2);
+  border-radius: 8px;
+  color: #008F7F;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  padding: 14px 22px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Day citas popover list */
+.day-citas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.day-cita-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+}
+
+.day-cita-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #00A896;
+  white-space: nowrap;
+}
+
+.day-cita-details {
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+}
+
+.day-cita-details strong {
+  color: #0F172A;
+}
+
+.day-cita-details span {
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+/* ========================================================= */
+/* 4. RESPONSIVE BREAKPOINTS                                 */
+/* ========================================================= */
+@media (max-width: 1024px) {
+  .reportes-historial-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .rep-filter-row,
+  .hist-filter-grid,
+  .citas-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================================= */
+/* 5. DARK MODE OVERRIDES                                    */
+/* ========================================================= */
+.dark-mode .col-header__title,
+.dark-mode .section-card-title,
+.dark-mode .calendar-title,
+.dark-mode .month-title,
+.dark-mode .summary-table td,
+.dark-mode .summary-total-row td,
+.dark-mode .user-name,
+.dark-mode .td-profesional,
+.dark-mode .modal-title,
+.dark-mode .info-val,
+.dark-mode .modal-section-title,
+.dark-mode .day-cita-details strong,
+.dark-mode .rep-filter-item label,
+.dark-mode .hist-filter-item label {
+  color: #F1F5F9;
+}
+
+.dark-mode .col-header__subtitle,
+.dark-mode .calendar-subtitle,
+.dark-mode .summary-table th,
+.dark-mode .user-role,
+.dark-mode .td-datetime,
+.dark-mode .td-detalles,
+.dark-mode .pagination-info,
+.dark-mode .hist-subtab-btn,
+.dark-mode .info-label,
+.dark-mode .info-sub,
+.dark-mode .day-cita-details span {
+  color: #94A3B8;
+}
+
+.dark-mode .card,
+.dark-mode .modal-container {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.dark-mode .summary-table th,
+.dark-mode .summary-total-row td,
+.dark-mode .rep-filter-item input,
+.dark-mode .rep-filter-item select,
+.dark-mode .hist-filter-item input,
+.dark-mode .hist-filter-item select,
+.dark-mode .hist-search-box input,
+.dark-mode .historial-table th,
+.dark-mode .modal-header,
+.dark-mode .modal-footer,
+.dark-mode .modal-section-box,
+.dark-mode .day-cita-item {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F1F5F9;
+}
+
+.dark-mode .historial-table td {
+  border-color: #334155;
+}
+
+.dark-mode .calendar-cell {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .cell-date {
+  color: #F1F5F9;
+}
+
+.dark-mode .month-nav-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+.dark-mode .btn--secondary {
+  background: #0F172A;
+  color: #CBD5E1;
+  border-color: #334155;
+}
+
+.dark-mode .historial-info-banner {
+  background: rgba(0, 168, 150, 0.12);
+  border-color: rgba(0, 168, 150, 0.3);
+}
+
+.dark-mode .banner-left {
+  color: #2DD4BF;
+}
+
+.dark-mode .hist-subtabs {
+  border-color: #334155;
+}
+
+.dark-mode .hist-subtab-btn:hover {
+  color: #F1F5F9;
+}

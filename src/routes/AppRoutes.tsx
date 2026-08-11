@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Login from '../pages/auth/login/Login';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminReportes from '../pages/admin/reportes/AdminReportes';
 import UsersManagement from '../pages/admin/users/UsersManagement';
 import NotFound from '../components/common/NotFound';
 
@@ -49,16 +50,9 @@ const DashboardContainer: React.FC = () => {
       <Routes>
         <Route path="admin" element={<AdminDashboard />} />
         <Route path="inicio" element={<AdminDashboard />} />
-        <Route
-          path="estadisticas"
-          element={
-            <NotFound
-              title="Error 404"
-              subtitle="Vista de Reportes no encontrada"
-              description="La sección de Reportes y Estadísticas se encuentra actualmente en desarrollo."
-            />
-          }
-        />
+        <Route path="reportes" element={<AdminReportes />} />
+        <Route path="estadisticas" element={<AdminReportes />} />
+        <Route path="historial-atencion" element={<AdminReportes />} />
         <Route
           path="profesionales"
           element={
@@ -88,16 +82,6 @@ const DashboardContainer: React.FC = () => {
               title="Error 404"
               subtitle="Vista de Citas no encontrada"
               description="La sección de Gestión de Citas se encuentra actualmente en desarrollo."
-            />
-          }
-        />
-        <Route
-          path="historial-atencion"
-          element={
-            <NotFound
-              title="Error 404"
-              subtitle="Vista de Historial no encontrada"
-              description="La sección de Historial y Atención médica se encuentra actualmente en desarrollo."
             />
           }
         />

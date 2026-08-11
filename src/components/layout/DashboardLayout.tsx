@@ -13,24 +13,24 @@ interface DashboardLayoutProps {
 const routeTabMap: Record<string, string> = {
   '/admin': 'inicio',
   '/inicio': 'inicio',
-  '/estadisticas': 'reportes',
+  '/estadisticas': 'historial-atencion',
+  '/reportes': 'historial-atencion',
   '/profesionales': 'profesionales',
   '/usuarios-roles': 'usuarios',
   '/usuarios': 'usuarios',
   '/pacientes': 'pacientes',
   '/gestion-citas': 'citas',
-  '/historial-atencion': 'historial',
+  '/historial-atencion': 'historial-atencion',
   '/perfil': 'inicio',
 };
 
 const tabRouteMap: Record<string, string> = {
-  reportes: '/estadisticas',
+  'historial-atencion': '/historial-atencion',
   profesionales: '/profesionales',
   usuarios: '/usuarios',
   inicio: '/admin',
   pacientes: '/pacientes',
   citas: '/gestion-citas',
-  historial: '/historial-atencion',
 };
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({

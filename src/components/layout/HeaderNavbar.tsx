@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Info,
   Stethoscope,
   Users,
   Home,
@@ -22,13 +21,12 @@ interface HeaderNavbarProps {
 }
 
 const tabs: NavTab[] = [
-  { id: 'reportes', label: 'Reportes', icon: <Info size={16} /> },
   { id: 'profesionales', label: 'Profesionales', icon: <Stethoscope size={16} /> },
   { id: 'usuarios', label: 'Usuarios', icon: <Users size={16} /> },
   { id: 'inicio', label: 'Inicio', icon: <Home size={16} /> },
   { id: 'pacientes', label: 'Pacientes', icon: <UserCheck size={16} /> },
   { id: 'citas', label: 'Citas', icon: <Calendar size={16} /> },
-  { id: 'historial', label: 'Historial', icon: <Clock size={16} /> },
+  { id: 'historial-atencion', label: 'Historial y Reportes', icon: <Clock size={16} /> },
 ];
 
 const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
