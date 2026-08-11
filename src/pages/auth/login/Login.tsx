@@ -136,141 +136,141 @@ const Login: React.FC = () => {
 
               {/* Tarjeta */}
               <div className="login-card">
-              {/* Avatar */}
-              <div className="login-avatar">
-                <User size={46} strokeWidth={1.8} />
-              </div>
-
-              {/* Mensajes globales */}
-              {globalError && (
-                <div className="login-error" role="alert">
-                  <AlertCircle size={16} className="login-error__icon" />
-                  <span className="login-error__text">{globalError}</span>
+                {/* Avatar */}
+                <div className="login-avatar">
+                  <User size={46} strokeWidth={1.8} />
                 </div>
-              )}
 
-              {success && (
-                <div className="login-success" role="status">
-                  <CheckCircle size={16} className="login-success__icon" />
-                  <span className="login-success__text">{success}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleLogin} noValidate>
-                {/* Campo correo */}
-                <div className="login-field">
-                  <div className="login-field__header">
-                    <label htmlFor="login-email" className="login-field__label">
-                      Correo electrónico
-                    </label>
+                {/* Mensajes globales */}
+                {globalError && (
+                  <div className="login-error" role="alert">
+                    <AlertCircle size={16} className="login-error__icon" />
+                    <span className="login-error__text">{globalError}</span>
                   </div>
-                  <div className="login-field__input-wrapper">
-                    <span className="login-field__input-icon">
-                      <User size={16} strokeWidth={2} />
+                )}
+
+                {success && (
+                  <div className="login-success" role="status">
+                    <CheckCircle size={16} className="login-success__icon" />
+                    <span className="login-success__text">{success}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleLogin} noValidate>
+                  {/* Campo correo */}
+                  <div className="login-field">
+                    <div className="login-field__header">
+                      <label htmlFor="login-email" className="login-field__label">
+                        Correo electrónico
+                      </label>
+                    </div>
+                    <div className="login-field__input-wrapper">
+                      <span className="login-field__input-icon">
+                        <User size={16} strokeWidth={2} />
+                      </span>
+                      <input
+                        id="login-email"
+                        type="email"
+                        className={`login-field__input${errors.email ? ' login-field__input--error' : ''}`}
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errors.email) setErrors((prev) => ({ ...prev, email: null }));
+                        }}
+                        placeholder="ejemplo@correo.com"
+                        autoComplete="email"
+                        disabled={loading}
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="login-field__error">{errors.email}</p>
+                    )}
+                  </div>
+
+                  {/* Campo contraseña */}
+                  <div className="login-field">
+                    <div className="login-field__header">
+                      <label htmlFor="login-password" className="login-field__label">
+                        Contraseña
+                      </label>
+                      <button
+                        type="button"
+                        className="login-field__forgot"
+                        onClick={onForgotPassword}
+                        tabIndex={-1}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
+                    <div className="login-field__input-wrapper">
+                      <span className="login-field__input-icon">
+                        <Lock size={16} strokeWidth={2} />
+                      </span>
+                      <input
+                        id="login-password"
+                        type="password"
+                        className={`login-field__input${errors.password ? ' login-field__input--error' : ''}`}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (errors.password) setErrors((prev) => ({ ...prev, password: null }));
+                        }}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        disabled={loading}
+                      />
+                    </div>
+                    {errors.password && (
+                      <p className="login-field__error">{errors.password}</p>
+                    )}
+                  </div>
+
+                  {/* Recordarme */}
+                  <label className="login-remember" htmlFor="login-remember">
+                    <span className="login-remember__checkbox">
+                      <input
+                        id="login-remember"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        disabled={loading}
+                      />
+                      <span className="login-remember__checkmark" />
                     </span>
-                    <input
-                      id="login-email"
-                      type="email"
-                      className={`login-field__input${errors.email ? ' login-field__input--error' : ''}`}
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (errors.email) setErrors((prev) => ({ ...prev, email: null }));
-                      }}
-                      placeholder="ejemplo@correo.com"
-                      autoComplete="email"
-                      disabled={loading}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="login-field__error">{errors.email}</p>
-                  )}
-                </div>
-
-                {/* Campo contraseña */}
-                <div className="login-field">
-                  <div className="login-field__header">
-                    <label htmlFor="login-password" className="login-field__label">
-                      Contraseña
-                    </label>
-                    <button
-                      type="button"
-                      className="login-field__forgot"
-                      onClick={onForgotPassword}
-                      tabIndex={-1}
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-                  <div className="login-field__input-wrapper">
-                    <span className="login-field__input-icon">
-                      <Lock size={16} strokeWidth={2} />
+                    <span className="login-remember__text">
+                      Recordarme en este dispositivo
                     </span>
-                    <input
-                      id="login-password"
-                      type="password"
-                      className={`login-field__input${errors.password ? ' login-field__input--error' : ''}`}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (errors.password) setErrors((prev) => ({ ...prev, password: null }));
-                      }}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
-                      disabled={loading}
-                    />
-                  </div>
-                  {errors.password && (
-                    <p className="login-field__error">{errors.password}</p>
-                  )}
-                </div>
+                  </label>
 
-                {/* Recordarme */}
-                <label className="login-remember" htmlFor="login-remember">
-                  <span className="login-remember__checkbox">
-                    <input
-                      id="login-remember"
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      disabled={loading}
-                    />
-                    <span className="login-remember__checkmark" />
-                  </span>
-                  <span className="login-remember__text">
-                    Recordarme en este dispositivo
-                  </span>
-                </label>
+                  {/* Botón principal */}
+                  <button
+                    type="submit"
+                    className={`login-btn${loading ? ' login-btn--loading' : ''}`}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="login-btn__spinner" />
+                    ) : (
+                      <>
+                        <LogIn size={18} strokeWidth={2.2} />
+                        <span>Iniciar sesión</span>
+                      </>
+                    )}
+                  </button>
+                </form>
 
-                {/* Botón principal */}
+                {/* Botón Google */}
                 <button
-                  type="submit"
-                  className={`login-btn${loading ? ' login-btn--loading' : ''}`}
+                  type="button"
+                  className="login-google-btn"
+                  onClick={onGoogleLogin}
                   disabled={loading}
                 >
-                  {loading ? (
-                    <span className="login-btn__spinner" />
-                  ) : (
-                    <>
-                      <LogIn size={18} strokeWidth={2.2} />
-                      <span>Iniciar sesión</span>
-                    </>
-                  )}
+                  <GoogleIcon className="login-google-btn__icon" />
+                  <span>Ingresa con Google</span>
                 </button>
-              </form>
-
-              {/* Botón Google */}
-              <button
-                type="button"
-                className="login-google-btn"
-                onClick={onGoogleLogin}
-                disabled={loading}
-              >
-                <GoogleIcon className="login-google-btn__icon" />
-                <span>Ingresa con Google</span>
-              </button>
+              </div>
             </div>
-          </div>
           </div>
         </div>
       </div>

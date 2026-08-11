@@ -1,0 +1,64 @@
+.dashboard-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #EFEFEF;
+  font-family: 'Inter', sans-serif;
+  color: #0F172A;
+  transition: background-color 0.3s ease;
+}
+
+.dashboard-layout__sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-layout__body {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  position: relative;
+}
+
+/* Left decorative background strip (using login background texture) */
+.dashboard-layout__left-strip {
+  width: 120px;
+  flex-shrink: 0;
+  background: #E5E7EB url('../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+  background-attachment: fixed;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Content viewport */
+.dashboard-layout__content {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* Responsive adjustments for mobile/tablet */
+@media (max-width: 900px) {
+  .dashboard-layout__left-strip {
+    display: none;
+  }
+
+  .dashboard-layout__content {
+    padding: 16px;
+  }
+}
+
+/* Dark Mode Overrides */
+.dashboard-layout.dark-mode {
+  background-color: #0F172A;
+  color: #F1F5F9;
+}
+
+.dashboard-layout.dark-mode .dashboard-layout__left-strip {
+  background: #0B132B url('../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+  background-attachment: fixed;
+  border-color: #1E293B;
+}
