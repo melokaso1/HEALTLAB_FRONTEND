@@ -8,13 +8,11 @@
   background: transparent;
   border-bottom: none;
   flex-shrink: 0;
-  position: absolute;
-  top: -180px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 20;
   gap: 0;
   width: 100%;
+  margin-bottom: 20px;
 }
 
 .header__logo {
@@ -22,22 +20,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   text-decoration: none;
 }
 
-.header__logo-icon {
-  height: 80px;
+.header__logo-img {
+  height: 170px;
+  max-width: 320px;
   width: auto;
   object-fit: contain;
-  order: -1;
+  filter: drop-shadow(0 6px 16px rgba(0, 168, 150, 0.18));
+  transition: transform 0.3s ease;
 }
 
-.header__logo-title {
-  height: 140px;
-  width: auto;
-  object-fit: contain;
-  order: 1;
+.header__logo-img:hover {
+  transform: scale(1.04);
 }
 
 .header__theme-toggle {
@@ -46,17 +42,16 @@
   gap: 8px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.95);
-  border: none;
+  border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 100px;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: #0F172A;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
   white-space: nowrap;
-  margin-right: 16px;
   position: fixed;
   top: 20px;
   right: 20px;
@@ -65,7 +60,7 @@
 
 .header__theme-toggle:hover {
   background: #F8FAFC;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .header__theme-toggle:active {
@@ -73,7 +68,7 @@
 }
 
 .header__theme-toggle svg {
-  color: #64748B;
+  color: #00A896;
   flex-shrink: 0;
 }
 

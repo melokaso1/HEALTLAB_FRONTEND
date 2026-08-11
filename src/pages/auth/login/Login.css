@@ -1,8 +1,3 @@
-/* ============================================
-   LOGIN PAGE - HEALTLAB
-   ============================================ */
-
-/* --- Layout principal --- */
 .login-page {
   height: 100vh;
   background: #FFFFFF url('../../../assets/images/fondo_healtlab.png') center/cover no-repeat;
@@ -24,7 +19,7 @@
   padding: 20px;
 }
 
-/* --- Columna Izquierda: Imagen del médico --- */
+
 .login-image-panel {
   display: none;
 }
@@ -37,7 +32,7 @@
   display: block;
 }
 
-/* --- Columna Derecha: Header + Formulario --- */
+
 .login-form-panel {
   display: flex;
   flex-direction: column;
@@ -63,7 +58,7 @@
   max-width: 360px;
 }
 
-/* --- Pill "Sistema de Gestión Clínica" --- */
+
 .login-badge {
   display: none;
 }
@@ -80,7 +75,6 @@
   letter-spacing: 0.01em;
 }
 
-/* --- Título y subtítulo --- */
 .login-title {
   display: none;
 }
@@ -89,7 +83,6 @@
   display: none;
 }
 
-/* --- Tarjeta del formulario --- */
 .login-card {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
@@ -98,17 +91,16 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
-/* --- Avatar circle --- */
 .login-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   background: #00A896;
   border-radius: 50%;
   margin: 0 auto 24px;
-  box-shadow: 0 4px 14px rgba(0, 168, 150, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 168, 150, 0.28);
 }
 
 .login-avatar svg {
@@ -253,7 +245,7 @@
   justify-content: center;
 }
 
-.login-remember__checkbox input:checked + .login-remember__checkmark {
+.login-remember__checkbox input:checked+.login-remember__checkmark {
   background: #00A896;
   border-color: #00A896;
 }
@@ -269,7 +261,7 @@
   margin-top: -1px;
 }
 
-.login-remember__checkbox input:checked + .login-remember__checkmark::after {
+.login-remember__checkbox input:checked+.login-remember__checkmark::after {
   display: block;
 }
 
@@ -421,8 +413,9 @@
    DARK MODE
    ============================================ */
 
-.dark-mode .login-page {
-  background: #1E293B url('../../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+.login-page.dark-mode,
+.dark-mode.login-page {
+  background: #0F172A url('../../../assets/images/fondo_healtlab.png') center/cover no-repeat;
   background-attachment: fixed;
 }
 

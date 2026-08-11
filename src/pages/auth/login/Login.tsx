@@ -105,8 +105,6 @@ const Login: React.FC = () => {
 
   return (
     <div className={`login-page${darkMode ? ' dark-mode' : ''}`}>
-      <Header darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
-
       <div className="login-container">
         {/* Columna izquierda: Imagen del médico */}
         <div className="login-image-panel">
@@ -121,23 +119,26 @@ const Login: React.FC = () => {
         <div className="login-form-panel">
           <div className="login-form-content">
             <div className="login-form-wrapper">
-            {/* Badge */}
-            <div className="login-badge">
-              <Shield size={15} strokeWidth={2.2} className="login-badge__icon" />
-              <span className="login-badge__text">Sistema de Gestión Clínica</span>
-            </div>
+              {/* Header / Logo Healtlab */}
+              <Header darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
 
-            {/* Títulos */}
-            <h1 className="login-title">Bienvenido de vuelta</h1>
-            <p className="login-subtitle">
-              Ingresa tus credenciales para entrar al sistema
-            </p>
+              {/* Badge */}
+              <div className="login-badge">
+                <Shield size={15} strokeWidth={2.2} className="login-badge__icon" />
+                <span className="login-badge__text">Sistema de Gestión Clínica</span>
+              </div>
 
-            {/* Tarjeta */}
-            <div className="login-card">
+              {/* Títulos */}
+              <h1 className="login-title">Bienvenido de vuelta</h1>
+              <p className="login-subtitle">
+                Ingresa tus credenciales para entrar al sistema
+              </p>
+
+              {/* Tarjeta */}
+              <div className="login-card">
               {/* Avatar */}
               <div className="login-avatar">
-                <User size={40} strokeWidth={1.8} />
+                <User size={46} strokeWidth={1.8} />
               </div>
 
               {/* Mensajes globales */}

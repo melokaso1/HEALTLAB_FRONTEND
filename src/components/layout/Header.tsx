@@ -1,6 +1,5 @@
 import { Moon, Sun } from 'lucide-react';
-import healtlabIcon from '../../assets/icons/HEALTLAB_sintitulo.png';
-import healtlabTitle from '../../assets/icons/HEALTLAB_Titulo.png';
+import healtlabLogo from '../../assets/icons/HEALTLAB.png';
 import './Header.css';
 
 interface HeaderProps {
@@ -13,14 +12,9 @@ const Header: React.FC<HeaderProps> = ({ darkMode = false, onToggleDarkMode }) =
     <header className="header">
       <div className="header__logo">
         <img
-          src={healtlabIcon}
-          alt="HEALTLAB icono"
-          className="header__logo-icon"
-        />
-        <img
-          src={healtlabTitle}
-          alt="HEALTLAB"
-          className="header__logo-title"
+          src={healtlabLogo}
+          alt="HEALTLAB Logo"
+          className="header__logo-img"
         />
       </div>
 
