@@ -1,0 +1,717 @@
+import React, { useState } from 'react';
+import {
+  Search,
+  Plus,
+  Edit2,
+  MoreVertical,
+  Calendar,
+  FileText,
+  Settings,
+  Lock,
+  KeyRound,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  X,
+} from 'lucide-react';
+import type { ManagedUser, UserRoleType } from '../../../types/user.types';
+import {
+  mockUsers,
+  getRolePermissions,
+  getRoleLabel,
+} from '../../../services/users.service';
+import './UsersManagement.css';
+
+/* SVG 1: Checkmark Icon */
+const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="16px"
+    viewBox="0 -960 960 960"
+    width="16px"
+    fill="currentColor"
+  >
+    <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" />
+  </svg>
+);
+
+/* SVG 2: Cross Icon */
+const CrossIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="16px"
+    viewBox="0 -960 960 960"
+    width="16px"
+    fill="currentColor"
+  >
+    <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
+  </svg>
+);
+
+/* SVG 3: Admin Icon */
+const AdminRoleIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="16px"
+    viewBox="0 -960 960 960"
+    width="16px"
+    fill="currentColor"
+  >
+    <path d="M480-560q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-720q0-33-23.5-56.5T480-800q-33 0-56.5 23.5T400-720q0 33 23.5 56.5T480-640ZM160-80v-271q0-34 17-62.5t47-44.5q51-26 115.5-44T480-520q76 0 140.5 18T736-458q30 16 47 44.5t17 62.5v191q0 33-23.5 56.5T720-80H390q-46 0-78-32t-32-78q0-46 32-78t78-32h113l62-132q-20-4-41-6t-44-2q-72 0-128 17.5T261-386q-10 5-15.5 14.5T240-351v271h-80Zm230-80h48l28-60h-76q-12 0-21 9t-9 21q0 12 9 21t21 9Zm136 0h194v-191q0-11-5.5-20.5T700-386q-12-6-26-12.5T644-411L526-160Zm-46-560Zm0 426Z" />
+  </svg>
+);
+
+/* SVG 4: Headset / Receptionist Icon */
+const ReceptionistRoleIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="16px"
+    viewBox="0 -960 960 960"
+    width="16px"
+    fill="currentColor"
+  >
+    <path d="M480-40v-80h280v-40H600v-320h160v-40q0-116-82-198t-198-82q-116 0-198 82t-82 198v40h160v320H200q-33 0-56.5-23.5T120-240v-280q0-74 28.5-139.5T226-774q49-49 114.5-77.5T480-880q74 0 139.5 28.5T734-774q49 49 77.5 114.5T840-520v400q0 33-23.5 56.5T760-40H480ZM200-240h80v-160h-80v160Zm480 0h80v-160h-80v160ZM200-400h80-80Zm480 0h80-80Z" />
+  </svg>
+);
+
+/* SVG 5: Professional Doctor Shield Icon */
+const ProfessionalRoleIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="16px"
+    viewBox="0 -960 960 960"
+    width="16px"
+    fill="currentColor"
+  >
+    <path d="M722.5-297.5Q740-315 740-340t-17.5-42.5Q705-400 680-400t-42.5 17.5Q620-365 620-340t17.5 42.5Q655-280 680-280t42.5-17.5ZM680-160q31 0 57-14.5t42-38.5q-22-13-47-20t-52-7q-27 0-52 7t-47 20q16 24 42 38.5t57 14.5ZM480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v227q-19-8-39-14.5t-41-9.5v-147l-240-90-240 90v188q0 47 12.5 94t35 89.5Q310-290 342-254t71 60q11 32 29 61t41 52q-1 0-1.5.5t-1.5.5Zm200 0q-83 0-141.5-58.5T480-280q0-83 58.5-141.5T680-480q83 0 141.5 58.5T880-280q0 83-58.5 141.5T680-80ZM480-494Z" />
+  </svg>
+);
+
+/* SVG 6: Trash / Delete Icon provided by user */
+const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="18px"
+    viewBox="0 -960 960 960"
+    width="18px"
+    fill="currentColor"
+  >
+    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
+  </svg>
+);
+
+const UsersManagement: React.FC = () => {
+  const [users, setUsers] = useState<ManagedUser[]>(mockUsers);
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active'); // Show active users by default
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Modals & Side Panel state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState<boolean>(false);
+  const [activePanelUserId, setActivePanelUserId] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // New user form state
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
+
+  // Edit role form state
+  const [editTargetUser, setEditTargetUser] = useState<ManagedUser | null>(null);
+  const [targetRole, setTargetRole] = useState<UserRoleType>('professional');
+
+  const handleTogglePanel = (user: ManagedUser, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (activePanelUserId === user.id) {
+      setActivePanelUserId(null);
+    } else {
+      setActivePanelUserId(user.id);
+    }
+  };
+
+  const panelUser = users.find((u) => u.id === activePanelUserId);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
+  const handleDeleteUser = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === id ? { ...user, status: 'inactive' } : user
+      )
+    );
+    showToast('Usuario deshabilitado y movido al archivo');
+  };
+
+  const handleReactivateUser = (id: number) => {
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === id ? { ...user, status: 'active' } : user
+      )
+    );
+    setActivePanelUserId(id);
+    setIsCreateModalOpen(false);
+    setNewUserName('');
+    setNewUserEmail('');
+    showToast('Usuario reactivado exitosamente');
+  };
+
+  const handleOpenEditRole = (user: ManagedUser, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditTargetUser(user);
+    setTargetRole(user.role);
+    setIsEditRoleModalOpen(true);
+  };
+
+  const handleSaveRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTargetUser) return;
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === editTargetUser.id ? { ...u, role: targetRole } : u))
+    );
+    setIsEditRoleModalOpen(false);
+    showToast(`Rol de ${editTargetUser.name} actualizado a ${getRoleLabel(targetRole)}`);
+  };
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserName.trim() || !newUserEmail.trim()) {
+      showToast('Por favor completa el nombre y correo electrónico');
+      return;
+    }
+
+    const initials = newUserName
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+
+    const newUser: ManagedUser = {
+      id: Date.now(),
+      name: newUserName,
+      email: newUserEmail,
+      role: newUserRole,
+      status: 'active',
+      initials: initials,
+      avatarBg: '#0A9396',
+      lastAccess: 'Nunca',
+    };
+
+    setUsers([newUser, ...users]);
+    setActivePanelUserId(newUser.id);
+    setNewUserName('');
+    setNewUserEmail('');
+    setIsCreateModalOpen(false);
+    showToast(`Usuario ${newUser.name} creado exitosamente`);
+  };
+
+  const handleResetPassword = () => {
+    if (!panelUser) return;
+    showToast(`Enlace de restablecimiento enviado a ${panelUser.email}`);
+  };
+
+  // Check if any deactivated users match current create modal input
+  // Requires typing the FULL name or FULL email to avoid partial prefix matches (e.g. "dra")
+  const deactivatedMatches = users.filter((u) => {
+    if (u.status !== 'inactive') return false;
+
+    const nameInput = newUserName.toLowerCase().trim();
+    const emailInput = newUserEmail.toLowerCase().trim();
+
+    if (!nameInput && !emailInput) return false;
+
+    const userNameLower = u.name.toLowerCase().trim();
+    const userEmailLower = u.email.toLowerCase().trim();
+
+    // Strip medical prefixes (Dr., Dra., Dr, Dra) for clean full name comparison
+    const nameClean = userNameLower.replace(/^(dra\.|dr\.|dra|dr)\s+/, '').trim();
+
+    // Check exact full name, full name without title prefix, or full email
+    const isExactFullName = nameInput !== '' && (nameInput === userNameLower || nameInput === nameClean);
+    const isExactFullEmail = emailInput !== '' && emailInput === userEmailLower;
+
+    return isExactFullName || isExactFullEmail;
+  });
+
+  // Filtered user list for table
+  const filteredUsers = users.filter((u) => {
+    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
+    const matchesSearch =
+      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesRole && matchesStatus && matchesSearch;
+  });
+
+  const activePermissions = panelUser
+    ? getRolePermissions(panelUser.role)
+    : getRolePermissions('receptionist');
+
+  const renderRoleBadge = (role: UserRoleType) => {
+    if (role === 'admin') {
+      return (
+        <span className="role-badge role-badge--admin">
+          <AdminRoleIcon className="role-badge__icon" />
+          <span>Administrador</span>
+        </span>
+      );
+    }
+    if (role === 'receptionist') {
+      return (
+        <span className="role-badge role-badge--receptionist">
+          <ReceptionistRoleIcon className="role-badge__icon" />
+          <span>Recepcionista</span>
+        </span>
+      );
+    }
+    return (
+      <span className="role-badge role-badge--professional">
+        <ProfessionalRoleIcon className="role-badge__icon" />
+        <span>Professional</span>
+      </span>
+    );
+  };
+
+  return (
+    <div className="users-mgmt">
+      {/* Top Title & Filters Row */}
+      <div className="users-mgmt__header-row">
+        <div className="users-mgmt__title-group">
+          <h1 className="users-mgmt__title">Gestión de Usuarios</h1>
+          <p className="users-mgmt__subtitle">
+            Administre el acceso y roles del personal de la clínica.
+          </p>
+        </div>
+
+        <div className="users-mgmt__filters">
+          {/* Búsqueda */}
+          <div className="users-mgmt__search-box">
+            <Search size={16} className="users-mgmt__search-icon" />
+            <input
+              type="text"
+              className="users-mgmt__search-input"
+              placeholder="Buscar usuario..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filtro por Rol */}
+          <select
+            className="users-mgmt__select"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="all">Todos los Roles</option>
+            <option value="admin">Administrador</option>
+            <option value="professional">Profesional</option>
+            <option value="receptionist">Recepcionista</option>
+          </select>
+
+          {/* Filtro por Estado */}
+          <select
+            className="users-mgmt__select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="active">Estado: Activos</option>
+            <option value="inactive">Estado: Inactivos / Eliminados</option>
+            <option value="all">Estado: Todos</option>
+          </select>
+
+          {/* Botón Agregar Usuario */}
+          <button
+            type="button"
+            className="users-mgmt__btn-add"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            <Plus size={16} />
+            <span>Nuevo Usuario</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Layout (Table Full-Width by default, 2-column when 3-dots clicked) */}
+      <div className={`users-mgmt__grid${activePanelUserId !== null ? ' users-mgmt__grid--with-panel' : ''}`}>
+        {/* Left Column: Users Table */}
+        <div className="users-card">
+          <div className="users-table__wrapper">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '40px' }}>#</th>
+                  <th>USUARIO</th>
+                  <th>CORREO ELECTRÓNICO</th>
+                  <th>ROL</th>
+                  <th style={{ textAlign: 'center' }}>ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}
+                    >
+                      No se encontraron usuarios con los filtros aplicados.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user, idx) => {
+                    const isPanelOpen = user.id === activePanelUserId;
+                    return (
+                      <tr
+                        key={user.id}
+                        className={isPanelOpen ? 'users-table__row--selected' : ''}
+                      >
+                        <td className="users-table__index">{idx + 1}</td>
+                        <td>
+                          <div className="user-identity">
+                            {user.avatarUrl ? (
+                              <img
+                                src={user.avatarUrl}
+                                alt={user.name}
+                                className="user-avatar"
+                              />
+                            ) : (
+                              <div
+                                className="user-avatar-initials"
+                                style={{ backgroundColor: user.avatarBg || '#0A9396' }}
+                              >
+                                {user.initials || 'U'}
+                              </div>
+                            )}
+                            <span className="user-identity__name">{user.name}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="user-email-cell">{user.email}</span>
+                        </td>
+                        <td>{renderRoleBadge(user.role)}</td>
+                        <td>
+                          <div
+                            className="users-table__actions"
+                            style={{ justifyContent: 'center' }}
+                          >
+                            {user.status === 'active' ? (
+                              <button
+                                type="button"
+                                className="trash-btn"
+                                title="Desactivar / Eliminar usuario"
+                                onClick={(e) => handleDeleteUser(user.id, e)}
+                              >
+                                <TrashIcon className="trash-btn__icon" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="reactivate-icon-btn"
+                                title="Reactivar usuario"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReactivateUser(user.id);
+                                }}
+                              >
+                                <RotateCcw size={15} />
+                                <span>Reactivar</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="action-btn"
+                              title="Editar rol"
+                              onClick={(e) => handleOpenEditRole(user, e)}
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={`action-btn${isPanelOpen ? ' action-btn--active' : ''}`}
+                              title="Ver información y permisos"
+                              onClick={(e) => handleTogglePanel(user, e)}
+                            >
+                              <MoreVertical size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Footer */}
+          <div className="users-table__footer">
+            <span>
+              Mostrando {filteredUsers.length > 0 ? 1 : 0} - {filteredUsers.length} de{' '}
+              {users.filter(u => statusFilter === 'all' || u.status === statusFilter).length} usuarios
+            </span>
+            <div className="pagination-controls">
+              <button type="button" className="pagination-btn" disabled>
+                <ChevronLeft size={16} />
+              </button>
+              <button type="button" className="pagination-btn" disabled>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Role Permissions Side Panel (Appears ONLY when 3-dots clicked) */}
+        {activePanelUserId !== null && panelUser && (
+          <div className="users-card permissions-panel">
+            <div className="permissions-panel__top">
+              {renderRoleBadge(panelUser.role)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="permissions-panel__edit-btn"
+                  onClick={() => handleOpenEditRole(panelUser)}
+                >
+                  <Edit2 size={13} />
+                  <span>Editar Rol</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  title="Cerrar panel de información"
+                  onClick={() => setActivePanelUserId(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* User Identity */}
+            <div className="permissions-panel__user-header">
+              <h3 className="permissions-panel__user-name">{panelUser.name}</h3>
+              <span className="permissions-panel__user-sub">
+                Última actividad: {panelUser.lastAccess || 'Ayer, 5:30 PM, actualizando perfil'}
+              </span>
+            </div>
+
+            <div className="permissions-panel__section-title">
+              PERMISOS DE ROL ASIGNADOS
+            </div>
+
+            {/* Groups */}
+            <div className="permission-groups">
+              {activePermissions.map((group) => (
+                <div key={group.id} className="permission-group">
+                  <div className="permission-group__header">
+                    {group.icon === 'calendar' && (
+                      <Calendar size={16} className="permission-group__icon" />
+                    )}
+                    {group.icon === 'file' && (
+                      <FileText size={16} className="permission-group__icon" />
+                    )}
+                    {group.icon === 'gear' && (
+                      <Settings size={16} className="permission-group__icon" />
+                    )}
+                    <span>{group.title}</span>
+                  </div>
+
+                  <div className="permission-items">
+                    {group.items.map((item) => (
+                      <div key={item.id} className="permission-item">
+                        {item.status === 'allowed' && (
+                          <CheckIcon className="perm-icon--allowed" />
+                        )}
+                        {item.status === 'denied' && (
+                          <CrossIcon className="perm-icon--denied" />
+                        )}
+                        {item.status === 'restricted' && (
+                          <Lock size={14} className="perm-icon--restricted" />
+                        )}
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Reset Password Action */}
+            <button
+              type="button"
+              className="permissions-panel__btn-reset"
+              onClick={handleResetPassword}
+            >
+              <KeyRound size={16} />
+              <span>Restablecer Contraseña</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Modal: Create User */}
+      {isCreateModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsCreateModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Nuevo Usuario</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateUser}>
+              <div className="modal-body">
+                {/* Deactivated Users Prompt */}
+                {deactivatedMatches.length > 0 && (
+                  <div className="deactivated-restore-section">
+                    <span className="deactivated-restore-section-title">
+                      ¡Usuarios desactivados previamente encontrados ({deactivatedMatches.length})!
+                    </span>
+                    <div className="deactivated-restore-list">
+                      {deactivatedMatches.map((match) => (
+                        <div key={match.id} className="deactivated-restore-card">
+                          <div className="deactivated-restore-info">
+                            <span className="deactivated-restore-title">{match.name}</span>
+                            <span className="deactivated-restore-desc">
+                              {match.email} • {getRoleLabel(match.role)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-reactivate"
+                            onClick={() => handleReactivateUser(match.id)}
+                          >
+                            <RotateCcw size={13} />
+                            <span>Reactivar</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Nombre Completo</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Ej. Dra. Elena Vasquez"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="ejemplo@medflow.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Rol Asignado</label>
+                  <select
+                    className="users-mgmt__select"
+                    style={{ width: '100%' }}
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as UserRoleType)}
+                  >
+                    <option value="professional">Profesional Médico</option>
+                    <option value="receptionist">Recepcionista</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  Guardar Usuario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit User Role */}
+      {isEditRoleModalOpen && editTargetUser && (
+        <div className="modal-backdrop" onClick={() => setIsEditRoleModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Editar Rol de Usuario</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsEditRoleModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveRole}>
+              <div className="modal-body">
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Cambiando el rol de <strong>{editTargetUser.name}</strong> ({editTargetUser.email})
+                </p>
+                <div className="form-group" style={{ marginTop: '10px' }}>
+                  <label className="form-label">Seleccionar Nuevo Rol</label>
+                  <select
+                    className="users-mgmt__select"
+                    style={{ width: '100%' }}
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value as UserRoleType)}
+                  >
+                    <option value="professional">Profesional Médico</option>
+                    <option value="receptionist">Recepcionista</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsEditRoleModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  Actualizar Rol
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && <div className="toast-msg">{toastMessage}</div>}
+    </div>
+  );
+};
+
+export default UsersManagement;

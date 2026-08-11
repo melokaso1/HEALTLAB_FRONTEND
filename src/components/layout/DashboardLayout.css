@@ -23,11 +23,11 @@
   position: relative;
 }
 
-/* Left decorative background strip (using login background texture) */
+/* Left decorative background strip (using HEALTLAB texture) */
 .dashboard-layout__left-strip {
-  width: 120px;
+  width: 140px;
   flex-shrink: 0;
-  background: #E5E7EB url('../../assets/images/fondo_healtlab.png') center/cover no-repeat;
+  background: #00A896 url('../../assets/images/fondo_healtlab.png') center/cover no-repeat;
   background-attachment: fixed;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -35,8 +35,10 @@
 /* Content viewport */
 .dashboard-layout__content {
   flex: 1;
-  padding: 20px 24px;
-  overflow-x: auto;
+  padding: 24px 32px;
+  max-width: 1600px;
+  margin: 0;
+  width: 100%;
   box-sizing: border-box;
 }
 

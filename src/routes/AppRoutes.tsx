@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Login from '../pages/auth/login/Login';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import UsersManagement from '../pages/admin/users/UsersManagement';
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -68,16 +69,8 @@ const DashboardContainer: React.FC = () => {
             />
           }
         />
-        <Route
-          path="usuarios-roles"
-          element={
-            <NotFound
-              title="Error 404"
-              subtitle="Vista de Usuarios no encontrada"
-              description="La sección de Usuarios del Sistema y Roles se encuentra actualmente en desarrollo."
-            />
-          }
-        />
+        <Route path="usuarios-roles" element={<UsersManagement />} />
+        <Route path="usuarios" element={<UsersManagement />} />
         <Route
           path="pacientes"
           element={

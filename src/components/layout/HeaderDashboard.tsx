@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Sun, Moon, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../common/ThemeToggle';
 import healtlabIcon from '../../assets/icons/HEALTLAB_sintitulo.png';
 import healtlabTitle from '../../assets/icons/HEALTLAB_Titulo.png';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
@@ -64,16 +65,8 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
 
       {/* Right controls: Theme toggle, Notifications, User profile */}
       <div className="header-dashboard__actions">
-        {/* Dark/Light mode button */}
-        <button
-          type="button"
-          className="header-dashboard__theme-btn"
-          onClick={onToggleDarkMode}
-          title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-        >
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          <span>{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
-        </button>
+        {/* Dark/Light mode toggle switch */}
+        <ThemeToggle darkMode={darkMode} onToggle={onToggleDarkMode} />
 
         {/* Notifications bell */}
         <button

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, User, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-react';
 import Header from '../../../components/layout/Header';
+import ThemeToggle from '../../../components/common/ThemeToggle';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -119,7 +120,7 @@ const Login: React.FC = () => {
           <div className="login-form-content">
             <div className="login-form-wrapper">
               {/* Header / Logo Healtlab */}
-              <Header darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
+              <Header />
 
               {/* Badge */}
               <div className="login-badge">
@@ -272,6 +273,11 @@ const Login: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Botón modo oscuro/claro en esquina inferior izquierda */}
+      <div className="login-bottom-left-toggle">
+        <ThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} />
       </div>
     </div>
   );

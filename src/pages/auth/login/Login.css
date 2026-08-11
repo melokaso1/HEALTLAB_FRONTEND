@@ -549,3 +549,11 @@
     padding: 20px 12px;
   }
 }
+
+/* Bottom-left theme toggle fixed container */
+.login-bottom-left-toggle {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 100;
+}

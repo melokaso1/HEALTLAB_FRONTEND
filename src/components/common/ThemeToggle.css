@@ -1,0 +1,67 @@
+.theme-toggle-switch {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+.theme-toggle-track {
+  position: relative;
+  width: 66px;
+  height: 34px;
+  border-radius: 34px;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Light mode styling */
+.theme-toggle-switch.light .theme-toggle-track {
+  background-color: #E2E8F0;
+  border: 2px solid #CBD5E1;
+}
+
+/* Dark mode styling */
+.theme-toggle-switch.dark .theme-toggle-track {
+  background-color: #0F172A;
+  border: 2px solid #FFFFFF;
+}
+
+/* Toggle Thumb */
+.theme-toggle-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-switch.light .theme-toggle-thumb {
+  transform: translateX(0);
+  background-color: #FFFFFF;
+}
+
+.theme-toggle-switch.dark .theme-toggle-thumb {
+  transform: translateX(32px);
+  background-color: #1E293B;
+}
+
+/* Icon colors */
+.theme-toggle-icon.sun {
+  color: #F59E0B;
+  fill: #FBBF24;
+}
+
+.theme-toggle-icon.moon {
+  color: #FFFFFF;
+  fill: #FFFFFF;
+}

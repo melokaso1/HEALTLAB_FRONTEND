@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderDashboard from './HeaderDashboard';
 import HeaderNavbar from './HeaderNavbar';
-import { useTheme } from '../../context/ThemeContext';
 import './DashboardLayout.css';
 
 interface DashboardLayoutProps {
@@ -17,6 +16,7 @@ const routeTabMap: Record<string, string> = {
   '/estadisticas': 'reportes',
   '/profesionales': 'profesionales',
   '/usuarios-roles': 'usuarios',
+  '/usuarios': 'usuarios',
   '/pacientes': 'pacientes',
   '/gestion-citas': 'citas',
   '/historial-atencion': 'historial',
@@ -26,7 +26,7 @@ const routeTabMap: Record<string, string> = {
 const tabRouteMap: Record<string, string> = {
   reportes: '/estadisticas',
   profesionales: '/profesionales',
-  usuarios: '/usuarios-roles',
+  usuarios: '/usuarios',
   inicio: '/admin',
   pacientes: '/pacientes',
   citas: '/gestion-citas',
@@ -38,7 +38,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   userName = 'Juan Perez',
   userRole = 'Director Médico',
 }) => {
-  const { darkMode, toggleDarkMode } = useTheme();
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,6 +47,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const handleSelectTab = (tabId: string) => {
     const targetRoute = tabRouteMap[tabId] || '/admin';
     navigate(targetRoute);
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode((prev: boolean) => !prev);
   };
 
   return (
@@ -64,7 +68,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main Body Area */}
       <div className="dashboard-layout__body">
-        {/* Decorative left strip featuring login background pattern */}
+        {/* Decorative left strip featuring HEALTLAB background pattern */}
         <div className="dashboard-layout__left-strip" />
 
         {/* Content Viewport */}
