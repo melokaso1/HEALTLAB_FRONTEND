@@ -121,29 +121,28 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="admin-dashboard">
-      {/* Top Title & Search Row */}
-      <div className="admin-dashboard__header-row">
-        <div>
-          <h1 className="admin-dashboard__title">Inicio</h1>
-          <p className="admin-dashboard__subtitle">Martes, Nov 12, 2023</p>
-        </div>
-
-        <div className="admin-dashboard__search-wrapper">
-          <Search size={18} className="admin-dashboard__search-icon" />
-          <input
-            type="text"
-            className="admin-dashboard__search-input"
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
       {/* Main Content Layout Grid (Left 2-Columns / Right 1-Column Agenda) */}
       <div className="admin-dashboard__grid">
-        {/* Left Section (KPIs, Table, Activity) */}
+        {/* Left Section (Header, KPIs, Table, Activity) */}
         <div className="admin-dashboard__left-col">
+          {/* Top Title & Search Row */}
+          <div className="admin-dashboard__header-row">
+            <div className="admin-dashboard__title-group">
+              <h1 className="admin-dashboard__title">Inicio</h1>
+              <p className="admin-dashboard__subtitle">Martes, Nov 12, 2023</p>
+            </div>
+
+            <div className="admin-dashboard__search-wrapper">
+              <Search size={18} className="admin-dashboard__search-icon" />
+              <input
+                type="text"
+                className="admin-dashboard__search-input"
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           {/* Row 1: KPI Cards */}
           <div className="admin-dashboard__kpi-row">
             {/* KPI Card 1: Citas de hoy */}

@@ -9,9 +9,16 @@
 .admin-dashboard__header-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 32px;
+  width: 100%;
+  margin-bottom: 8px;
   flex-wrap: wrap;
+}
+
+.admin-dashboard__title-group {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
 .admin-dashboard__title {
@@ -34,7 +41,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 380px;
+  max-width: 320px;
 }
 
 .admin-dashboard__search-icon {

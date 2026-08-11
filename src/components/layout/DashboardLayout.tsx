@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderDashboard from './HeaderDashboard';
 import HeaderNavbar from './HeaderNavbar';
 import './DashboardLayout.css';
@@ -9,13 +10,43 @@ interface DashboardLayoutProps {
   userRole?: string;
 }
 
+const routeTabMap: Record<string, string> = {
+  '/admin': 'inicio',
+  '/inicio': 'inicio',
+  '/estadisticas': 'reportes',
+  '/profesionales': 'profesionales',
+  '/usuarios-roles': 'usuarios',
+  '/pacientes': 'pacientes',
+  '/gestion-citas': 'citas',
+  '/historial-atencion': 'historial',
+  '/perfil': 'inicio',
+};
+
+const tabRouteMap: Record<string, string> = {
+  reportes: '/estadisticas',
+  profesionales: '/profesionales',
+  usuarios: '/usuarios-roles',
+  inicio: '/admin',
+  pacientes: '/pacientes',
+  citas: '/gestion-citas',
+  historial: '/historial-atencion',
+};
+
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
   userName = 'Juan Perez',
   userRole = 'Director Médico',
 }) => {
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState('inicio');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const activeTab = routeTabMap[location.pathname] || 'inicio';
+
+  const handleSelectTab = (tabId: string) => {
+    const targetRoute = tabRouteMap[tabId] || '/admin';
+    navigate(targetRoute);
+  };
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => !prev);
@@ -31,7 +62,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           userName={userName}
           userRole={userRole}
         />
-        <HeaderNavbar activeTab={activeTab} onSelectTab={setActiveTab} />
+        <HeaderNavbar activeTab={activeTab} onSelectTab={handleSelectTab} />
       </div>
 
       {/* Main Body Area */}

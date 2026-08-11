@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, User, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-react';
 import Header from '../../../components/layout/Header';
 import { useAuth } from '../../../context/AuthContext';
@@ -35,6 +36,7 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const Login: React.FC = () => {
   const { login, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   // Form state
   const [email, setEmail] = useState('');
@@ -55,7 +57,7 @@ const Login: React.FC = () => {
 
   /**
    * Handler principal de login.
-   * Preparado para conectar con el backend mediante AuthContext.
+   * Conecta con AuthContext y redirige al dashboard.
    */
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -73,13 +75,13 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Conecta con el backend a través del AuthContext → authService → api
       const user = await login({ email, password });
-
       setSuccess(`¡Bienvenido, ${user.name}!`);
 
-      // TODO: Redirigir según el rol del usuario
-      // navigate(`/${user.role}/dashboard`);
+      const targetPath = (user.role || '').toLowerCase() === 'admin' ? '/admin' : '/admin';
+      setTimeout(() => {
+        navigate(targetPath, { replace: true });
+      }, 300);
     } catch (err) {
       const message =
         err instanceof Error
