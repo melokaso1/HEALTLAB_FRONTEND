@@ -1,0 +1,157 @@
+.not-found-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100vh - 180px);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.not-found-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+  padding: 40px 32px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.not-found-card__image-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.not-found-card__img {
+  max-width: 260px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 168, 150, 0.15));
+  animation: floatBounce 3s ease-in-out infinite;
+}
+
+@keyframes floatBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.not-found-card__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.not-found-card__title {
+  font-size: 42px;
+  font-weight: 800;
+  color: #00A896;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.not-found-card__subtitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.not-found-card__description {
+  font-size: 14.5px;
+  color: #64748B;
+  margin: 8px 0 24px 0;
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+.not-found-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.not-found-card__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.not-found-card__btn--primary {
+  background: #00A896;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 168, 150, 0.25);
+}
+
+.not-found-card__btn--primary:hover {
+  background: #008F7F;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 168, 150, 0.35);
+}
+
+.not-found-card__btn--secondary {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+}
+
+.not-found-card__btn--secondary:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+/* Dark Mode Overrides */
+.dark-mode .not-found-card {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .not-found-card__title {
+  color: #00A896;
+}
+
+.dark-mode .not-found-card__subtitle {
+  color: #F1F5F9;
+}
+
+.dark-mode .not-found-card__description {
+  color: #94A3B8;
+}
+
+.dark-mode .not-found-card__btn--secondary {
+  background: #0F172A;
+  color: #CBD5E1;
+  border-color: #334155;
+}
+
+.dark-mode .not-found-card__btn--secondary:hover {
+  background: #1E293B;
+  color: #F1F5F9;
+}

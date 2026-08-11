@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Login from '../pages/auth/login/Login';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
@@ -47,13 +48,67 @@ const DashboardContainer: React.FC = () => {
       <Routes>
         <Route path="admin" element={<AdminDashboard />} />
         <Route path="inicio" element={<AdminDashboard />} />
-        <Route path="reportes" element={<AdminDashboard />} />
-        <Route path="profesionales" element={<AdminDashboard />} />
-        <Route path="usuarios" element={<AdminDashboard />} />
-        <Route path="pacientes" element={<AdminDashboard />} />
-        <Route path="citas" element={<AdminDashboard />} />
-        <Route path="historial" element={<AdminDashboard />} />
-        <Route path="*" element={<AdminDashboard />} />
+        <Route
+          path="estadisticas"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Reportes no encontrada"
+              description="La sección de Reportes y Estadísticas se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route
+          path="profesionales"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Profesionales no encontrada"
+              description="La sección de Gestión de Profesionales se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route
+          path="usuarios-roles"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Usuarios no encontrada"
+              description="La sección de Usuarios del Sistema y Roles se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route
+          path="pacientes"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Pacientes no encontrada"
+              description="La sección de Gestión de Pacientes se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route
+          path="gestion-citas"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Citas no encontrada"
+              description="La sección de Gestión de Citas se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route
+          path="historial-atencion"
+          element={
+            <NotFound
+              title="Error 404"
+              subtitle="Vista de Historial no encontrada"
+              description="La sección de Historial y Atención médica se encuentra actualmente en desarrollo."
+            />
+          }
+        />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
   );

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderDashboard from './HeaderDashboard';
 import HeaderNavbar from './HeaderNavbar';
+import { useTheme } from '../../context/ThemeContext';
 import './DashboardLayout.css';
 
 interface DashboardLayoutProps {
@@ -37,7 +38,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   userName = 'Juan Perez',
   userRole = 'Director Médico',
 }) => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,10 +47,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const handleSelectTab = (tabId: string) => {
     const targetRoute = tabRouteMap[tabId] || '/admin';
     navigate(targetRoute);
-  };
-
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => !prev);
   };
 
   return (

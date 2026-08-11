@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, User, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-react';
 import Header from '../../../components/layout/Header';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import {
   validateLoginForm,
   handleGoogleLogin,
@@ -36,13 +37,13 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const Login: React.FC = () => {
   const { login, isLoading: authLoading } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
 
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -99,10 +100,6 @@ const Login: React.FC = () => {
 
   const onGoogleLogin = () => {
     handleGoogleLogin();
-  };
-
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => !prev);
   };
 
   return (
