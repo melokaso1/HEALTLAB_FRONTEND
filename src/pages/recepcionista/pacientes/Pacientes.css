@@ -1,0 +1,433 @@
+/* Pacientes.css - Receptionist Patients Directory View for HEALTLAB */
+
+.recep-pacientes-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--hl-text-main);
+}
+
+/* Header Section */
+.recep-pacientes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.recep-pacientes-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recep-pacientes-header__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.recep-pacientes-header__subtitle {
+  font-size: 14px;
+  color: var(--hl-text-sub);
+  margin: 0;
+}
+
+.btn-nuevo-paciente {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--hl-primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--hl-radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--hl-shadow-sm);
+  white-space: nowrap;
+}
+
+.btn-nuevo-paciente:hover {
+  background-color: var(--hl-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--hl-shadow-md);
+}
+
+/* Main Patients Card */
+.recep-pacientes-card {
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  overflow: hidden;
+}
+
+/* Controls Toolbar Row */
+.recep-pacientes-toolbar {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--hl-border);
+  flex-wrap: wrap;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-filter-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--hl-text-sub);
+  pointer-events: none;
+}
+
+.toolbar-select {
+  height: 36px;
+  padding: 0 12px 0 32px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolbar-select:focus {
+  border-color: var(--hl-primary);
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.toolbar-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-toolbar-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--hl-radius-md);
+  border: 1px solid var(--hl-border);
+  background-color: var(--hl-card-bg);
+  color: var(--hl-text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toolbar-icon:hover {
+  border-color: var(--hl-primary);
+  color: var(--hl-primary);
+  background-color: var(--hl-primary-light);
+}
+
+/* Patients Table */
+.recep-pacientes-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.pacientes-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.pacientes-table th {
+  padding: 14px 18px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--hl-text-sub);
+  background-color: var(--hl-bg-page);
+  border-bottom: 1px solid var(--hl-border);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pacientes-table td {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--hl-text-main);
+  border-bottom: 1px solid var(--hl-border);
+  vertical-align: middle;
+}
+
+.pacientes-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pacientes-table tr:hover td {
+  background-color: var(--hl-bg-page);
+}
+
+/* Custom Checkbox Style (Adapts cleanly to Light & Dark Mode) */
+.custom-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #CBD5E1;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.15s ease;
+  vertical-align: middle;
+}
+
+.custom-checkbox:hover {
+  border-color: var(--hl-primary);
+}
+
+.custom-checkbox:checked {
+  background-color: var(--hl-primary);
+  border-color: var(--hl-primary);
+}
+
+.custom-checkbox:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #FFFFFF;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 1px;
+}
+
+/* Document Column */
+.doc-number {
+  font-weight: 600;
+  font-family: monospace, monospace;
+  font-size: 13px;
+  color: var(--hl-text-sub);
+}
+
+/* Patient Column */
+.patient-profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.patient-avatar-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.patient-avatar-box.mint {
+  background-color: #00A896;
+}
+
+.patient-avatar-box.purple {
+  background-color: #4C62D6;
+}
+
+.patient-avatar-box.gray {
+  background-color: #64748B;
+}
+
+.patient-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.patient-name {
+  font-weight: 700;
+  color: var(--hl-text-main);
+}
+
+.patient-submeta {
+  font-size: 12px;
+  color: var(--hl-text-sub);
+}
+
+/* Contact Column */
+.contact-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-phone {
+  font-weight: 600;
+  color: var(--hl-text-main);
+}
+
+.contact-email {
+  font-size: 12px;
+  color: var(--hl-text-sub);
+}
+
+/* Status Badges */
+.patient-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.patient-status-badge.activo {
+  background-color: #ECFDF5;
+  color: #10B981;
+  border: 1px solid #A7F3D0;
+}
+
+.patient-status-badge.inactivo {
+  background-color: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+/* Table Footer Pagination */
+.recep-pacientes-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: var(--hl-card-bg);
+  border-top: 1px solid var(--hl-border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pacientes-count-text {
+  font-size: 13px;
+  color: var(--hl-text-sub);
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--hl-radius-md);
+  border: 1px solid var(--hl-border);
+  background-color: var(--hl-card-bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover {
+  border-color: var(--hl-primary);
+  color: var(--hl-primary);
+}
+
+.page-btn.active {
+  background-color: #E6F7F5;
+  color: var(--hl-primary);
+  border-color: var(--hl-primary);
+}
+
+/* Dark Mode Overrides */
+.dark-mode .pacientes-table th {
+  background-color: #0F172A;
+  color: #94A3B8;
+}
+
+.dark-mode .pacientes-table td {
+  color: #F8FAFC;
+  border-color: #334155;
+}
+
+.dark-mode .pacientes-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.dark-mode .patient-name,
+.dark-mode .contact-phone {
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-number,
+.dark-mode .patient-submeta,
+.dark-mode .contact-email {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-status-badge.activo {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.dark-mode .patient-status-badge.inactivo {
+  background-color: rgba(100, 116, 139, 0.2);
+  color: #94A3B8;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+.dark-mode .page-btn.active {
+  background-color: rgba(0, 168, 150, 0.25);
+  color: #2DD4BF;
+  border-color: #00A896;
+}
+
+.dark-mode .custom-checkbox {
+  background-color: #0F172A;
+  border-color: #475569;
+}
+
+.dark-mode .custom-checkbox:hover {
+  border-color: #00A896;
+}
+
+.dark-mode .custom-checkbox:checked {
+  background-color: #00A896;
+  border-color: #00A896;
+}

@@ -12,12 +12,10 @@ import PatientsManagement from '../pages/admin/patients/PatientsManagement';
 import AppointmentsManagement from '../pages/admin/appointments/AppointmentsManagement';
 import AdminProfesionales from '../pages/admin/profesionales/AdminProfesionales';
 import ProfileSettings from '../pages/admin/profile/ProfileSettings';
-import ProfessionalDashboard from '../pages/professional/ProfessionalDashboard';
-import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
-import DoctorProfileSettings from '../pages/professional/DoctorProfileSettings';
 
 // Recepcionista Views
 import RecepInicio from '../pages/recepcionista/inicio/Inicio';
+import RecepPacientes from '../pages/recepcionista/pacientes/Pacientes';
 import RecepHistorial from '../pages/recepcionista/historial/Historial';
 
 import NotFound from '../components/common/NotFound';
@@ -26,17 +24,6 @@ interface ProtectedRouteProps {
   allowedRoles?: string[];
   children: React.ReactNode;
 }
-
-const getInitialRouteForRole = (role?: string) => {
-  const r = (role || '').toLowerCase();
-  if (r === 'professional' || r === 'profesional' || r === 'doctor') {
-    return '/agenda-medico';
-  }
-  if (r === 'receptionist' || r === 'recepcionista') {
-    return '/gestion-citas';
-  }
-  return '/admin';
-};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
   const { isAuthenticated, user } = useAuth();
@@ -51,8 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
       (r) => r.toLowerCase() === userRole || (r === 'profesional' && userRole === 'professional')
     );
     if (!hasPermission) {
-      const defaultRoute = userRole === 'admin' ? '/admin' : '/admin';
-      return <Navigate to={defaultRoute} replace />;
+      return <Navigate to="/inicio" replace />;
     }
   }
 
@@ -61,6 +47,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
 
 const DashboardContainer: React.FC = () => {
   const { user } = useAuth();
+  const userRoleLower = (user?.role || '').toLowerCase();
+  const isReceptionist = userRoleLower === 'receptionist' || userRoleLower === 'recepcionista';
 
   const getRoleLabel = (role?: string) => {
     const r = (role || '').toLowerCase();
@@ -76,20 +64,69 @@ const DashboardContainer: React.FC = () => {
       userRole={getRoleLabel(user?.role)}
     >
       <Routes>
-        <Route path="admin" element={<AdminDashboard />} />
-        <Route path="inicio" element={<AdminDashboard />} />
-        <Route path="reportes" element={<AdminReportes />} />
-        <Route path="estadisticas" element={<AdminReportes />} />
-        <Route path="historial-atencion" element={<AdminReportes />} />
-        <Route path="profesionales" element={<AdminProfesionales />} />
-        <Route path="usuarios-roles" element={<UsersManagement />} />
-        <Route path="usuarios" element={<UsersManagement />} />
-        <Route path="pacientes" element={<PatientsManagement />} />
-        <Route path="gestion-citas" element={<AppointmentsManagement />} />
-        <Route path="citas" element={<AppointmentsManagement />} />
+        {/* Inicio */}
+        <Route
+          path="admin"
+          element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
+        />
+        <Route
+          path="inicio"
+          element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
+        />
+
+        {/* Pacientes (Vista directorio de pacientes para recepcionista) */}
+        <Route
+          path="pacientes"
+          element={isReceptionist ? <RecepPacientes /> : <PatientsManagement />}
+        />
+
+        {/* Historial (Vista recepcionista para consulta histórica solo lectura) */}
+        <Route
+          path="historial-atencion"
+          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+        />
+        <Route
+          path="historial"
+          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+        />
+
+        {/* Citas (Se mantiene Inicio hasta construir su módulo dedicado) */}
+        <Route
+          path="gestion-citas"
+          element={isReceptionist ? <RecepInicio /> : <AppointmentsManagement />}
+        />
+        <Route
+          path="citas"
+          element={isReceptionist ? <RecepInicio /> : <AppointmentsManagement />}
+        />
+
+        {/* Perfil */}
         <Route path="configuracion" element={<ProfileSettings />} />
         <Route path="perfil" element={<ProfileSettings />} />
         <Route path="settings" element={<ProfileSettings />} />
+
+        {/* Rutas Administrativas (Solo Admin) */}
+        <Route
+          path="profesionales"
+          element={isReceptionist ? <Navigate to="/inicio" replace /> : <AdminProfesionales />}
+        />
+        <Route
+          path="usuarios-roles"
+          element={isReceptionist ? <Navigate to="/inicio" replace /> : <UsersManagement />}
+        />
+        <Route
+          path="usuarios"
+          element={isReceptionist ? <Navigate to="/inicio" replace /> : <UsersManagement />}
+        />
+        <Route
+          path="reportes"
+          element={isReceptionist ? <Navigate to="/inicio" replace /> : <AdminReportes />}
+        />
+        <Route
+          path="estadisticas"
+          element={isReceptionist ? <Navigate to="/inicio" replace /> : <AdminReportes />}
+        />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
@@ -97,15 +134,13 @@ const DashboardContainer: React.FC = () => {
 };
 
 const AppRoutes: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <Routes>
       <Route
         path="/login"
-        element={
-          isAuthenticated ? <Navigate to="/admin" replace /> : <Login />
-        }
+        element={isAuthenticated ? <Navigate to="/inicio" replace /> : <Login />}
       />
       <Route
         path="/*"
