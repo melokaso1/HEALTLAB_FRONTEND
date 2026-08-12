@@ -4,7 +4,7 @@ import {
   Plus,
   X,
   CalendarPlus,
-  Edit,
+  Edit2,
   Phone,
   HeartPulse,
   Clock,
@@ -12,10 +12,25 @@ import {
   ChevronRight,
   FileText,
   MoreVertical,
+  RotateCcw,
 } from 'lucide-react';
 import type { Patient, GenderType } from '../../../types/patient.types';
 import { mockPatients } from '../../../services/patients.service';
 import './PatientsManagement.css';
+
+/* SVG Trash / Delete Icon */
+const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    height="18px"
+    viewBox="0 -960 960 960"
+    width="18px"
+    fill="currentColor"
+  >
+    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
+  </svg>
+);
 
 const PatientsManagement: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
@@ -28,6 +43,20 @@ const PatientsManagement: React.FC = () => {
   // Modal State for New Patient
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Edit Patient State
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editTargetPatient, setEditTargetPatient] = useState<Patient | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDocType, setEditDocType] = useState<'CC' | 'CE' | 'TI' | 'PAS'>('CC');
+  const [editDocNum, setEditDocNum] = useState('');
+  const [editGender, setEditGender] = useState<GenderType>('Femenino');
+  const [editAge, setEditAge] = useState<number | ''>(30);
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editBloodType, setEditBloodType] = useState('O+');
+  const [editAllergies, setEditAllergies] = useState('Ninguna');
 
   const handleAddNote = (patientId: number) => {
     if (!newNoteText.trim()) return;
@@ -73,6 +102,86 @@ const PatientsManagement: React.FC = () => {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  const handleDeletePatient = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPatients((prev) =>
+      prev.map((patient) =>
+        patient.id === id ? { ...patient, status: 'inactive' } : patient
+      )
+    );
+    showToast('Paciente deshabilitado y movido al archivo');
+  };
+
+  const handleReactivatePatient = (id: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setPatients((prev) =>
+      prev.map((patient) =>
+        patient.id === id ? { ...patient, status: 'active' } : patient
+      )
+    );
+    setActivePatientId(id);
+    setIsCreateModalOpen(false);
+    showToast('Paciente reactivado exitosamente');
+  };
+
+  const handleOpenEditPatient = (patient: Patient, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditTargetPatient(patient);
+    setEditName(patient.name);
+    setEditDocType(patient.documentType);
+    setEditDocNum(patient.documentNumber);
+    setEditGender(patient.gender);
+    setEditAge(patient.age);
+    setEditPhone(patient.contact.phone);
+    setEditEmail(patient.contact.email);
+    setEditAddress(patient.contact.address);
+    setEditBloodType(patient.medicalData.bloodType);
+    setEditAllergies(patient.medicalData.allergies.join(', '));
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditPatient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTargetPatient) return;
+
+    const updatedInitials = editName
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+
+    setPatients((prev) =>
+      prev.map((p) => {
+        if (p.id === editTargetPatient.id) {
+          return {
+            ...p,
+            name: editName,
+            documentType: editDocType,
+            documentNumber: editDocNum,
+            gender: editGender,
+            age: Number(editAge) || 30,
+            initials: updatedInitials,
+            contact: {
+              phone: editPhone,
+              email: editEmail,
+              address: editAddress,
+            },
+            medicalData: {
+              ...p.medicalData,
+              bloodType: editBloodType,
+              allergies: editAllergies ? editAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
+            },
+          };
+        }
+        return p;
+      })
+    );
+
+    setIsEditModalOpen(false);
+    showToast(`Información de ${editName} actualizada exitosamente`);
   };
 
   const handleTogglePanel = (patientId: number, e: React.MouseEvent) => {
@@ -148,6 +257,27 @@ const PatientsManagement: React.FC = () => {
     showToast(`Paciente ${newPatient.name} creado exitosamente`);
   };
 
+  // Check if any deactivated patients match current create modal input
+  const deactivatedMatches = patients.filter((p) => {
+    if (p.status !== 'inactive') return false;
+
+    const nameInput = newName.toLowerCase().trim();
+    const docInput = newDocNum.toLowerCase().trim();
+    const emailInput = newEmail.toLowerCase().trim();
+
+    if (!nameInput && !docInput && !emailInput) return false;
+
+    const patientNameLower = p.name.toLowerCase().trim();
+    const patientDocLower = p.documentNumber.toLowerCase().trim();
+    const patientEmailLower = p.contact.email.toLowerCase().trim();
+
+    const isExactName = nameInput !== '' && nameInput === patientNameLower;
+    const isExactDoc = docInput !== '' && docInput === patientDocLower;
+    const isExactEmail = emailInput !== '' && emailInput === patientEmailLower;
+
+    return isExactName || isExactDoc || isExactEmail;
+  });
+
   const filteredPatients = patients.filter((p) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -203,7 +333,7 @@ const PatientsManagement: React.FC = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="active">Estado: Activos</option>
-            <option value="inactive">Estado: Inactivos</option>
+            <option value="inactive">Estado: Inactivos / Eliminados</option>
             <option value="all">Estado: Todos</option>
           </select>
 
@@ -286,6 +416,37 @@ const PatientsManagement: React.FC = () => {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div className="patients-table__actions" style={{ justifyContent: 'center' }}>
+                            {patient.status === 'active' ? (
+                              <button
+                                type="button"
+                                className="trash-btn"
+                                title="Desactivar / Eliminar paciente"
+                                onClick={(e) => handleDeletePatient(patient.id, e)}
+                              >
+                                <TrashIcon className="trash-btn__icon" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="reactivate-icon-btn"
+                                title="Reactivar paciente"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReactivatePatient(patient.id);
+                                }}
+                              >
+                                <RotateCcw size={15} />
+                                <span>Reactivar</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="action-btn"
+                              title="Editar paciente"
+                              onClick={(e) => handleOpenEditPatient(patient, e)}
+                            >
+                              <Edit2 size={15} />
+                            </button>
                             <button
                               type="button"
                               className={`action-btn${isPanelOpen ? ' action-btn--active' : ''}`}
@@ -307,7 +468,8 @@ const PatientsManagement: React.FC = () => {
           {/* Table Footer / Pagination */}
           <div className="patients-table__footer">
             <span>
-              Mostrando 1 - {filteredPatients.length} de {patients.length} pacientes
+              Mostrando {filteredPatients.length > 0 ? 1 : 0} - {filteredPatients.length} de{' '}
+              {patients.filter((p) => statusFilter === 'all' || p.status === statusFilter).length} pacientes
             </span>
             <div className="pagination-controls">
               <button type="button" className="pagination-btn" disabled>
@@ -364,8 +526,12 @@ const PatientsManagement: React.FC = () => {
                   <CalendarPlus size={14} />
                   <span>Agendar</span>
                 </button>
-                <button type="button" className="btn-editar">
-                  <Edit size={14} />
+                <button
+                  type="button"
+                  className="btn-editar"
+                  onClick={(e) => handleOpenEditPatient(activePatient, e)}
+                >
+                  <Edit2 size={14} />
                   <span>Editar</span>
                 </button>
               </div>
@@ -575,6 +741,35 @@ const PatientsManagement: React.FC = () => {
             </div>
             <form onSubmit={handleCreatePatient}>
               <div className="modal-body">
+                {/* Deactivated Patients Prompt */}
+                {deactivatedMatches.length > 0 && (
+                  <div className="deactivated-restore-section">
+                    <span className="deactivated-restore-section-title">
+                      ¡Pacientes desactivados previamente encontrados ({deactivatedMatches.length})!
+                    </span>
+                    <div className="deactivated-restore-list">
+                      {deactivatedMatches.map((match) => (
+                        <div key={match.id} className="deactivated-restore-card">
+                          <div className="deactivated-restore-info">
+                            <span className="deactivated-restore-title">{match.name}</span>
+                            <span className="deactivated-restore-desc">
+                              {match.documentType}-{match.documentNumber} • {match.contact.email}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-reactivate"
+                            onClick={() => handleReactivatePatient(match.id)}
+                          >
+                            <RotateCcw size={13} />
+                            <span>Reactivar</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">Nombre Completo</label>
                   <input
@@ -718,6 +913,165 @@ const PatientsManagement: React.FC = () => {
                 </button>
                 <button type="submit" className="btn-primary">
                   Guardar Paciente
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Patient */}
+      {isEditModalOpen && editTargetPatient && (
+        <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Editar Información de Paciente</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditPatient}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Nombre Completo</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Tipo Doc.</label>
+                    <select
+                      className="patients-mgmt__select"
+                      style={{ width: '100%' }}
+                      value={editDocType}
+                      onChange={(e) => setEditDocType(e.target.value as 'CC' | 'CE' | 'TI' | 'PAS')}
+                    >
+                      <option value="CC">CC</option>
+                      <option value="CE">CE</option>
+                      <option value="TI">TI</option>
+                      <option value="PAS">PAS</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Número de Documento</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editDocNum}
+                      onChange={(e) => setEditDocNum(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Sexo</label>
+                    <select
+                      className="patients-mgmt__select"
+                      style={{ width: '100%' }}
+                      value={editGender}
+                      onChange={(e) => setEditGender(e.target.value as GenderType)}
+                    >
+                      <option value="Femenino">Femenino</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Edad</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={editAge}
+                      onChange={(e) => setEditAge(e.target.value ? Number(e.target.value) : '')}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Teléfono</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Dirección</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Tipo de Sangre</label>
+                    <select
+                      className="patients-mgmt__select"
+                      style={{ width: '100%' }}
+                      value={editBloodType}
+                      onChange={(e) => setEditBloodType(e.target.value)}
+                    >
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Alergias</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editAllergies}
+                      onChange={(e) => setEditAllergies(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  Actualizar Paciente
                 </button>
               </div>
             </form>

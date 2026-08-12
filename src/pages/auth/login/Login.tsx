@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, User, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-react';
+import { Shield, User, Lock, LogIn, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Header from '../../../components/layout/Header';
 import ThemeToggle from '../../../components/common/ThemeToggle';
 import { useAuth } from '../../../context/AuthContext';
@@ -44,6 +44,7 @@ const Login: React.FC = () => {
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   // UI state
@@ -208,7 +209,7 @@ const Login: React.FC = () => {
                       </span>
                       <input
                         id="login-password"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         className={`login-field__input${errors.password ? ' login-field__input--error' : ''}`}
                         value={password}
                         onChange={(e) => {
@@ -219,6 +220,19 @@ const Login: React.FC = () => {
                         autoComplete="current-password"
                         disabled={loading}
                       />
+                      <button
+                        type="button"
+                        className="login-field__toggle-password"
+                        onClick={() => setShowPassword(!showPassword)}
+                        title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} strokeWidth={2} />
+                        ) : (
+                          <Eye size={16} strokeWidth={2} />
+                        )}
+                      </button>
                     </div>
                     {errors.password && (
                       <p className="login-field__error">{errors.password}</p>

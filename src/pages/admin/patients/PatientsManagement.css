@@ -953,6 +953,130 @@
   cursor: pointer;
 }
 
+/* Trash / Delete Action Button */
+.trash-btn {
+  background: transparent;
+  border: none;
+  color: #EF4444;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.trash-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+  transform: scale(1.1);
+}
+
+.trash-btn__icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Reactivate Icon Button for archived patients */
+.reactivate-icon-btn {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #2563EB;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.reactivate-icon-btn:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+/* Deactivated Patients Section in Modal */
+.deactivated-restore-section {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deactivated-restore-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #166534;
+  display: block;
+}
+
+.deactivated-restore-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.deactivated-restore-card {
+  background: #FFFFFF;
+  border: 1px solid #DCFCE7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deactivated-restore-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deactivated-restore-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803D;
+  display: block;
+}
+
+.deactivated-restore-desc {
+  font-size: 11.5px;
+  color: #4B5563;
+  display: block;
+}
+
+.btn-reactivate {
+  background: #16A34A;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.btn-reactivate:hover {
+  background: #15803D;
+}
+
 /* Toast Message */
 .toast-msg {
   position: fixed;
