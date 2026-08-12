@@ -15,6 +15,7 @@ import {
   FileText,
   CheckCircle,
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 import './AdminReportes.css';
 
 // TypeScript Interfaces
@@ -242,6 +243,9 @@ const profesionalesLista = [
 const usuariosLista = ['Todos', 'Ana Gómez', 'Juan Perez', 'Carlos Ruiz', 'María López'];
 
 const AdminReportes: React.FC = () => {
+  const { user } = useAuth();
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor = role === 'professional' || role === 'profesional' || role === 'medico' || role === 'doctor';
   // Reportes Filter State
   const [repFechaDesde, setRepFechaDesde] = useState('2025-05-01');
   const [repFechaHasta, setRepFechaHasta] = useState('2025-05-31');
@@ -754,8 +758,14 @@ const AdminReportes: React.FC = () => {
                 <Clock size={22} />
               </div>
               <div>
-                <h1 className="col-header__title">Historial</h1>
-                <p className="col-header__subtitle">Consulta el historial de acciones y citas pasadas.</p>
+                <h1 className="col-header__title">
+                  {isDoctor ? 'Historial de Consultas' : 'Historial'}
+                </h1>
+                <p className="col-header__subtitle">
+                  {isDoctor
+                    ? 'Consulta el historial de atenciones clínicas y expedientes de pacientes.'
+                    : 'Consulta el historial de acciones y citas pasadas.'}
+                </p>
               </div>
             </div>
 

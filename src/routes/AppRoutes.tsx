@@ -19,6 +19,10 @@ import RecepPacientes from '../pages/recepcionista/pacientes/Pacientes';
 import RecepCitas from '../pages/recepcionista/citas/Citas';
 import RecepHistorial from '../pages/recepcionista/historial/Historial';
 
+// Doctor / Professional Views
+import ProfessionalDashboard from '../pages/professional/ProfessionalDashboard';
+import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
+
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -50,6 +54,11 @@ const DashboardContainer: React.FC = () => {
   const { user } = useAuth();
   const userRoleLower = (user?.role || '').toLowerCase();
   const isReceptionist = userRoleLower === 'receptionist' || userRoleLower === 'recepcionista';
+  const isDoctor =
+    userRoleLower === 'professional' ||
+    userRoleLower === 'profesional' ||
+    userRoleLower === 'medico' ||
+    userRoleLower === 'doctor';
 
   const getRoleLabel = (role?: string) => {
     const r = (role || '').toLowerCase();
@@ -65,14 +74,16 @@ const DashboardContainer: React.FC = () => {
       userRole={getRoleLabel(user?.role)}
     >
       <Routes>
-        {/* Inicio */}
+        {/* Inicio / Agenda */}
+        <Route path="agenda-medico" element={<ProfessionalDashboard />} />
+        <Route path="mi-agenda" element={<ProfessionalDashboard />} />
         <Route
           path="admin"
-          element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
+          element={isReceptionist ? <RecepInicio /> : isDoctor ? <ProfessionalDashboard /> : <AdminDashboard />}
         />
         <Route
           path="inicio"
-          element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
+          element={isReceptionist ? <RecepInicio /> : isDoctor ? <ProfessionalDashboard /> : <AdminDashboard />}
         />
 
         {/* Pacientes (Vista directorio de pacientes para recepcionista) */}
@@ -91,14 +102,30 @@ const DashboardContainer: React.FC = () => {
           element={isReceptionist ? <RecepCitas /> : <AppointmentsManagement />}
         />
 
-        {/* Historial (Vista recepcionista para consulta histórica solo lectura) */}
+        {/* Historial */}
         <Route
           path="historial-atencion"
-          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+          element={
+            isDoctor ? (
+              <ProfessionalHistory />
+            ) : isReceptionist ? (
+              <RecepHistorial />
+            ) : (
+              <AdminReportes />
+            )
+          }
         />
         <Route
           path="historial"
-          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+          element={
+            isDoctor ? (
+              <ProfessionalHistory />
+            ) : isReceptionist ? (
+              <RecepHistorial />
+            ) : (
+              <AdminReportes />
+            )
+          }
         />
 
         {/* Perfil */}
