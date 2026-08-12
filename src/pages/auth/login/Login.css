@@ -570,10 +570,10 @@
   }
 }
 
-/* Bottom-left theme toggle fixed container */
-.login-bottom-left-toggle {
+/* Top-right theme toggle fixed container */
+.login-top-right-toggle {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  top: 24px;
+  right: 24px;
   z-index: 100;
 }
