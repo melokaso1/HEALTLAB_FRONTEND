@@ -5,7 +5,6 @@ import {
   Search,
   Filter,
   Clock,
-  User,
   Stethoscope,
   FileText,
   AlertTriangle,
@@ -17,7 +16,6 @@ import {
   UserX,
   CalendarDays,
   MoreVertical,
-  RotateCcw,
 } from 'lucide-react';
 import type {
   Appointment,
@@ -32,20 +30,6 @@ import {
 import { mockProfessionals } from '../../../services/professionals.service';
 import { mockPatients } from '../../../services/patients.service';
 import './AppointmentsManagement.css';
-
-/* SVG Trash / Delete Icon */
-const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-    height="18px"
-    viewBox="0 -960 960 960"
-    width="18px"
-    fill="currentColor"
-  >
-    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
-  </svg>
-);
 
 const AppointmentsManagement: React.FC = () => {
   // Main Data States
@@ -127,17 +111,6 @@ const AppointmentsManagement: React.FC = () => {
 
     return { monthTitle, cells };
   }, [calendarViewDate, appointments]);
-
-  const getEventBadgeClass = (appId: number) => {
-    const colors = [
-      'mini-calendar__event--blue',
-      'mini-calendar__event--green',
-      'mini-calendar__event--purple',
-      'mini-calendar__event--orange',
-      'mini-calendar__event--gray',
-    ];
-    return colors[appId % colors.length];
-  };
 
   // Filters
   const [profFilter, setProfFilter] = useState<string>('all');
