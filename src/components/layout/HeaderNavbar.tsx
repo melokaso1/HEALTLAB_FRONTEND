@@ -54,6 +54,8 @@ const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <button
               key={tab.id}
               type="button"
+              title={tab.label}
+              aria-label={tab.label}
               className={`header-navbar__tab${isActive ? ' header-navbar__tab--active' : ''}`}
               onClick={() => onSelectTab(tab.id)}
             >

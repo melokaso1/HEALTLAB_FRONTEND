@@ -58,6 +58,23 @@
   align-items: center;
 }
 
+/* Responsive: Hide text labels on small screens to prevent text overlap */
+@media (max-width: 768px) {
+  .header-navbar__tab-label {
+    display: none;
+  }
+
+  .header-navbar__tab {
+    gap: 0;
+    padding: 0;
+  }
+
+  .header-navbar__tab-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+}
+
 /* Dark mode overrides */
 .dark-mode .header-navbar {
   background: #111827;
