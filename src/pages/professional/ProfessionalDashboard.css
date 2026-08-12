@@ -1,0 +1,958 @@
+.prof-agenda-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1E293B;
+}
+
+/* Header Area */
+.prof-agenda__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.prof-agenda__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prof-agenda__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.prof-agenda__subtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Base Card Container */
+.prof-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+/* 1. DOCTOR HERO PROFILE CARD */
+.prof-hero-card {
+  padding: 20px 24px;
+}
+
+.prof-hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.prof-hero-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.prof-hero-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #0A9396;
+  box-shadow: 0 4px 12px rgba(10, 147, 150, 0.2);
+}
+
+.prof-hero-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prof-hero-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.prof-hero-specialty {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0A9396;
+  margin: 0;
+}
+
+.prof-hero-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
+}
+
+.tag-badge.active-status {
+  background-color: #DCFCE7;
+  color: #15803D;
+  border-color: rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+}
+
+.prof-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 2. FULL-WIDTH WEEKLY CALENDAR CARD */
+.calendar-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Calendar Toolbar */
+.calendar-toolbar {
+  padding: 12px 18px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background-color: #FFFFFF;
+}
+
+.calendar-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.week-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.btn-week-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-week-nav:hover {
+  background-color: #E2E8F0;
+  color: #0F172A;
+}
+
+.week-date-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-today-shortcut {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  background-color: #E0F2FE;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-today-shortcut:hover {
+  background-color: #0284C7;
+  color: #FFFFFF;
+}
+
+.calendar-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.prof-agenda-search-box {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 6px 10px;
+  gap: 6px;
+}
+
+.prof-agenda-search-icon {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.prof-agenda-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  color: #1E293B;
+  width: 180px;
+}
+
+.prof-agenda-filter-select {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+}
+
+/* CSS Grid Timetable Container */
+.calendar-grid-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+}
+
+/* Header Row: 72px for Y-axis hour, repeat(7, minmax(0, 1fr)) for 7 days */
+.calendar-grid-header {
+  display: grid;
+  grid-template-columns: 72px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  box-sizing: border-box;
+}
+
+.time-header-cell {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  border-right: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  box-sizing: border-box;
+}
+
+.day-header-col {
+  padding: 6px 2px;
+  text-align: center;
+  border-right: 1px solid #E2E8F0;
+  box-sizing: border-box;
+}
+
+.day-header-col:last-child {
+  border-right: none;
+}
+
+.day-header-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.day-header-col.is-selected-day .day-header-badge {
+  background-color: #0A9396;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(10, 147, 150, 0.3);
+}
+
+/* Body Scrollable Area (Invisible Scrollbar like AdminProfesionales) */
+.calendar-grid-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  box-sizing: border-box;
+}
+
+.calendar-grid-body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+}
+
+.calendar-hour-row {
+  display: grid;
+  grid-template-columns: 72px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid #E2E8F0;
+  min-height: 76px;
+  box-sizing: border-box;
+}
+
+.time-axis-cell {
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  border-right: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.grid-day-cell {
+  position: relative;
+  padding: 3px;
+  border-right: 1px solid #E2E8F0;
+  transition: background-color 0.15s ease;
+  min-width: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.grid-day-cell:hover {
+  background-color: #F8FAFC;
+}
+
+.grid-day-cell:last-child {
+  border-right: none;
+}
+
+/* Appointment Card Block (Identical to AdminProfesionales) */
+.appointment-card-block {
+  position: relative;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 5px 6px 5px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: inset 4px 0 0 #0A9396, 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.appointment-card-block.status-atendido,
+.appointment-card-block.status-atendida {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: inset 4px 0 0 #10B981, 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.appointment-card-block.status-confirmada {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: inset 4px 0 0 #38BDF8, 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.appointment-card-block.status-en-sala-de-espera,
+.appointment-card-block.status-espera {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: inset 4px 0 0 #F59E0B, 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.appointment-card-block.status-cancelada {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: inset 4px 0 0 #EF4444, 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.appointment-card-block:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 4px 0 0 #0A9396, 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.appointment-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0A9396;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.appointment-patient-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.appointment-time-badge {
+  font-size: 9.5px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  margin-top: 1px;
+}
+
+.status-chip-mini {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.status-chip-mini.atendido,
+.status-chip-mini.atendida {
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+
+.status-chip-mini.confirmada {
+  background-color: #E0F2FE;
+  color: #0369A1;
+}
+
+.status-chip-mini.en-sala-de-espera,
+.status-chip-mini.espera {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.status-chip-mini.cancelada {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0A9396, #005F73);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(10, 147, 150, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(10, 147, 150, 0.35);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: #FFFFFF;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.patient-modal-card {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.patient-modal-card__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #3B82F6;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.patient-modal-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.patient-modal-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E3A8A;
+}
+
+.patient-modal-card__sub {
+  font-size: 11.5px;
+  color: #3B82F6;
+}
+
+.patient-modal-card__reason {
+  font-size: 11.5px;
+  color: #1E40AF;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group--checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.form-input,
+.form-textarea {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #0F172A;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-textarea {
+  resize: vertical;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: #0A9396;
+  box-shadow: 0 0 0 3px rgba(10, 147, 150, 0.12);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  accent-color: #0A9396;
+  width: 15px;
+  height: 15px;
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-secondary {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Toast */
+.toast-msg {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.25);
+  z-index: 400;
+  animation: toastIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====================================================
+   DARK MODE OVERRIDES (Matching AdminProfesionales)
+   ==================================================== */
+.dark-mode .prof-agenda__title {
+  color: #F8FAFC;
+}
+
+.dark-mode .prof-agenda__subtitle {
+  color: #94A3B8;
+}
+
+.dark-mode .prof-card {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .prof-hero-name {
+  color: #F8FAFC;
+}
+
+.dark-mode .prof-hero-specialty {
+  color: #38BDF8;
+}
+
+.dark-mode .tag-badge {
+  background-color: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+.dark-mode .tag-badge.active-status {
+  background-color: rgba(16, 185, 129, 0.25);
+  color: #6EE7B7;
+}
+
+.dark-mode .calendar-toolbar {
+  background-color: #1E293B;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .week-selector-group {
+  background-color: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .btn-week-nav {
+  color: #94A3B8;
+}
+
+.dark-mode .btn-week-nav:hover {
+  background-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .week-date-trigger {
+  background-color: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .btn-today-shortcut {
+  background-color: rgba(56, 189, 248, 0.25);
+  color: #38BDF8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.dark-mode .prof-agenda-search-box,
+.dark-mode .prof-agenda-filter-select {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .prof-agenda-search-input {
+  color: #F8FAFC;
+}
+
+.dark-mode .calendar-grid-container {
+  background-color: #1E293B;
+}
+
+.dark-mode .calendar-grid-header {
+  background-color: #0F172A;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .time-header-cell {
+  background-color: #0F172A;
+  border-right-color: #334155;
+  color: #94A3B8;
+}
+
+.dark-mode .day-header-col {
+  border-right-color: #334155;
+}
+
+.dark-mode .day-header-badge {
+  color: #CBD5E1;
+}
+
+.dark-mode .day-header-col.is-selected-day .day-header-badge {
+  background-color: #0A9396;
+  color: #FFFFFF;
+}
+
+.dark-mode .calendar-hour-row {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .time-axis-cell {
+  background-color: #0F172A;
+  border-right-color: #334155;
+  color: #94A3B8;
+}
+
+.dark-mode .grid-day-cell {
+  border-right-color: #334155;
+}
+
+.dark-mode .grid-day-cell:hover {
+  background-color: rgba(56, 189, 248, 0.08);
+}
+
+/* Appointment Blocks in Dark Mode */
+.dark-mode .appointment-card-block {
+  background-color: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .appointment-card-header {
+  color: #38BDF8;
+}
+
+.dark-mode .appointment-patient-name {
+  color: #F8FAFC;
+}
+
+.dark-mode .appointment-time-badge {
+  color: #94A3B8;
+}
+
+.dark-mode .status-chip-mini.atendido,
+.dark-mode .status-chip-mini.atendida {
+  background-color: rgba(16, 185, 129, 0.25);
+  color: #6EE7B7;
+}
+
+.dark-mode .status-chip-mini.confirmada {
+  background-color: rgba(56, 189, 248, 0.25);
+  color: #7DD3FC;
+}
+
+.dark-mode .status-chip-mini.en-sala-de-espera,
+.dark-mode .status-chip-mini.espera {
+  background-color: rgba(245, 158, 11, 0.25);
+  color: #FDE047;
+}
+
+.dark-mode .status-chip-mini.cancelada {
+  background-color: rgba(239, 68, 68, 0.25);
+  color: #FCA5A5;
+}
+
+.dark-mode .btn-outline {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .btn-outline:hover {
+  background: #334155;
+}
+
+.dark-mode .modal-content {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+.dark-mode .modal-header,
+.dark-mode .modal-footer {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .modal-title {
+  color: #F8FAFC;
+}
+
+.dark-mode .patient-modal-card {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .patient-modal-card__name {
+  color: #F8FAFC;
+}
+
+.dark-mode .patient-modal-card__sub {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-modal-card__reason {
+  color: #38BDF8;
+}
+
+.dark-mode .form-label,
+.dark-mode .checkbox-label {
+  color: #CBD5E1;
+}
+
+.dark-mode .form-input,
+.dark-mode .form-textarea {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .btn-secondary {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}

@@ -6,6 +6,7 @@ import {
   Settings,
   Home,
   Calendar,
+  CalendarDays,
   UserCheck,
   Stethoscope,
   Clock,
@@ -65,6 +66,10 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor = role === 'professional' || role === 'profesional' || role === 'doctor';
+  const isReceptionist = role === 'receptionist' || role === 'recepcionista';
 
   return (
     <header className="header-dashboard">
@@ -157,52 +162,114 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
 
               <div className="github-dropdown-divider" />
 
-              {/* Menu Navigation Links with Navbar Sections + Configuración */}
+              {/* Menu Navigation Links filtered by User Role */}
               <div className="github-dropdown-menu">
-                <button
-                  type="button"
-                  className="github-dropdown-item"
-                  onClick={() => handleNavigate('/admin')}
-                >
-                  <Home size={16} />
-                  <span>Inicio</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="github-dropdown-item"
-                  onClick={() => handleNavigate('/gestion-citas')}
-                >
-                  <Calendar size={16} />
-                  <span>Gestión de Citas</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="github-dropdown-item"
-                  onClick={() => handleNavigate('/pacientes')}
-                >
-                  <UserCheck size={16} />
-                  <span>Pacientes</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="github-dropdown-item"
-                  onClick={() => handleNavigate('/profesionales')}
-                >
-                  <Stethoscope size={16} />
-                  <span>Profesionales</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="github-dropdown-item"
-                  onClick={() => handleNavigate('/historial-atencion')}
-                >
-                  <Clock size={16} />
-                  <span>Historial y Reportes</span>
-                </button>
+                {isDoctor ? (
+                  <>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/agenda-medico')}
+                    >
+                      <CalendarDays size={16} />
+                      <span>Mi Agenda</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/pacientes')}
+                    >
+                      <UserCheck size={16} />
+                      <span>Mis Pacientes</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/gestion-citas')}
+                    >
+                      <Calendar size={16} />
+                      <span>Citas</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/historial-atencion')}
+                    >
+                      <Clock size={16} />
+                      <span>Historial de Atenciones</span>
+                    </button>
+                  </>
+                ) : isReceptionist ? (
+                  <>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/gestion-citas')}
+                    >
+                      <Calendar size={16} />
+                      <span>Gestión de Citas</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/pacientes')}
+                    >
+                      <UserCheck size={16} />
+                      <span>Pacientes</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/admin')}
+                    >
+                      <Home size={16} />
+                      <span>Inicio</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/usuarios')}
+                    >
+                      <UserCheck size={16} />
+                      <span>Usuarios</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/profesionales')}
+                    >
+                      <Stethoscope size={16} />
+                      <span>Profesionales</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/pacientes')}
+                    >
+                      <UserCheck size={16} />
+                      <span>Pacientes</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/gestion-citas')}
+                    >
+                      <Calendar size={16} />
+                      <span>Gestión de Citas</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="github-dropdown-item"
+                      onClick={() => handleNavigate('/historial-atencion')}
+                    >
+                      <Clock size={16} />
+                      <span>Historial y Reportes</span>
+                    </button>
+                  </>
+                )}
 
                 <div className="github-dropdown-divider" />
 

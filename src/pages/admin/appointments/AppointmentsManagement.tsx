@@ -29,11 +29,13 @@ import {
 } from '../../../services/appointments.service';
 import { mockProfessionals } from '../../../services/professionals.service';
 import { mockPatients } from '../../../services/patients.service';
+import { useAuth } from '../../../context/AuthContext';
 import './AppointmentsManagement.css';
 
-
-
 const AppointmentsManagement: React.FC = () => {
+  const { user } = useAuth();
+  const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico';
+
   // Main Data States
   const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
   const [selectedAppId, setSelectedAppId] = useState<number | null>(1); // Default to first appointment
@@ -114,16 +116,7 @@ const AppointmentsManagement: React.FC = () => {
     return { monthTitle, cells };
   }, [calendarViewDate, appointments]);
 
-  const getEventBadgeClass = (appId: number) => {
-    const colors = [
-      'mini-calendar__event--blue',
-      'mini-calendar__event--green',
-      'mini-calendar__event--purple',
-      'mini-calendar__event--orange',
-      'mini-calendar__event--gray',
-    ];
-    return colors[appId % colors.length];
-  };
+
 
   // Filters
   const [profFilter, setProfFilter] = useState<string>('all');
@@ -308,16 +301,20 @@ const AppointmentsManagement: React.FC = () => {
   // Filtered appointments list for table
   const filteredAppointments = useMemo(() => {
     return appointments.filter((app) => {
-      const matchesProf = profFilter === 'all' || app.professionalId === profFilter;
+      const matchesDoctorUser =
+        !isDoctor ||
+        app.professionalId === 'prof-1' ||
+        app.professionalName.toLowerCase().includes((user?.name || '').toLowerCase());
+      const matchesProf = isDoctor || profFilter === 'all' || app.professionalId === profFilter;
       const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
       const matchesSearch =
         app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.professionalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.serviceName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesProf && matchesStatus && matchesSearch;
+      return matchesDoctorUser && matchesProf && matchesStatus && matchesSearch;
     });
-  }, [appointments, profFilter, statusFilter, searchTerm]);
+  }, [appointments, isDoctor, user?.name, profFilter, statusFilter, searchTerm]);
 
   // Helper render badge
   const renderStatusBadge = (status: AppointmentStatus) => {
@@ -454,19 +451,26 @@ const AppointmentsManagement: React.FC = () => {
             <div className="upcoming-filters">
               <div className="upcoming-field">
                 <label className="upcoming-label">Profesional</label>
-                <select
-                  className="citas-select"
-                  style={{ width: '100%' }}
-                  value={profFilter}
-                  onChange={(e) => setProfFilter(e.target.value)}
-                >
-                  <option value="all">Todos los Médicos</option>
-                  {mockProfessionals.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                {isDoctor ? (
+                  <div className="citas-prof-badge">
+                    <Stethoscope size={14} />
+                    <span>{user?.name || 'Dr. Julian Moore'}</span>
+                  </div>
+                ) : (
+                  <select
+                    className="citas-select"
+                    style={{ width: '100%' }}
+                    value={profFilter}
+                    onChange={(e) => setProfFilter(e.target.value)}
+                  >
+                    <option value="all">Todos los Médicos</option>
+                    {mockProfessionals.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="upcoming-field">
@@ -487,6 +491,7 @@ const AppointmentsManagement: React.FC = () => {
             <div className="upcoming-list">
               {appointments
                 .filter((app) => app.date === selectedDate)
+                .filter((app) => !isDoctor || app.professionalId === 'prof-1' || app.professionalName.toLowerCase().includes((user?.name || '').toLowerCase()))
                 .slice(0, 4)
                 .map((app) => {
                   const isSelected = app.id === selectedAppId;
@@ -566,7 +571,7 @@ const AppointmentsManagement: React.FC = () => {
                 <tr>
                   <th style={{ width: '90px' }}>HORA</th>
                   <th>PACIENTE</th>
-                  <th>PROFESIONAL</th>
+                  <th>{isDoctor ? 'CONSULTORIO' : 'PROFESIONAL'}</th>
                   <th>SERVICIO</th>
                   <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }}>ACCIONES</th>
@@ -595,7 +600,9 @@ const AppointmentsManagement: React.FC = () => {
                         </td>
                         <td>
                           <div className="citas-table__prof">
-                            <span className="citas-table__prof-name">{app.professionalName}</span>
+                            <span className="citas-table__prof-name">
+                              {isDoctor ? 'Consultorio 302' : app.professionalName}
+                            </span>
                           </div>
                         </td>
                         <td>
@@ -768,9 +775,10 @@ const AppointmentsManagement: React.FC = () => {
                 <label className="form-label">Profesional</label>
                 <select
                   className="citas-select"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', ...(isDoctor ? { opacity: 0.85, cursor: 'not-allowed' } : {}) }}
                   value={rescheduleProfId}
                   onChange={(e) => setRescheduleProfId(e.target.value)}
+                  disabled={isDoctor}
                 >
                   {mockProfessionals.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -902,9 +910,10 @@ const AppointmentsManagement: React.FC = () => {
                   <label className="form-label">Seleccionar Profesional Médico</label>
                   <select
                     className="citas-select"
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', ...(isDoctor ? { opacity: 0.85, cursor: 'not-allowed' } : {}) }}
                     value={newProfId}
                     onChange={(e) => setNewProfId(e.target.value)}
+                    disabled={isDoctor}
                     required
                   >
                     {mockProfessionals.map((p) => (

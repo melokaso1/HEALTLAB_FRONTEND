@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { Patient, GenderType } from '../../../types/patient.types';
 import { mockPatients } from '../../../services/patients.service';
+import { useAuth } from '../../../context/AuthContext';
 import './PatientsManagement.css';
 
 /* SVG Trash / Delete Icon */
@@ -33,6 +34,9 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const PatientsManagement: React.FC = () => {
+  const { user } = useAuth();
+  const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico' || (user?.role as string) === 'profesional';
+
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
   const [activePatientId, setActivePatientId] = useState<number | null>(1); // Maria Rodriguez open by default
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -67,7 +71,7 @@ const PatientsManagement: React.FC = () => {
           const newNote = {
             id: Date.now(),
             date: 'Hoy',
-            author: 'Director Médico',
+            author: user?.name || (isDoctor ? 'Dr. Julian Moore' : 'Director Médico'),
             text: newNoteText.trim(),
           };
           return {
@@ -80,7 +84,7 @@ const PatientsManagement: React.FC = () => {
     );
 
     setNewNoteText('');
-    showToast('Nota médica agregada correctamente');
+    showToast('Nota clínica agregada correctamente');
   };
 
   // Form State for New Patient
@@ -307,9 +311,13 @@ const PatientsManagement: React.FC = () => {
       {/* Header & Controls Row (Identical Layout to UsersManagement) */}
       <div className="patients-mgmt__header-row">
         <div className="patients-mgmt__title-group">
-          <h1 className="patients-mgmt__title">Gestión de Pacientes</h1>
+          <h1 className="patients-mgmt__title">
+            {isDoctor ? 'Mis Pacientes' : 'Gestión de Pacientes'}
+          </h1>
           <p className="patients-mgmt__subtitle">
-            Administre los expedientes e historial clínico de los pacientes de la clínica.
+            {isDoctor
+              ? 'Directorio de pacientes atendidos en sus consultas médicas e historial de atención.'
+              : 'Administre los expedientes e historial clínico de los pacientes de la clínica.'}
           </p>
         </div>
 

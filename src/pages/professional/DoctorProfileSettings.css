@@ -1,0 +1,598 @@
+.doc-profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1E293B;
+}
+
+/* Header Area */
+.doc-profile__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-profile__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.doc-profile__subtitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Main Two-Column Layout Grid */
+.doc-profile__grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .doc-profile__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Base Card Container */
+.prof-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+/* Left Column: Doctor Profile Main Card */
+.doc-profile-main-card {
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Avatar Header Section */
+.doc-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.doc-avatar-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.doc-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.doc-avatar-edit-btn {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #0A9396;
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(10, 147, 150, 0.3);
+  transition: all 0.15s ease;
+}
+
+.doc-avatar-edit-btn:hover {
+  transform: scale(1.1);
+  background: #005F73;
+}
+
+.doc-profile-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 4px 0 0 0;
+}
+
+.doc-profile-specialty {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0A9396;
+}
+
+/* 4 Metadata Info Boxes Grid */
+.doc-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .doc-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.doc-meta-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-meta-box__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748B;
+}
+
+.doc-meta-icon {
+  color: #0A9396;
+  flex-shrink: 0;
+}
+
+.doc-meta-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.05em;
+}
+
+.doc-meta-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+  margin-left: 24px;
+}
+
+/* Right Column: Preferences & Security */
+.doc-profile-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.side-pref-card,
+.side-sec-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.side-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+/* Preferences Items */
+.pref-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pref-item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.theme-toggle-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.theme-opt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #64748B;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-opt-btn--active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.pref-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pref-link-item:hover {
+  color: #0A9396;
+}
+
+.pref-link-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pref-link-icon {
+  color: #64748B;
+}
+
+.pref-link-arrow {
+  font-size: 16px;
+  color: #94A3B8;
+}
+
+/* Security Action Buttons */
+.btn-sec-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sec-action--change-pass {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #0A9396;
+}
+
+.btn-sec-action--change-pass:hover {
+  background: #F0FDF4;
+  border-color: #0A9396;
+}
+
+.btn-sec-action--logout {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #DC2626;
+}
+
+.btn-sec-action--logout:hover {
+  background: #FEE2E2;
+}
+
+/* Modal Change Password */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.2s ease;
+}
+
+.modal-content.change-pass-modal {
+  background: #FFFFFF;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header__title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0A9396;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.form-input {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #0A9396;
+  box-shadow: 0 0 0 3px rgba(10, 147, 150, 0.12);
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-secondary {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-save-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0A9396, #005F73);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Toast */
+.toast-msg {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.25);
+  z-index: 400;
+  animation: toastIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark Mode Support */
+.dark-mode .doc-profile__title {
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-profile__subtitle {
+  color: #94A3B8;
+}
+
+.dark-mode .prof-card {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-avatar-container {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .doc-profile-name {
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-profile-specialty {
+  color: #38BDF8;
+}
+
+.dark-mode .doc-meta-box {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .doc-meta-box__header {
+  color: #94A3B8;
+}
+
+.doc-meta-icon {
+  color: #38BDF8;
+}
+
+.dark-mode .doc-meta-label {
+  color: #94A3B8;
+}
+
+.dark-mode .doc-meta-value {
+  color: #F8FAFC;
+}
+
+.dark-mode .side-card-title {
+  color: #F8FAFC;
+}
+
+.dark-mode .pref-item-label {
+  color: #94A3B8;
+}
+
+.dark-mode .theme-toggle-group {
+  background: #0F172A;
+}
+
+.dark-mode .theme-opt-btn {
+  color: #94A3B8;
+}
+
+.dark-mode .theme-opt-btn--active {
+  background: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .pref-link-item {
+  color: #CBD5E1;
+}
+
+.dark-mode .pref-link-item:hover {
+  color: #38BDF8;
+}
+
+.dark-mode .pref-link-icon {
+  color: #94A3B8;
+}
+
+.dark-mode .btn-sec-action--change-pass {
+  background: #0F172A;
+  border-color: #334155;
+  color: #38BDF8;
+}
+
+.dark-mode .btn-sec-action--change-pass:hover {
+  background: #334155;
+}
+
+.dark-mode .btn-sec-action--logout {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #FCA5A5;
+}
+
+.dark-mode .btn-sec-action--logout:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.dark-mode .modal-content.change-pass-modal {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+.dark-mode .modal-header,
+.dark-mode .modal-footer {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .modal-title {
+  color: #F8FAFC;
+}
+
+.dark-mode .form-label {
+  color: #CBD5E1;
+}
+
+.dark-mode .form-input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .btn-secondary {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
