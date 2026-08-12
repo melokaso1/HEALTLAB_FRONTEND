@@ -668,3 +668,90 @@
   background: #0A9396;
   color: #FFFFFF;
 }
+
+/* ====================================================
+   MOBILE RESPONSIVE BREAKPOINTS
+   ==================================================== */
+.doc-inicio-view,
+.doc-inicio-grid,
+.doc-main-col,
+.doc-side-col,
+.doc-card {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .doc-card {
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+
+  .doc-hero-banner {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .doc-hero-banner__content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .doc-hero-banner__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .doc-btn-primary,
+  .doc-btn-outline {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .doc-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Schedule Item Responsive Card Layout */
+  .doc-schedule-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .doc-schedule-item__top {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .doc-schedule-item__action {
+    width: 100%;
+  }
+
+  .doc-schedule-item__action .doc-btn-sm {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Patients Quick Grid Responsive Stack */
+  .doc-recent-patients-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .doc-patient-quick-card {
+    width: 100%;
+  }
+
+  .doc-task-item {
+    padding: 10px;
+  }
+}
