@@ -8,6 +8,7 @@ import AdminReportes from '../pages/admin/reportes/AdminReportes';
 import UsersManagement from '../pages/admin/users/UsersManagement';
 import PatientsManagement from '../pages/admin/patients/PatientsManagement';
 import AppointmentsManagement from '../pages/admin/appointments/AppointmentsManagement';
+import AdminProfesionales from '../pages/admin/profesionales/AdminProfesionales';
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -55,16 +56,7 @@ const DashboardContainer: React.FC = () => {
         <Route path="reportes" element={<AdminReportes />} />
         <Route path="estadisticas" element={<AdminReportes />} />
         <Route path="historial-atencion" element={<AdminReportes />} />
-        <Route
-          path="profesionales"
-          element={
-            <NotFound
-              title="Error 404"
-              subtitle="Vista de Profesionales no encontrada"
-              description="La sección de Gestión de Profesionales se encuentra actualmente en desarrollo."
-            />
-          }
-        />
+        <Route path="profesionales" element={<AdminProfesionales />} />
         <Route path="usuarios-roles" element={<UsersManagement />} />
         <Route path="usuarios" element={<UsersManagement />} />
         <Route path="pacientes" element={<PatientsManagement />} />
