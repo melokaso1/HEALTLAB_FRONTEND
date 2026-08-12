@@ -504,7 +504,6 @@ const ProfessionalDashboard: React.FC = () => {
               >
                 <div className="day-header-badge">
                   <span>{dayObj.abrev}</span>
-                  <span style={{ fontSize: '14px' }}>{dayObj.dayNum}</span>
                 </div>
               </div>
             ))}

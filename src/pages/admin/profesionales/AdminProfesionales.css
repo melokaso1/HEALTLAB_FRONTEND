@@ -675,6 +675,8 @@
   padding: 6px 2px;
   text-align: center;
   border-right: 1px solid var(--hl-border);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .day-header-col:last-child {
@@ -683,15 +685,16 @@
 
 .day-header-badge {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 6px;
-  border-radius: var(--hl-radius-md);
-  font-size: 11.5px;
+  padding: 4px 8px;
+  max-width: 100%;
+  border-radius: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--hl-text-main);
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .day-header-col.is-today .day-header-badge,

@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   height: 84px;
-  padding: 0 24px;
+  padding: 0 24px 0 12px;
   background: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
   width: 100%;
@@ -15,7 +15,7 @@
 .header-dashboard__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
 }
 
 .header-dashboard__logo-icon {
@@ -26,9 +26,10 @@
 }
 
 .header-dashboard__logo-title {
-  height: 90px;
+  height: 86px;
   width: auto;
   object-fit: contain;
+  margin-left: -4px;
   transition: filter 0.3s ease;
 }
 
@@ -547,5 +548,46 @@
 
 .dark-mode .github-dropdown-item--logout:hover svg {
   color: #FF7B72;
+}
+
+/* Responsive Breakpoints for Mobile Viewports */
+@media (max-width: 768px) {
+  .header-dashboard {
+    height: 60px;
+    padding: 0 12px;
+    justify-content: space-between;
+  }
+
+  /* Hide the text title image "HEALTLAB" on lower resolutions */
+  .header-dashboard__logo-title {
+    display: none !important;
+  }
+
+  .header-dashboard__logo-icon {
+    height: 40px;
+  }
+
+  .header-dashboard__brand {
+    gap: 0;
+    flex-shrink: 0;
+  }
+
+  /* Guarantee right controls and user avatar are always visible at top-right */
+  .header-dashboard__actions {
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .header-dashboard__user-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .header-dashboard__user-avatar-btn,
+  .github-profile-avatar-btn {
+    flex-shrink: 0;
+  }
 }
 
