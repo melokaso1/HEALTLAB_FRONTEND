@@ -7,6 +7,7 @@ import {
   Calendar,
   Clock,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './HeaderNavbar.css';
 
 export interface NavTab {
@@ -20,23 +21,35 @@ interface HeaderNavbarProps {
   onSelectTab: (tabId: string) => void;
 }
 
-const tabs: NavTab[] = [
+const allTabs: NavTab[] = [
+  { id: 'inicio', label: 'Inicio', icon: <Home size={16} /> },
   { id: 'profesionales', label: 'Profesionales', icon: <Stethoscope size={16} /> },
   { id: 'usuarios', label: 'Usuarios', icon: <Users size={16} /> },
-  { id: 'inicio', label: 'Inicio', icon: <Home size={16} /> },
   { id: 'pacientes', label: 'Pacientes', icon: <UserCheck size={16} /> },
   { id: 'citas', label: 'Citas', icon: <Calendar size={16} /> },
-  { id: 'historial-atencion', label: 'Historial y Reportes', icon: <Clock size={16} /> },
+  { id: 'historial-atencion', label: 'Historial', icon: <Clock size={16} /> },
 ];
 
 const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   activeTab = 'inicio',
   onSelectTab,
 }) => {
+  const { user } = useAuth();
+  const isReceptionist =
+    (user?.role || '').toLowerCase() === 'receptionist' ||
+    (user?.role || '').toLowerCase() === 'recepcionista';
+
+  // Recepcionista Navbar: Inicio, Pacientes, Citas, Historial
+  const visibleTabs = isReceptionist
+    ? allTabs.filter((t) =>
+        ['inicio', 'pacientes', 'citas', 'historial-atencion'].includes(t.id)
+      )
+    : allTabs;
+
   return (
     <nav className="header-navbar">
       <div className="header-navbar__tabs">
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button

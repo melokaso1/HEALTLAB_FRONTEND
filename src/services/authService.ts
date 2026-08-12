@@ -32,17 +32,27 @@ export const loginApi = async (credentials: LoginCredentials): Promise<AuthRespo
     console.warn('[authService] Backend .NET no disponible. Usando autenticación de desarrollo:', error);
 
     const emailLower = credentials.email.toLowerCase();
-    const isDoctor = emailLower.includes('medico') || emailLower.includes('doctor') || emailLower.includes('profesional');
-    const role: UserRole = isDoctor ? 'professional' : 'admin';
-    const name = isDoctor ? 'Dr. Alejandro Silva' : 'Juan Perez';
+    let role: UserRole = 'admin';
+    let name = 'Juan Perez';
+    let id = 1;
+
+    if (emailLower.includes('recep') || emailLower.includes('ana')) {
+      role = 'receptionist';
+      name = 'Ana Martínez';
+      id = 3;
+    } else if (emailLower.includes('medico') || emailLower.includes('doctor') || emailLower.includes('profesional')) {
+      role = 'professional';
+      name = 'Dra. Sarah Jenkins';
+      id = 2;
+    }
 
     return {
       token: `dev-session-token-${Date.now()}`,
       user: {
-        id: isDoctor ? 2 : 1,
-        name: name,
+        id,
+        name,
         email: credentials.email,
-        role: role,
+        role,
       },
     };
   }
