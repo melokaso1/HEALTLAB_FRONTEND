@@ -83,7 +83,7 @@ const mockDoctorsShift: DoctorShift[] = [
     especialidad: 'Pediatría',
     consultorio: 'Consultorio 3',
     citasCount: 18,
-    foto: 'https://images.unsplash.com/photo-1594824813566-88855ce78905?w=200&auto=format&fit=crop&q=80',
+    foto: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&auto=format&fit=crop&q=80',
     estado: 'Disponible',
   },
   {
@@ -102,6 +102,11 @@ const RecepInicio: React.FC = () => {
   const [isRegisterPatientOpen, setIsRegisterPatientOpen] = useState(false);
   const [isScheduleAppointmentOpen, setIsScheduleAppointmentOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
+  const handleImageError = (id: string) => {
+    setImgErrors((prev) => ({ ...prev, [id]: true }));
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -246,7 +251,7 @@ const RecepInicio: React.FC = () => {
               <tbody>
                 {citasList.map((cita) => (
                   <tr key={cita.id}>
-                    <td style={{ fontWeight: 600, color: cita.estado === 'Cancelada' ? '#E82C6A' : '#0F172A' }}>
+                    <td className={`hora-cell ${cita.estado === 'Cancelada' ? 'is-cancelada' : ''}`}>
                       {cita.hora}
                     </td>
                     <td>
@@ -301,11 +306,12 @@ const RecepInicio: React.FC = () => {
               <div key={doc.id} className="doctor-shift-item">
                 <div className="doctor-shift-left">
                   <div className="doctor-shift-avatar-wrapper">
-                    {doc.foto ? (
+                    {doc.foto && !imgErrors[doc.id] ? (
                       <img
                         src={doc.foto}
                         alt={doc.nombre}
                         className="doctor-shift-avatar"
+                        onError={() => handleImageError(doc.id)}
                       />
                     ) : (
                       <div className="doctor-shift-avatar-fallback">

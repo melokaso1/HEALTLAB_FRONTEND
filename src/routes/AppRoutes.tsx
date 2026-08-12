@@ -13,8 +13,9 @@ import AppointmentsManagement from '../pages/admin/appointments/AppointmentsMana
 import AdminProfesionales from '../pages/admin/profesionales/AdminProfesionales';
 import ProfileSettings from '../pages/admin/profile/ProfileSettings';
 
-// Recepcionista View (única vista activa para recepcionista)
+// Recepcionista Views
 import RecepInicio from '../pages/recepcionista/inicio/Inicio';
+import RecepHistorial from '../pages/recepcionista/historial/Historial';
 
 import NotFound from '../components/common/NotFound';
 
@@ -62,7 +63,7 @@ const DashboardContainer: React.FC = () => {
       userRole={getRoleLabel(user?.role)}
     >
       <Routes>
-        {/* Rutas Recepcionista (Se renderiza únicamente la vista de Inicio) */}
+        {/* Inicio */}
         <Route
           path="admin"
           element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
@@ -71,6 +72,18 @@ const DashboardContainer: React.FC = () => {
           path="inicio"
           element={isReceptionist ? <RecepInicio /> : <AdminDashboard />}
         />
+
+        {/* Historial (Vista recepcionista para consulta histórica solo lectura) */}
+        <Route
+          path="historial-atencion"
+          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+        />
+        <Route
+          path="historial"
+          element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
+        />
+
+        {/* Pacientes y Citas (Se mantiene Inicio hasta construir sus módulos dedicados) */}
         <Route
           path="pacientes"
           element={isReceptionist ? <RecepInicio /> : <PatientsManagement />}
@@ -82,14 +95,6 @@ const DashboardContainer: React.FC = () => {
         <Route
           path="citas"
           element={isReceptionist ? <RecepInicio /> : <AppointmentsManagement />}
-        />
-        <Route
-          path="historial-atencion"
-          element={isReceptionist ? <RecepInicio /> : <AdminReportes />}
-        />
-        <Route
-          path="historial"
-          element={isReceptionist ? <RecepInicio /> : <AdminReportes />}
         />
 
         {/* Perfil */}
