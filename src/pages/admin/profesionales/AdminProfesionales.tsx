@@ -18,6 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import type {
   Professional,
@@ -374,17 +376,21 @@ const AdminProfesionales: React.FC = () => {
               )}
             </div>
 
-            {/* Specialty Chips */}
-            <div className="chips-container">
-              {specialtyOptions.map((spec) => (
-                <button
-                  key={spec}
-                  className={`chip-btn ${activeSpecialty === spec ? 'active' : ''}`}
-                  onClick={() => setActiveSpecialty(spec)}
-                >
-                  {spec}
-                </button>
-              ))}
+            {/* Specialty Dropdown Select */}
+            <div className="specialty-select-wrapper">
+              <Filter className="specialty-filter-icon" size={15} />
+              <select
+                className="specialty-select-dropdown"
+                value={activeSpecialty}
+                onChange={(e) => setActiveSpecialty(e.target.value)}
+              >
+                {specialtyOptions.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {spec === 'Todos' ? 'Todas las especialidades' : spec}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="specialty-dropdown-chevron" size={14} />
             </div>
           </div>
 
@@ -583,7 +589,7 @@ const AdminProfesionales: React.FC = () => {
                   <div className="calendar-toolbar__right">
                     <button
                       className="btn-outline"
-                      style={{ padding: '6px 12px', fontSize: '12.5px' }}
+                      style={{ padding: '5px 10px', fontSize: '12px' }}
                       onClick={() => {
                         setNewAppointmentSlot({ dayAbrev: 'MIÉ', timeStr: '09:00' });
                         setIsNewAppointmentOpen(true);
@@ -595,103 +601,100 @@ const AdminProfesionales: React.FC = () => {
 
                     <button
                       className="btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '12.5px' }}
+                      style={{ padding: '5px 12px', fontSize: '12px' }}
+                      title="Configurar disponibilidad"
                       onClick={() => setIsConfigureScheduleOpen(true)}
                     >
                       <Settings size={14} />
-                      <span>Configurar disponibilidad</span>
+                      <span>Configurar Horario</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Timetable Grid View */}
-                <div className="calendar-grid-wrapper">
-                  <table className="calendar-grid-table">
-                    {/* Header Row: Column Days */}
-                    <thead className="calendar-grid-header">
-                      <tr>
-                        <th className="time-header-cell">HORA</th>
-                        {weekDays.map((d) => (
-                          <th
-                            key={d.diaAbrev}
-                            className={`day-header-col ${
-                              d.isToday ? 'is-today' : ''
-                            } ${d.diaAbrev === 'MIÉ' ? 'is-selected-day' : ''}`}
-                          >
-                            <div className="day-header-badge">
-                              {d.label}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
+                {/* Timetable CSS Grid View */}
+                <div className="calendar-grid-container">
+                  {/* Header Row: Column Days */}
+                  <div className="calendar-grid-header">
+                    <div className="time-header-cell">HORA</div>
+                    {weekDays.map((d) => (
+                      <div
+                        key={d.diaAbrev}
+                        className={`day-header-col ${
+                          d.isToday ? 'is-today' : ''
+                        } ${d.diaAbrev === 'MIÉ' ? 'is-selected-day' : ''}`}
+                      >
+                        <div className="day-header-badge">
+                          {d.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                    {/* Body Rows: Vertical Hours Axis (07:00 a.m. - 20:00 p.m.) */}
-                    <tbody>
-                      {HOURLY_SLOTS.map((hourStr) => (
-                        <tr key={hourStr} className="calendar-time-row">
-                          {/* Y-Axis Hour Label */}
-                          <td className="time-axis-cell">
-                            {formatTimeLabel(hourStr)}
-                          </td>
+                  {/* Body Rows: Vertical Hours Axis (07:00 a.m. - 20:00 p.m.) */}
+                  <div className="calendar-grid-body">
+                    {HOURLY_SLOTS.map((hourStr) => (
+                      <div key={hourStr} className="calendar-hour-row">
+                        {/* Y-Axis Hour Label */}
+                        <div className="time-axis-cell">
+                          {formatTimeLabel(hourStr)}
+                        </div>
 
-                          {/* 7 Days Columns for this hour */}
-                          {weekDays.map((day) => {
-                            const app = getAppointmentAtSlot(day.diaAbrev, hourStr);
-                            const available = isAvailableSlot(day.diaAbrev, hourStr);
+                        {/* 7 Days Columns for this hour */}
+                        {weekDays.map((day) => {
+                          const app = getAppointmentAtSlot(day.diaAbrev, hourStr);
+                          const available = isAvailableSlot(day.diaAbrev, hourStr);
 
-                            return (
-                              <td
-                                key={`${day.diaAbrev}-${hourStr}`}
-                                className={`grid-day-cell ${
-                                  available ? 'is-available-slot' : ''
-                                }`}
-                                onClick={() => {
-                                  if (!app && available) {
-                                    setNewAppointmentSlot({
-                                      dayAbrev: day.diaAbrev,
-                                      timeStr: hourStr,
-                                    });
-                                    setIsNewAppointmentOpen(true);
-                                  }
-                                }}
-                              >
-                                {app ? (
-                                  <div
-                                    className="appointment-card-block"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedAppointment(app);
-                                    }}
-                                  >
-                                    <h4 className="appointment-card-header">
-                                      <Stethoscope size={13} />
-                                      <span>{app.motivoConsulta}</span>
-                                    </h4>
+                          return (
+                            <div
+                              key={`${day.diaAbrev}-${hourStr}`}
+                              className={`grid-day-cell ${
+                                available ? 'is-available-slot' : ''
+                              }`}
+                              onClick={() => {
+                                if (!app && available) {
+                                  setNewAppointmentSlot({
+                                    dayAbrev: day.diaAbrev,
+                                    timeStr: hourStr,
+                                  });
+                                  setIsNewAppointmentOpen(true);
+                                }
+                              }}
+                            >
+                              {app ? (
+                                <div
+                                  className={`appointment-card-block status-${app.estado.toLowerCase()}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedAppointment(app);
+                                  }}
+                                >
+                                  <h4 className="appointment-card-header">
+                                    <Stethoscope size={12} />
+                                    <span>{app.motivoConsulta}</span>
+                                  </h4>
 
-                                    <p className="appointment-patient-name">
-                                      {app.pacienteNombre}
-                                    </p>
+                                  <p className="appointment-patient-name">
+                                    {app.pacienteNombre}
+                                  </p>
 
-                                    <div className="appointment-time-badge">
-                                      <span>
-                                        {app.horaInicio} - {app.horaFin}
-                                      </span>
-                                      <span
-                                        className={`status-chip-mini ${app.estado.toLowerCase()}`}
-                                      >
-                                        {app.estado}
-                                      </span>
-                                    </div>
+                                  <div className="appointment-time-badge">
+                                    <span>
+                                      {app.horaInicio} - {app.horaFin}
+                                    </span>
+                                    <span
+                                      className={`status-chip-mini ${app.estado.toLowerCase()}`}
+                                    >
+                                      {app.estado}
+                                    </span>
                                   </div>
-                                ) : null}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Footer Legend */}
