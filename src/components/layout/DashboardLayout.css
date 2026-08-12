@@ -35,9 +35,7 @@
 /* Content viewport */
 .dashboard-layout__content {
   flex: 1;
-  padding: 24px 32px;
-  max-width: 1600px;
-  margin: 0;
+  padding: 24px 28px;
   width: 100%;
   box-sizing: border-box;
 }
