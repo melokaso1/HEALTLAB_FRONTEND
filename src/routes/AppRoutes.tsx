@@ -16,6 +16,7 @@ import ProfileSettings from '../pages/admin/profile/ProfileSettings';
 // Recepcionista Views
 import RecepInicio from '../pages/recepcionista/inicio/Inicio';
 import RecepPacientes from '../pages/recepcionista/pacientes/Pacientes';
+import RecepCitas from '../pages/recepcionista/citas/Citas';
 import RecepHistorial from '../pages/recepcionista/historial/Historial';
 
 import NotFound from '../components/common/NotFound';
@@ -80,6 +81,16 @@ const DashboardContainer: React.FC = () => {
           element={isReceptionist ? <RecepPacientes /> : <PatientsManagement />}
         />
 
+        {/* Citas (Vista agendamiento y gestión diaria para recepcionista) */}
+        <Route
+          path="gestion-citas"
+          element={isReceptionist ? <RecepCitas /> : <AppointmentsManagement />}
+        />
+        <Route
+          path="citas"
+          element={isReceptionist ? <RecepCitas /> : <AppointmentsManagement />}
+        />
+
         {/* Historial (Vista recepcionista para consulta histórica solo lectura) */}
         <Route
           path="historial-atencion"
@@ -88,16 +99,6 @@ const DashboardContainer: React.FC = () => {
         <Route
           path="historial"
           element={isReceptionist ? <RecepHistorial /> : <AdminReportes />}
-        />
-
-        {/* Citas (Se mantiene Inicio hasta construir su módulo dedicado) */}
-        <Route
-          path="gestion-citas"
-          element={isReceptionist ? <RecepInicio /> : <AppointmentsManagement />}
-        />
-        <Route
-          path="citas"
-          element={isReceptionist ? <RecepInicio /> : <AppointmentsManagement />}
         />
 
         {/* Perfil */}

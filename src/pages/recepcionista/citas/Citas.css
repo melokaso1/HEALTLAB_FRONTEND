@@ -1,0 +1,623 @@
+/* Citas.css - Receptionist Appointment Management View for HEALTLAB */
+
+.recep-citas-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--hl-text-main);
+}
+
+/* Breadcrumb Subheader */
+.recep-breadcrumb {
+  font-size: 13px;
+  color: var(--hl-text-sub);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.recep-breadcrumb span.active {
+  font-weight: 700;
+  color: var(--hl-text-main);
+}
+
+/* Main 2-Column Flex Layout (Clean Separation without Overlap) */
+.recep-citas-layout {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .recep-citas-layout {
+    flex-direction: column;
+  }
+  .nueva-cita-card {
+    width: 100% !important;
+  }
+}
+
+/* Left Main Column Container (~65-70%) */
+.citas-left-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Calendar Card Container (Shrunk & Compact) */
+.calendar-card {
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Top Toolbar inside Calendar Card */
+.calendar-toolbar {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hl-border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.view-pills {
+  display: flex;
+  align-items: center;
+  background-color: var(--hl-bg-page);
+  padding: 3px;
+  border-radius: var(--hl-radius-md);
+  border: 1px solid var(--hl-border);
+}
+
+.pill-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--hl-text-sub);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill-btn.active {
+  background-color: var(--hl-card-bg);
+  color: var(--hl-text-main);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.date-navigator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-arrow-btn {
+  background: none;
+  border: none;
+  color: var(--hl-text-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.nav-arrow-btn:hover {
+  color: var(--hl-primary);
+}
+
+.current-date-range {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+}
+
+.btn-filtros {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  padding: 5px 12px;
+  border-radius: var(--hl-radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-filtros:hover {
+  border-color: var(--hl-primary);
+  color: var(--hl-primary);
+}
+
+/* Calendar Grid Timetable Rules */
+.calendar-timetable {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.calendar-header-row {
+  display: grid;
+  grid-template-columns: 55px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--hl-border);
+  background-color: var(--hl-card-bg);
+  min-width: 500px;
+}
+
+.header-empty-cell {
+  border-right: 1px solid var(--hl-border);
+  background-color: var(--hl-bg-page);
+}
+
+.header-day-cell {
+  padding: 8px 4px;
+  text-align: center;
+  border-right: 1px solid var(--hl-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.header-day-cell:last-child {
+  border-right: none;
+}
+
+.day-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hl-text-sub);
+}
+
+.day-num-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--hl-text-main);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-day-cell.is-today .day-num-badge {
+  background-color: var(--hl-primary);
+  color: #FFFFFF;
+}
+
+/* Body Scrollable Grid (Invisible Scrollbar) */
+.calendar-body-grid {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 500px;
+}
+
+.calendar-body-grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 55px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--hl-border);
+  min-height: 64px;
+}
+
+.time-label-cell {
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hl-text-sub);
+  border-right: 1px solid var(--hl-border);
+  background-color: var(--hl-bg-page);
+}
+
+.slot-cell {
+  border-right: 1px solid var(--hl-border);
+  position: relative;
+  padding: 4px;
+  background-color: var(--hl-card-bg);
+}
+
+.slot-cell:last-child {
+  border-right: none;
+}
+
+/* Appointment Block Cards inside Grid */
+.agenda-block {
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.agenda-block:hover {
+  transform: scale(1.02);
+}
+
+.agenda-block.teal {
+  background-color: #00A896;
+  color: #FFFFFF;
+}
+
+.agenda-block.blue {
+  background-color: #EEF2FF;
+  color: #4C62D6;
+  border-left: 3px solid #4C62D6;
+}
+
+.agenda-block.red {
+  background-color: #FFF1F2;
+  color: #E82C6A;
+  border-left: 3px solid #E82C6A;
+}
+
+.block-patient {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-desc {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.95;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-time {
+  font-size: 9.5px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-top: 1px;
+}
+
+/* Bottom Card: Citas de Hoy (Stretches to align bottom with right panel) */
+.citas-hoy-card {
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.citas-hoy-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hl-border);
+}
+
+.citas-hoy-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  margin: 0;
+}
+
+.count-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hl-secondary-blue);
+  background-color: var(--hl-secondary-blue-light);
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.citas-hoy-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.citas-hoy-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.citas-hoy-table th {
+  padding: 12px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hl-text-sub);
+  background-color: var(--hl-bg-page);
+  border-bottom: 1px solid var(--hl-border);
+  text-transform: uppercase;
+}
+
+.citas-hoy-table td {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--hl-text-main);
+  border-bottom: 1px solid var(--hl-border);
+  vertical-align: middle;
+}
+
+.citas-hoy-table tr:last-child td {
+  border-bottom: none;
+}
+
+.citas-hoy-table tr:hover td {
+  background-color: var(--hl-bg-page);
+}
+
+.status-bullet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.status-bullet-badge.atendida {
+  background-color: #ECFDF5;
+  color: #10B981;
+}
+
+.status-bullet-badge.cancelada {
+  background-color: #FFF1F2;
+  color: #E82C6A;
+}
+
+.status-bullet-badge.agendada {
+  background-color: #EEF2FF;
+  color: #4C62D6;
+}
+
+/* Right Panel: Nueva Cita Card (~360px Fixed Width) */
+.nueva-cita-card {
+  width: 360px;
+  flex-shrink: 0;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.nueva-cita-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nueva-cita-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  margin: 0;
+}
+
+.btn-close-form {
+  background: none;
+  border: none;
+  color: var(--hl-text-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-form:hover {
+  color: var(--hl-danger);
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+}
+
+.search-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-field-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--hl-text-sub);
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  color: var(--hl-text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.search-field-wrapper .field-input {
+  padding-left: 32px;
+}
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: var(--hl-primary);
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.date-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field-textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.nueva-cita-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-limpiar {
+  flex: 1;
+  padding: 9px 16px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-limpiar:hover {
+  background-color: var(--hl-bg-page);
+}
+
+.btn-agendar-main {
+  flex: 1.5;
+  padding: 9px 16px;
+  background-color: var(--hl-primary);
+  border: none;
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--hl-shadow-sm);
+}
+
+.btn-agendar-main:hover {
+  background-color: var(--hl-primary-hover);
+}
+
+/* Dark Mode Overrides */
+.dark-mode .calendar-header-row,
+.dark-mode .time-label-cell,
+.dark-mode .header-empty-cell {
+  background-color: #0F172A;
+}
+
+.dark-mode .header-day-cell {
+  border-color: #334155;
+}
+
+.dark-mode .slot-cell {
+  background-color: #1E293B;
+  border-color: #334155;
+}
+
+.dark-mode .time-row {
+  border-color: #334155;
+}
+
+.dark-mode .day-name,
+.dark-mode .field-label {
+  color: #94A3B8;
+}
+
+.dark-mode .citas-hoy-table th {
+  background-color: #0F172A;
+  color: #94A3B8;
+}
+
+.dark-mode .citas-hoy-table td {
+  color: #F8FAFC;
+  border-color: #334155;
+}
+
+.dark-mode .citas-hoy-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.dark-mode .status-bullet-badge.atendida {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+}
+
+.dark-mode .status-bullet-badge.cancelada {
+  background-color: rgba(232, 44, 106, 0.2);
+  color: #F472B6;
+}
+
+.dark-mode .status-bullet-badge.agendada {
+  background-color: rgba(76, 98, 214, 0.25);
+  color: #818CF8;
+}
