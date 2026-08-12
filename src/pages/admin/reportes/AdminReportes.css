@@ -9,7 +9,7 @@
   display: grid;
   grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
   width: 100%;
 }
 
@@ -21,6 +21,7 @@
   gap: 16px;
   width: 100%;
   min-width: 0;
+  height: 100%;
 }
 
 /* Column Headers */
@@ -315,6 +316,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px 18px;
+  flex: 1;
 }
 
 .calendar-card__header {
