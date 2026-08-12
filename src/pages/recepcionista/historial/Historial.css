@@ -1,0 +1,335 @@
+/* Historial.css - Receptionist Appointment History View for HEALTLAB */
+
+.recep-historial-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--hl-text-main);
+}
+
+/* Header Title Section */
+.recep-historial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.recep-historial-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recep-historial-header__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.recep-historial-header__subtitle {
+  font-size: 14px;
+  color: var(--hl-text-sub);
+  margin: 0;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--hl-card-bg);
+  color: var(--hl-text-main);
+  border: 1px solid var(--hl-border);
+  padding: 9px 16px;
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--hl-shadow-sm);
+}
+
+.btn-export:hover {
+  background-color: var(--hl-bg-page);
+  border-color: var(--hl-primary);
+  color: var(--hl-primary);
+}
+
+/* Filter Card Panel */
+.recep-filter-card {
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  padding: 20px;
+  box-shadow: var(--hl-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recep-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .recep-filter-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .recep-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hl-text-sub);
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  color: var(--hl-text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  border-color: var(--hl-primary);
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.btn-filtrar {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--hl-primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 24px;
+  border-radius: var(--hl-radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--hl-shadow-sm);
+}
+
+.btn-filtrar:hover {
+  background-color: var(--hl-primary-hover);
+}
+
+/* History Data Table Card */
+.recep-table-card {
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  overflow: hidden;
+}
+
+.recep-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.historial-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.historial-table th {
+  padding: 14px 18px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--hl-text-sub);
+  background-color: var(--hl-bg-page);
+  border-bottom: 1px solid var(--hl-border);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.historial-table td {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--hl-text-main);
+  border-bottom: 1px solid var(--hl-border);
+  vertical-align: middle;
+}
+
+.historial-table tr:last-child td {
+  border-bottom: none;
+}
+
+.historial-table tr:hover td {
+  background-color: var(--hl-bg-page);
+}
+
+.fecha-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fecha-date {
+  font-weight: 700;
+  color: var(--hl-text-main);
+}
+
+.fecha-time {
+  font-size: 12px;
+  color: var(--hl-text-sub);
+  font-weight: 500;
+}
+
+.paciente-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paciente-nombre {
+  font-weight: 700;
+  color: var(--hl-text-main);
+}
+
+.paciente-dni {
+  font-size: 12px;
+  color: var(--hl-text-sub);
+}
+
+/* Status Badges */
+.historial-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.historial-status-badge.atendido {
+  background-color: #ECFDF5;
+  color: #10B981;
+  border: 1px solid #A7F3D0;
+}
+
+.historial-status-badge.cancelado {
+  background-color: #FFF1F2;
+  color: #E82C6A;
+  border: 1px solid #FECDD3;
+}
+
+.historial-status-badge.no-asistio {
+  background-color: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.motivo-text {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--hl-text-sub);
+}
+
+.btn-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hl-border);
+  background-color: var(--hl-card-bg);
+  color: var(--hl-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-icon:hover {
+  background-color: var(--hl-primary-light);
+  border-color: var(--hl-primary);
+}
+
+/* Table Footer Pagination */
+.recep-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: var(--hl-card-bg);
+  border-top: 1px solid var(--hl-border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.recep-records-count {
+  font-size: 13px;
+  color: var(--hl-text-sub);
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--hl-radius-md);
+  border: 1px solid var(--hl-border);
+  background-color: var(--hl-card-bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover {
+  border-color: var(--hl-primary);
+  color: var(--hl-primary);
+}
+
+.page-btn.active {
+  background-color: var(--hl-primary);
+  color: #FFFFFF;
+  border-color: var(--hl-primary);
+}

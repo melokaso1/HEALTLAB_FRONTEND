@@ -116,7 +116,16 @@ const AppointmentsManagement: React.FC = () => {
     return { monthTitle, cells };
   }, [calendarViewDate, appointments]);
 
-
+  const getEventBadgeClass = (appId: number) => {
+    const colors = [
+      'mini-calendar__event--blue',
+      'mini-calendar__event--green',
+      'mini-calendar__event--purple',
+      'mini-calendar__event--orange',
+      'mini-calendar__event--gray',
+    ];
+    return colors[appId % colors.length];
+  };
 
   // Filters
   const [profFilter, setProfFilter] = useState<string>('all');

@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Login from '../pages/auth/login/Login';
 import DashboardLayout from '../components/layout/DashboardLayout';
+
+// Admin Views
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminReportes from '../pages/admin/reportes/AdminReportes';
 import UsersManagement from '../pages/admin/users/UsersManagement';
@@ -13,6 +15,11 @@ import ProfileSettings from '../pages/admin/profile/ProfileSettings';
 import ProfessionalDashboard from '../pages/professional/ProfessionalDashboard';
 import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
 import DoctorProfileSettings from '../pages/professional/DoctorProfileSettings';
+
+// Recepcionista Views
+import RecepInicio from '../pages/recepcionista/inicio/Inicio';
+import RecepHistorial from '../pages/recepcionista/historial/Historial';
+
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -44,7 +51,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
       (r) => r.toLowerCase() === userRole || (r === 'profesional' && userRole === 'professional')
     );
     if (!hasPermission) {
-      return <Navigate to={getInitialRouteForRole(userRole)} replace />;
+      const defaultRoute = userRole === 'admin' ? '/admin' : '/admin';
+      return <Navigate to={defaultRoute} replace />;
     }
   }
 
@@ -53,8 +61,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
 
 const DashboardContainer: React.FC = () => {
   const { user } = useAuth();
-  const role = (user?.role || '').toLowerCase();
-  const isDoctor = role === 'professional' || role === 'profesional' || role === 'doctor';
 
   const getRoleLabel = (role?: string) => {
     const r = (role || '').toLowerCase();
@@ -65,88 +71,25 @@ const DashboardContainer: React.FC = () => {
   };
 
   return (
-    <DashboardLayout userName={user?.name || 'Juan Perez'} userRole={getRoleLabel(user?.role)}>
+    <DashboardLayout
+      userName={user?.name || (isReceptionist ? 'Ana Martínez' : 'Juan Perez')}
+      userRole={getRoleLabel(user?.role)}
+    >
       <Routes>
-        <Route
-          path=""
-          element={<Navigate to={getInitialRouteForRole(user?.role)} replace />}
-        />
-        <Route
-          path="admin"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="inicio"
-          element={
-            isDoctor ? (
-              <Navigate to="/agenda-medico" replace />
-            ) : (
-              <AdminDashboard />
-            )
-          }
-        />
-        <Route path="agenda-medico" element={<ProfessionalDashboard />} />
-        <Route path="mi-agenda" element={<ProfessionalDashboard />} />
-        <Route path="profesional" element={<ProfessionalDashboard />} />
-        <Route
-          path="reportes"
-          element={isDoctor ? <ProfessionalHistory /> : <AdminReportes />}
-        />
-        <Route
-          path="estadisticas"
-          element={isDoctor ? <ProfessionalHistory /> : <AdminReportes />}
-        />
-        <Route
-          path="historial-atencion"
-          element={isDoctor ? <ProfessionalHistory /> : <AdminReportes />}
-        />
-        <Route
-          path="historial"
-          element={isDoctor ? <ProfessionalHistory /> : <AdminReportes />}
-        />
-        <Route
-          path="profesionales"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminProfesionales />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="usuarios-roles"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <UsersManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="usuarios"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <UsersManagement />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="admin" element={<AdminDashboard />} />
+        <Route path="inicio" element={<AdminDashboard />} />
+        <Route path="reportes" element={<AdminReportes />} />
+        <Route path="estadisticas" element={<AdminReportes />} />
+        <Route path="historial-atencion" element={<AdminReportes />} />
+        <Route path="profesionales" element={<AdminProfesionales />} />
+        <Route path="usuarios-roles" element={<UsersManagement />} />
+        <Route path="usuarios" element={<UsersManagement />} />
         <Route path="pacientes" element={<PatientsManagement />} />
         <Route path="gestion-citas" element={<AppointmentsManagement />} />
         <Route path="citas" element={<AppointmentsManagement />} />
-        <Route
-          path="configuracion"
-          element={isDoctor ? <DoctorProfileSettings /> : <ProfileSettings />}
-        />
-        <Route
-          path="perfil"
-          element={isDoctor ? <DoctorProfileSettings /> : <ProfileSettings />}
-        />
-        <Route
-          path="settings"
-          element={isDoctor ? <DoctorProfileSettings /> : <ProfileSettings />}
-        />
+        <Route path="configuracion" element={<ProfileSettings />} />
+        <Route path="perfil" element={<ProfileSettings />} />
+        <Route path="settings" element={<ProfileSettings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
@@ -161,11 +104,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/login"
         element={
-          isAuthenticated ? (
-            <Navigate to={getInitialRouteForRole(user?.role)} replace />
-          ) : (
-            <Login />
-          )
+          isAuthenticated ? <Navigate to="/admin" replace /> : <Login />
         }
       />
       <Route
