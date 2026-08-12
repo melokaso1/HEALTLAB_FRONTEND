@@ -20,6 +20,7 @@ import RecepCitas from '../pages/recepcionista/citas/Citas';
 import RecepHistorial from '../pages/recepcionista/historial/Historial';
 
 // Doctor / Professional Views
+import DoctorInicio from '../pages/professional/DoctorInicio';
 import ProfessionalDashboard from '../pages/professional/ProfessionalDashboard';
 import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
 
@@ -79,12 +80,13 @@ const DashboardContainer: React.FC = () => {
         <Route path="mi-agenda" element={<ProfessionalDashboard />} />
         <Route
           path="admin"
-          element={isReceptionist ? <RecepInicio /> : isDoctor ? <ProfessionalDashboard /> : <AdminDashboard />}
+          element={isReceptionist ? <RecepInicio /> : isDoctor ? <DoctorInicio /> : <AdminDashboard />}
         />
         <Route
           path="inicio"
-          element={isReceptionist ? <RecepInicio /> : isDoctor ? <ProfessionalDashboard /> : <AdminDashboard />}
+          element={isReceptionist ? <RecepInicio /> : isDoctor ? <DoctorInicio /> : <AdminDashboard />}
         />
+        <Route path="doctor-inicio" element={<DoctorInicio />} />
 
         {/* Pacientes (Vista directorio de pacientes para recepcionista) */}
         <Route

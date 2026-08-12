@@ -49,6 +49,7 @@ const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
   if (isDoctor) {
     visibleTabs = [
+      { id: 'inicio', label: 'Inicio', icon: <Home size={16} /> },
       { id: 'agenda-medico', label: 'Mi Agenda', icon: <Calendar size={16} /> },
       { id: 'pacientes', label: 'Mis Pacientes', icon: <UserCheck size={16} /> },
       { id: 'citas', label: 'Citas', icon: <Calendar size={16} /> },
