@@ -35,15 +35,30 @@ const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onSelectTab,
 }) => {
   const { user } = useAuth();
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor =
+    role === 'professional' ||
+    role === 'profesional' ||
+    role === 'medico' ||
+    role === 'doctor';
   const isReceptionist =
-    (user?.role || '').toLowerCase() === 'receptionist' ||
-    (user?.role || '').toLowerCase() === 'recepcionista';
+    role === 'receptionist' ||
+    role === 'recepcionista';
 
-  const visibleTabs = isReceptionist
-    ? allTabs.filter((t) =>
-        ['inicio', 'pacientes', 'citas', 'historial-atencion'].includes(t.id)
-      )
-    : allTabs;
+  let visibleTabs = allTabs;
+
+  if (isDoctor) {
+    visibleTabs = [
+      { id: 'agenda-medico', label: 'Mi Agenda', icon: <Calendar size={16} /> },
+      { id: 'pacientes', label: 'Mis Pacientes', icon: <UserCheck size={16} /> },
+      { id: 'citas', label: 'Citas', icon: <Calendar size={16} /> },
+      { id: 'historial-atencion', label: 'Historial de Atenciones', icon: <Clock size={16} /> },
+    ];
+  } else if (isReceptionist) {
+    visibleTabs = allTabs.filter((t) =>
+      ['inicio', 'pacientes', 'citas', 'historial-atencion'].includes(t.id)
+    );
+  }
 
   return (
     <nav className="header-navbar">
