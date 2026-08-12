@@ -95,64 +95,226 @@
   border-radius: 50%;
 }
 
-/* User Wrapper & Card */
+/* User Wrapper & Avatar Button */
 .header-dashboard__user-wrapper {
   position: relative;
-}
-
-.header-dashboard__user {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 4px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 30px;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.2s ease;
 }
 
-.header-dashboard__user:hover,
-.header-dashboard__user--open {
-  background: #F1F5F9;
-  border-color: #CBD5E1;
+.header-dashboard__user-avatar-btn {
+  position: relative;
+  background: transparent;
+  border: 2px solid #E2E8F0;
+  border-radius: 50%;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.header-dashboard__user-avatar-btn:hover,
+.header-dashboard__user-avatar-btn--open {
+  border-color: #00A896;
+  box-shadow: 0 0 0 4px rgba(0, 168, 150, 0.18);
+  transform: scale(1.05);
 }
 
 .header-dashboard__user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 
-.header-dashboard__user-info {
+/* GitHub Style Profile Dropdown Popover (Light Theme Default) */
+.github-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 14px 32px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  padding: 8px 0;
+  z-index: 200;
+  animation: githubDropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes githubDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.github-profile-card {
+  padding: 10px 14px 8px 14px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
-.header-dashboard__user-name {
+.github-profile-card__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.github-profile-card__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #E2E8F0;
+}
+
+.github-profile-card__details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.github-profile-card__name {
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0F172A;
   line-height: 1.2;
 }
 
-.header-dashboard__user-role {
+.github-profile-card__username,
+.github-profile-card__email {
   font-size: 11.5px;
   color: #64748B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 145px;
 }
 
-.header-dashboard__user-chevron {
+.github-profile-card__role {
+  font-size: 11px;
+  color: #00A896;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.github-profile-card__switch-btn {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
   color: #64748B;
-  transition: transform 0.2s ease;
-
-  &.header-dashboard__user-chevron--rotated {
-    transform: rotate(180deg);
-  }
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
-/* Floating Dropdown Menu */
+.github-profile-card__switch-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.github-profile-card__status-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.github-profile-card__status-btn:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.github-status-icon {
+  color: #10B981;
+}
+
+.github-dropdown-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 6px 0;
+}
+
+.github-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.github-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.github-dropdown-item svg {
+  color: #64748B;
+  transition: all 0.15s ease;
+}
+
+.github-dropdown-item:hover {
+  background: #F1F5F9;
+  color: #00A896;
+}
+
+.github-dropdown-item:hover svg {
+  color: #00A896;
+  transform: translateX(2px);
+}
+
+.github-dropdown-item--logout {
+  color: #EF4444;
+}
+
+.github-dropdown-item--logout svg {
+  color: #EF4444;
+}
+
+.github-dropdown-item--logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
+}
+
+.github-dropdown-item--logout:hover svg {
+  color: #DC2626;
+  transform: translateX(2px);
+}
+
+/* Floating Dropdown Menu (Legacy fallback) */
 .header-dashboard__user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -221,11 +383,11 @@
 
 .header-dashboard__dropdown-item--logout {
   color: #EF4444;
+}
 
-  &:hover {
-    background: rgba(239, 68, 68, 0.08);
-    color: #DC2626;
-  }
+.header-dashboard__dropdown-item--logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
 }
 
 /* Dark mode overrides */
@@ -257,25 +419,14 @@
   border-color: #1E293B;
 }
 
-.dark-mode .header-dashboard__user {
-  background: #0F172A;
+.dark-mode .header-dashboard__user-avatar-btn {
   border-color: #334155;
 }
 
-.dark-mode .header-dashboard__user:hover {
-  background: #253049;
-}
-
-.dark-mode .header-dashboard__user-name {
-  color: #F1F5F9;
-}
-
-.dark-mode .header-dashboard__user-role {
-  color: #94A3B8;
-}
-
-.dark-mode .header-dashboard__user-chevron {
-  color: #94A3B8;
+.dark-mode .header-dashboard__user-avatar-btn:hover,
+.dark-mode .header-dashboard__user-avatar-btn--open {
+  border-color: #00A896;
+  box-shadow: 0 0 0 4px rgba(0, 168, 150, 0.28);
 }
 
 .dark-mode .header-dashboard__user-dropdown {
@@ -308,3 +459,93 @@
 .dark-mode .header-dashboard__logo-title {
   filter: brightness(1.35) contrast(1.1) drop-shadow(0 2px 8px rgba(0, 168, 150, 0.4));
 }
+
+/* Dark Mode Overrides for GitHub Dropdown Popover */
+.dark-mode .github-profile-dropdown {
+  background: #0D1117;
+  border-color: #30363D;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .github-profile-card__avatar {
+  border-color: #30363D;
+}
+
+.dark-mode .github-profile-card__name {
+  color: #F0F6FC;
+}
+
+.dark-mode .github-profile-card__username,
+.dark-mode .github-profile-card__email {
+  color: #8B949E;
+}
+
+.dark-mode .github-profile-card__role {
+  color: #0A9396;
+}
+
+.dark-mode .github-profile-card__switch-btn {
+  background: transparent;
+  border-color: #30363D;
+  color: #8B949E;
+}
+
+.dark-mode .github-profile-card__switch-btn:hover {
+  background: #21262D;
+  color: #F0F6FC;
+  border-color: #8B949E;
+}
+
+.dark-mode .github-profile-card__status-btn {
+  background: #161B22;
+  border-color: #30363D;
+  color: #C9D1D9;
+}
+
+.dark-mode .github-profile-card__status-btn:hover {
+  border-color: #8B949E;
+  color: #F0F6FC;
+}
+
+.dark-mode .github-status-icon {
+  color: #E3B341;
+}
+
+.dark-mode .github-dropdown-divider {
+  background: #21262D;
+}
+
+.dark-mode .github-dropdown-item {
+  color: #C9D1D9;
+}
+
+.dark-mode .github-dropdown-item svg {
+  color: #8B949E;
+}
+
+.dark-mode .github-dropdown-item:hover {
+  background: #161B22;
+  color: #58A6FF;
+}
+
+.dark-mode .github-dropdown-item:hover svg {
+  color: #58A6FF;
+}
+
+.dark-mode .github-dropdown-item--logout {
+  color: #F85149;
+}
+
+.dark-mode .github-dropdown-item--logout svg {
+  color: #F85149;
+}
+
+.dark-mode .github-dropdown-item--logout:hover {
+  background: rgba(248, 81, 73, 0.15);
+  color: #FF7B72;
+}
+
+.dark-mode .github-dropdown-item--logout:hover svg {
+  color: #FF7B72;
+}
+

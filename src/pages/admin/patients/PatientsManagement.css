@@ -1135,6 +1135,36 @@
   color: #CBD5E1;
 }
 
+.dark-mode .patient-identity__name,
+.dark-mode .patient-detail__name {
+  color: #F8FAFC;
+}
+
+.dark-mode .patient-identity__sub {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-doc-cell {
+  color: #CBD5E1;
+}
+
+.dark-mode .patient-contact-phone {
+  color: #E2E8F0;
+}
+
+.dark-mode .patient-contact-email {
+  color: #38BDF8;
+}
+
+.dark-mode .patient-visit-date {
+  color: #E2E8F0;
+}
+
+.dark-mode .patients-table__index {
+  color: #94A3B8;
+}
+
+/* Hover & Selected Row in Dark Mode */
 .dark-mode .patients-table tbody tr:hover {
   background-color: #334155;
 }
@@ -1143,9 +1173,48 @@
   background-color: #064E3B;
 }
 
-.dark-mode .patient-identity__name,
-.dark-mode .patient-detail__name {
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-identity__name,
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-contact-phone,
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-visit-date {
+  color: #FFFFFF;
+}
+
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-identity__sub,
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-doc-cell,
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patients-table__index {
+  color: #A7F3D0;
+}
+
+.dark-mode .patients-table tbody tr.patients-table__row--selected .patient-contact-email {
+  color: #6EE7B7;
+}
+
+/* Specialty Pill Badges in Dark Mode */
+.dark-mode .specialty-badge--purple {
+  background-color: rgba(99, 102, 241, 0.25);
+  color: #C7D2FE;
+  border: 1px solid rgba(165, 180, 252, 0.3);
+}
+
+.dark-mode .specialty-badge--green {
+  background-color: rgba(14, 165, 233, 0.25);
+  color: #7DD3FC;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Action Buttons in Dark Mode */
+.dark-mode .action-btn {
+  color: #94A3B8;
+}
+
+.dark-mode .action-btn:hover {
+  background: #334155;
   color: #F8FAFC;
+}
+
+.dark-mode .action-btn--active {
+  background: rgba(56, 189, 248, 0.25);
+  color: #38BDF8;
 }
 
 .dark-mode .patients-table__footer {
@@ -1154,9 +1223,190 @@
   color: #94A3B8;
 }
 
+.dark-mode .pagination-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+.dark-mode .pagination-btn:hover:not(:disabled) {
+  border-color: #2DD4BF;
+  color: #2DD4BF;
+}
+
+.dark-mode .pagination-btn--active {
+  background: rgba(14, 165, 233, 0.25);
+  border-color: #38BDF8;
+  color: #38BDF8;
+}
+
+/* Patient Detail Side Panel in Dark Mode */
+.dark-mode .patient-detail-panel {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.dark-mode .patient-detail__header-info {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .patient-detail__doc {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-detail__close-btn {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-detail__close-btn:hover {
+  background: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .btn-editar {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+.dark-mode .btn-editar:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #F8FAFC;
+}
+
+.dark-mode .patient-detail__tabs {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .patient-detail__tab-btn {
+  color: #94A3B8;
+}
+
+.dark-mode .patient-detail__tab-btn:hover {
+  color: #F8FAFC;
+}
+
+.dark-mode .patient-detail__tab-btn--active {
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
+}
+
+.dark-mode .detail-section__header {
+  color: #94A3B8;
+}
+
+.dark-mode .detail-section__icon {
+  color: #2DD4BF;
+}
+
+.dark-mode .detail-info-label {
+  color: #94A3B8;
+}
+
+.dark-mode .detail-info-value {
+  color: #F8FAFC;
+}
+
+.dark-mode .detail-info-value--email {
+  color: #2DD4BF;
+}
+
 .dark-mode .medical-data-card {
   background: #0F172A;
   border-color: #334155;
+}
+
+.dark-mode .medical-data-label {
+  color: #94A3B8;
+}
+
+.dark-mode .medical-data-val {
+  color: #F8FAFC;
+}
+
+.dark-mode .medical-data-val--blood {
+  color: #2DD4BF;
+}
+
+.dark-mode .medical-data-val--allergies {
+  color: #F87171;
+}
+
+.dark-mode .activity-timeline {
+  border-left-color: #334155;
+}
+
+.dark-mode .timeline-dot {
+  background: #0A9396;
+  border-color: #1E293B;
+  box-shadow: 0 0 0 1px #0A9396;
+}
+
+.dark-mode .timeline-title {
+  color: #F8FAFC;
+}
+
+.dark-mode .timeline-sub {
+  color: #94A3B8;
+}
+
+.dark-mode .timeline-note-box {
+  background: rgba(30, 58, 138, 0.35);
+  border-color: #1E40AF;
+  color: #BFDBFE;
+}
+
+.dark-mode .history-card,
+.dark-mode .note-card {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .history-card__date,
+.dark-mode .note-card__author {
+  color: #F8FAFC;
+}
+
+.dark-mode .history-card__doctor,
+.dark-mode .note-card__date {
+  color: #94A3B8;
+}
+
+.dark-mode .history-card__doctor strong {
+  color: #CBD5E1;
+}
+
+.dark-mode .history-card__diag-box,
+.dark-mode .note-card__text {
+  background: #1E293B;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+.dark-mode .history-card__diag-label {
+  color: #94A3B8;
+}
+
+.dark-mode .history-card__diag-text {
+  color: #F8FAFC;
+}
+
+.dark-mode .add-note-input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .add-note-input:focus {
+  border-color: #2DD4BF;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
+}
+
+.dark-mode .empty-tab-state {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
 }
 
 .dark-mode .modal-content {

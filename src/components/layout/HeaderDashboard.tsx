@@ -1,5 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, LogOut, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Bell,
+  LogOut,
+  Settings,
+  Home,
+  Calendar,
+  UserCheck,
+  Stethoscope,
+  Clock,
+  Smile,
+  ArrowRightLeft,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../common/ThemeToggle';
 import healtlabIcon from '../../assets/icons/HEALTLAB_sintitulo.png';
@@ -21,7 +33,9 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
   userRole = 'Director Médico',
 }) => {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userStatus, setUserStatus] = useState('Disponible');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => {
@@ -31,6 +45,11 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
   const handleLogout = () => {
     setMenuOpen(false);
     logout();
+  };
+
+  const handleNavigate = (path: string) => {
+    setMenuOpen(false);
+    navigate(path);
   };
 
   // Close dropdown on click outside
@@ -78,43 +97,131 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
           <span className="header-dashboard__notif-badge" />
         </button>
 
-        {/* User profile dropdown container */}
+        {/* User Profile Dropdown Container - Avatar Only Button */}
         <div className="header-dashboard__user-wrapper" ref={dropdownRef}>
-          <div
-            className={`header-dashboard__user${menuOpen ? ' header-dashboard__user--open' : ''}`}
+          <button
+            type="button"
+            className={`header-dashboard__user-avatar-btn${menuOpen ? ' header-dashboard__user-avatar-btn--open' : ''}`}
             onClick={toggleMenu}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && toggleMenu()}
+            aria-label="Menú de usuario"
+            aria-expanded={menuOpen}
           >
             <img
               src={medicoAvatar}
               alt={userName}
               className="header-dashboard__user-avatar"
             />
-            <div className="header-dashboard__user-info">
-              <span className="header-dashboard__user-name">{userName}</span>
-              <span className="header-dashboard__user-role">{userRole}</span>
-            </div>
-            <ChevronDown
-              size={16}
-              className={`header-dashboard__user-chevron${menuOpen ? ' header-dashboard__user-chevron--rotated' : ''}`}
-            />
-          </div>
+          </button>
 
-          {/* Floating Dropdown Menu */}
+          {/* Floating Popover Dropdown */}
           {menuOpen && (
-            <div className="header-dashboard__user-dropdown">
-              <div className="header-dashboard__dropdown-header">
-                <span className="header-dashboard__dropdown-name">{userName}</span>
-                <span className="header-dashboard__dropdown-email">
-                  {user?.email || 'admin@healtlab.com'}
-                </span>
+            <div className="github-profile-dropdown">
+              {/* Profile Card Header: Nombre, Correo, Rol */}
+              <div className="github-profile-card">
+                <div className="github-profile-card__avatar-row">
+                  <img
+                    src={medicoAvatar}
+                    alt={userName}
+                    className="github-profile-card__avatar"
+                  />
+                  <div className="github-profile-card__details">
+                    <span className="github-profile-card__name">{userName}</span>
+                    <span className="github-profile-card__email">
+                      {user?.email || 'juan.perez@healtlab.com'}
+                    </span>
+                    <span className="github-profile-card__role">{userRole}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="github-profile-card__switch-btn"
+                    title="Cambiar cuenta"
+                  >
+                    <ArrowRightLeft size={14} />
+                  </button>
+                </div>
+
+                {/* Status bar button */}
+                <button
+                  type="button"
+                  className="github-profile-card__status-btn"
+                  onClick={() =>
+                    setUserStatus((prev) =>
+                      prev === 'Disponible' ? 'En Consulta' : 'Disponible'
+                    )
+                  }
+                >
+                  <Smile size={14} className="github-status-icon" />
+                  <span>{userStatus}</span>
+                </button>
               </div>
-              <div className="header-dashboard__dropdown-divider" />
+
+              <div className="github-dropdown-divider" />
+
+              {/* Menu Navigation Links with Navbar Sections + Configuración */}
+              <div className="github-dropdown-menu">
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/admin')}
+                >
+                  <Home size={16} />
+                  <span>Inicio</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/gestion-citas')}
+                >
+                  <Calendar size={16} />
+                  <span>Gestión de Citas</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/pacientes')}
+                >
+                  <UserCheck size={16} />
+                  <span>Pacientes</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/profesionales')}
+                >
+                  <Stethoscope size={16} />
+                  <span>Profesionales</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/historial-atencion')}
+                >
+                  <Clock size={16} />
+                  <span>Historial y Reportes</span>
+                </button>
+
+                <div className="github-dropdown-divider" />
+
+                <button
+                  type="button"
+                  className="github-dropdown-item"
+                  onClick={() => handleNavigate('/configuracion')}
+                >
+                  <Settings size={16} />
+                  <span>Configuración</span>
+                </button>
+              </div>
+
+              <div className="github-dropdown-divider" />
+
+              {/* Sign out item */}
               <button
                 type="button"
-                className="header-dashboard__dropdown-item header-dashboard__dropdown-item--logout"
+                className="github-dropdown-item github-dropdown-item--logout"
                 onClick={handleLogout}
               >
                 <LogOut size={16} />

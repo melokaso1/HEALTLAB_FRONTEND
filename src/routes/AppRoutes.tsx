@@ -9,6 +9,7 @@ import UsersManagement from '../pages/admin/users/UsersManagement';
 import PatientsManagement from '../pages/admin/patients/PatientsManagement';
 import AppointmentsManagement from '../pages/admin/appointments/AppointmentsManagement';
 import AdminProfesionales from '../pages/admin/profesionales/AdminProfesionales';
+import ProfileSettings from '../pages/admin/profile/ProfileSettings';
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -62,6 +63,9 @@ const DashboardContainer: React.FC = () => {
         <Route path="pacientes" element={<PatientsManagement />} />
         <Route path="gestion-citas" element={<AppointmentsManagement />} />
         <Route path="citas" element={<AppointmentsManagement />} />
+        <Route path="configuracion" element={<ProfileSettings />} />
+        <Route path="perfil" element={<ProfileSettings />} />
+        <Route path="settings" element={<ProfileSettings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

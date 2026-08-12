@@ -20,8 +20,11 @@ const routeTabMap: Record<string, string> = {
   '/usuarios': 'usuarios',
   '/pacientes': 'pacientes',
   '/gestion-citas': 'citas',
+  '/citas': 'citas',
   '/historial-atencion': 'historial-atencion',
-  '/perfil': 'inicio',
+  '/perfil': 'configuracion',
+  '/configuracion': 'configuracion',
+  '/settings': 'configuracion',
 };
 
 const tabRouteMap: Record<string, string> = {
@@ -31,6 +34,7 @@ const tabRouteMap: Record<string, string> = {
   inicio: '/admin',
   pacientes: '/pacientes',
   citas: '/gestion-citas',
+  configuracion: '/configuracion',
 };
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
