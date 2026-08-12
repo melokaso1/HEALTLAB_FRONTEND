@@ -164,7 +164,7 @@ const AdminProfesionales: React.FC = () => {
         diaAbrev: abrev,
         dayNum,
         monthName,
-        label: `${abrev} ${dayNum}`,
+        label: abrev,
         isToday: d.toDateString() === new Date().toDateString(),
       });
     }
