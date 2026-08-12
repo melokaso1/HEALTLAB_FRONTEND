@@ -229,41 +229,6 @@ const mockPastAppointments: PastAppointment[] = [
   },
 ];
 
-// Mapping of attended appointments per day for Mayo 2025
-const attendedAppointmentsByDay: Record<number, number> = {
-  1: 2,
-  2: 4,
-  3: 0,
-  4: 1,
-  5: 3,
-  6: 2,
-  7: 5,
-  8: 6,
-  9: 4,
-  10: 1,
-  11: 0,
-  12: 2,
-  13: 3,
-  14: 6,
-  15: 5,
-  16: 4,
-  17: 1,
-  18: 0,
-  19: 3,
-  20: 4,
-  21: 5,
-  22: 6,
-  23: 3,
-  24: 1,
-  25: 0,
-  26: 2,
-  27: 3,
-  28: 4,
-  29: 5,
-  30: 6,
-  31: 2,
-};
-
 const profesionalesLista = [
   'Todos',
   'Dr. Carlos Pérez',
@@ -568,89 +533,211 @@ const AdminReportes: React.FC = () => {
             </div>
           </div>
 
-          {/* Calendario de Citas Atendidas */}
+          {/* Tabla de Citas Atendidas */}
           <div className="card calendar-card">
             <div className="calendar-card__header">
               <div className="calendar-title-group">
                 <div className="calendar-icon-bg">
-                  <CalendarIcon size={18} />
+                  <CheckCircle size={18} />
                 </div>
                 <div>
                   <h3 className="calendar-title">Citas atendidas</h3>
                   <p className="calendar-subtitle">
-                    Calendario con el número de citas finalizadas por día.
+                    Registro de citas médicas finalizadas recientemente.
                   </p>
                 </div>
               </div>
 
               <div className="calendar-legend">
                 <span className="dot-indicator dot-indicator--green" />
-                <span>Citas atendidas</span>
+                <span>62 Citas en mayo</span>
               </div>
             </div>
 
-            <div className="calendar-controls">
-              <div className="month-nav">
-                <button type="button" className="month-nav-btn" aria-label="Mes anterior">
-                  <ChevronLeft size={16} />
-                </button>
-                <button type="button" className="month-nav-btn" aria-label="Mes siguiente">
-                  <ChevronRight size={16} />
-                </button>
-                <span className="month-title">Mayo 2025</span>
-              </div>
+            <div className="table-wrapper" style={{ marginTop: '8px' }}>
+              <table className="summary-table">
+                <thead>
+                  <tr>
+                    <th>FECHA</th>
+                    <th>PACIENTE</th>
+                    <th>MÉDICO</th>
+                    <th>ESPECIALIDAD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      id: 'ca1',
+                      fecha: '31/05/2025',
+                      paciente: 'María López',
+                      medico: 'Dra. Laura Martínez',
+                      especialidad: 'Pediatría',
+                    },
+                    {
+                      id: 'ca2',
+                      fecha: '31/05/2025',
+                      paciente: 'Pedro Gómez',
+                      medico: 'Dr. Carlos Ruiz',
+                      especialidad: 'Medicina General',
+                    },
+                    {
+                      id: 'ca3',
+                      fecha: '30/05/2025',
+                      paciente: 'Andrés Castro',
+                      medico: 'Dr. Carlos Pérez',
+                      especialidad: 'Cardiología',
+                    },
+                    {
+                      id: 'ca4',
+                      fecha: '29/05/2025',
+                      paciente: 'Carlos Mendoza',
+                      medico: 'Dra. Sofía Rojas',
+                      especialidad: 'Dermatología',
+                    },
+                    {
+                      id: 'ca5',
+                      fecha: '28/05/2025',
+                      paciente: 'Juan López Pineda',
+                      medico: 'Dr. Juan Rodríguez',
+                      especialidad: 'Neurología',
+                    },
+                    {
+                      id: 'ca6',
+                      fecha: '27/05/2025',
+                      paciente: 'Ana Rodríguez',
+                      medico: 'Dr. Carlos Ruiz',
+                      especialidad: 'Medicina General',
+                    },
+                    {
+                      id: 'ca7',
+                      fecha: '26/05/2025',
+                      paciente: 'Lucía Mendoza Paz',
+                      medico: 'Dra. Laura Martínez',
+                      especialidad: 'Pediatría',
+                    },
+                    {
+                      id: 'ca8',
+                      fecha: '25/05/2025',
+                      paciente: 'Carlos Eduardo Gómez',
+                      medico: 'Dr. Carlos Pérez',
+                      especialidad: 'Cardiología',
+                    },
+                    {
+                      id: 'ca9',
+                      fecha: '24/05/2025',
+                      paciente: 'Sofía Castro',
+                      medico: 'Dra. Sofía Rojas',
+                      especialidad: 'Dermatología',
+                    },
+                    {
+                      id: 'ca10',
+                      fecha: '23/05/2025',
+                      paciente: 'Roberto Fernández',
+                      medico: 'Dr. Juan Rodríguez',
+                      especialidad: 'Neurología',
+                    },
+                    {
+                      id: 'ca11',
+                      fecha: '22/05/2025',
+                      paciente: 'Elena Silva',
+                      medico: 'Dra. Laura Martínez',
+                      especialidad: 'Pediatría',
+                    },
+                    {
+                      id: 'ca12',
+                      fecha: '21/05/2025',
+                      paciente: 'Gabriel Torres',
+                      medico: 'Dr. Carlos Ruiz',
+                      especialidad: 'Medicina General',
+                    },
+                  ].map((cita) => (
+                    <tr key={cita.id}>
+                      <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                        {cita.fecha}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{cita.paciente}</td>
+                      <td>{cita.medico}</td>
+                      <td>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(0, 168, 150, 0.12)',
+                            color: '#00A896',
+                          }}
+                        >
+                          {cita.especialidad}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <div className="calendar-grid">
-              <div className="calendar-day-header">Lun</div>
-              <div className="calendar-day-header">Mar</div>
-              <div className="calendar-day-header">Mié</div>
-              <div className="calendar-day-header">Jue</div>
-              <div className="calendar-day-header">Vie</div>
-              <div className="calendar-day-header">Sáb</div>
-              <div className="calendar-day-header">Dom</div>
-
-              {/* Offset Days from Previous Month (Abril 28, 29, 30) */}
-              <div className="calendar-cell calendar-cell--adjacent">
-                <span className="cell-date">28</span>
-              </div>
-              <div className="calendar-cell calendar-cell--adjacent">
-                <span className="cell-date">29</span>
-              </div>
-              <div className="calendar-cell calendar-cell--adjacent">
-                <span className="cell-date">30</span>
-              </div>
-
-              {/* Current Month Days (1 to 31) */}
-              {Array.from({ length: 31 }, (_, i) => {
-                const dayNum = i + 1;
-                const count = attendedAppointmentsByDay[dayNum] ?? 0;
-                return (
-                  <div
-                    key={dayNum}
-                    className={`calendar-cell${count > 0 ? ' calendar-cell--has-citas' : ''}`}
-                    onClick={() => {
-                      if (count > 0) {
-                        setSelectedDayDetail({ day: dayNum, count });
-                      }
-                    }}
-                  >
-                    <span className="cell-date">{dayNum}</span>
-                    <div className="cell-count">
-                      <span className="count-dot" />
-                      <span>{count}</span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Trailing Days of Next Month (Junio 1) */}
-              <div className="calendar-cell calendar-cell--adjacent">
-                <span className="cell-date">1</span>
-                <div className="cell-count cell-count--dim">
-                  <span className="count-dot" />
-                  <span>0</span>
-                </div>
+            {/* Footer de Paginación para igualar la altura con la columna del Historial */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '12px',
+                marginTop: 'auto',
+                borderTop: '1px solid #E2E8F0',
+              }}
+            >
+              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                Mostrando 1 a 12 de 62 registros
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #00A896',
+                    backgroundColor: 'rgba(0, 168, 150, 0.15)',
+                    color: '#00A896',
+                    cursor: 'pointer',
+                  }}
+                >
+                  1
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    cursor: 'pointer',
+                  }}
+                >
+                  2
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    cursor: 'pointer',
+                  }}
+                >
+                  3
+                </button>
               </div>
             </div>
           </div>
