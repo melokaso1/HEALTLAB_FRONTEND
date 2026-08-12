@@ -18,41 +18,79 @@
   align-items: center;
   padding: 3px;
   box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Light mode styling */
+/* Light mode styling: Sky blue background with clouds */
 .theme-toggle-switch.light .theme-toggle-track {
-  background-color: #E2E8F0;
-  border: 2px solid #CBD5E1;
+  background: linear-gradient(135deg, #38BDF8 0%, #7DD3FC 100%);
+  border: 2px solid #BAE6FD;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(56, 189, 248, 0.25);
 }
 
-/* Dark mode styling */
+/* Dark mode styling: Night sky background with dark clouds and stars */
 .theme-toggle-switch.dark .theme-toggle-track {
-  background-color: #0F172A;
-  border: 2px solid #FFFFFF;
+  background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%);
+  border: 2px solid #64748B;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(15, 23, 42, 0.4);
+}
+
+/* Background SVG positions */
+.toggle-bg-clouds {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  width: 38px;
+  height: 24px;
+  pointer-events: none;
+  animation: cloudFloat 4s ease-in-out infinite alternate;
+}
+
+.toggle-bg-night {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 38px;
+  height: 24px;
+  pointer-events: none;
+  animation: starTwinkle 3s ease-in-out infinite alternate;
+}
+
+@keyframes cloudFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-1.5px); }
+}
+
+@keyframes starTwinkle {
+  0% { opacity: 0.85; }
+  100% { opacity: 1; }
 }
 
 /* Toggle Thumb */
 .theme-toggle-thumb {
+  position: relative;
+  z-index: 2;
   width: 26px;
   height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
 }
 
 .theme-toggle-switch.light .theme-toggle-thumb {
   transform: translateX(0);
   background-color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .theme-toggle-switch.dark .theme-toggle-thumb {
   transform: translateX(32px);
   background-color: #1E293B;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* Icon colors */
@@ -62,6 +100,6 @@
 }
 
 .theme-toggle-icon.moon {
-  color: #FFFFFF;
-  fill: #FFFFFF;
+  color: #FDE047;
+  fill: #FDE047;
 }

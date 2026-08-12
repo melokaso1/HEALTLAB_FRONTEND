@@ -5,6 +5,7 @@ import Login from '../pages/auth/login/Login';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UsersManagement from '../pages/admin/users/UsersManagement';
+import PatientsManagement from '../pages/admin/patients/PatientsManagement';
 import NotFound from '../components/common/NotFound';
 
 interface ProtectedRouteProps {
@@ -71,16 +72,7 @@ const DashboardContainer: React.FC = () => {
         />
         <Route path="usuarios-roles" element={<UsersManagement />} />
         <Route path="usuarios" element={<UsersManagement />} />
-        <Route
-          path="pacientes"
-          element={
-            <NotFound
-              title="Error 404"
-              subtitle="Vista de Pacientes no encontrada"
-              description="La sección de Gestión de Pacientes se encuentra actualmente en desarrollo."
-            />
-          }
-        />
+        <Route path="pacientes" element={<PatientsManagement />} />
         <Route
           path="gestion-citas"
           element={
