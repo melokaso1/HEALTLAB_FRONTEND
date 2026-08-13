@@ -3,7 +3,6 @@ import {
   Calendar as CalendarIcon,
   Plus,
   Search,
-  Filter,
   Clock,
   Stethoscope,
   FileText,
@@ -35,6 +34,7 @@ import {
 import { mockProfessionals } from '../../../services/professionals.service';
 import { mockPatients } from '../../../services/patients.service';
 import { useAuth } from '../../../context/AuthContext';
+import CustomSelect from '../../../components/common/CustomSelect';
 import './AppointmentsManagement.css';
 
 const AppointmentsManagement: React.FC = () => {
@@ -486,19 +486,15 @@ const AppointmentsManagement: React.FC = () => {
                     <span>{user?.name || 'Dr. Julian Moore'}</span>
                   </div>
                 ) : (
-                  <select
-                    className="citas-select"
+                  <CustomSelect
                     style={{ width: '100%' }}
                     value={profFilter}
-                    onChange={(e) => setProfFilter(e.target.value)}
-                  >
-                    <option value="all">Todos los Médicos</option>
-                    {mockProfessionals.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setProfFilter(val)}
+                    options={[
+                      { value: 'all', label: 'Todos los Médicos' },
+                      ...mockProfessionals.map((p) => ({ value: p.id, label: p.name })),
+                    ]}
+                  />
                 )}
               </div>
 
@@ -568,18 +564,17 @@ const AppointmentsManagement: React.FC = () => {
 
               {/* Status Filter */}
               <div className="citas-filter-select-wrapper">
-                <Filter size={14} className="citas-filter-icon" />
-                <select
-                  className="citas-select"
+                <CustomSelect
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">Estado: Todos</option>
-                  <option value="Agendada">Estado: Agendada</option>
-                  <option value="Atendida">Estado: Atendida</option>
-                  <option value="Cancelada">Estado: Cancelada</option>
-                  <option value="No asistió">Estado: No asistió</option>
-                </select>
+                  onChange={(val) => setStatusFilter(val)}
+                  options={[
+                    { value: 'all', label: 'Estado: Todos' },
+                    { value: 'Agendada', label: 'Estado: Agendada' },
+                    { value: 'Atendida', label: 'Estado: Atendida' },
+                    { value: 'Cancelada', label: 'Estado: Cancelada' },
+                    { value: 'No asistió', label: 'Estado: No asistió' },
+                  ]}
+                />
               </div>
             </div>
 

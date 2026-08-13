@@ -120,7 +120,8 @@
   grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
-  transition: all 0.3s ease;
+  transition: grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s ease;
+  width: 100%;
 }
 
 .patients-mgmt__grid--with-panel {
@@ -140,6 +141,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Table Styling */
@@ -377,6 +379,8 @@
   padding: 20px;
   gap: 16px;
   background: #FFFFFF;
+  animation: panelSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
 .patient-detail__top {

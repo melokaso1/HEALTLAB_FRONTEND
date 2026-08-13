@@ -18,8 +18,6 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Filter,
-  ChevronDown,
 } from 'lucide-react';
 import type {
   Professional,
@@ -30,6 +28,7 @@ import type {
 } from './profesional.types';
 import { initialProfesionales } from './mockProfesionales';
 import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
+import CustomSelect from '../../../components/common/CustomSelect';
 import './AdminProfesionales.css';
 
 // Helper: Calculate Sunday / Monday start of a week
@@ -433,21 +432,14 @@ const AdminProfesionales: React.FC = () => {
             </div>
 
             {/* Specialty Dropdown Select */}
-            <div className="specialty-select-wrapper">
-              <Filter className="specialty-filter-icon" size={15} />
-              <select
-                className="specialty-select-dropdown"
-                value={activeSpecialty}
-                onChange={(e) => setActiveSpecialty(e.target.value)}
-              >
-                {specialtyOptions.map((spec) => (
-                  <option key={spec} value={spec}>
-                    {spec === 'Todos' ? 'Todas las especialidades' : spec}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="specialty-dropdown-chevron" size={14} />
-            </div>
+            <CustomSelect
+              value={activeSpecialty}
+              onChange={(val) => setActiveSpecialty(val)}
+              options={specialtyOptions.map((spec) => ({
+                value: spec,
+                label: spec === 'Todos' ? 'Todas las especialidades' : spec,
+              }))}
+            />
           </div>
 
           {/* Directory Professionals List */}
