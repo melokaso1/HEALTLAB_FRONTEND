@@ -10,18 +10,19 @@
 import type { LoginCredentials } from '../types/auth';
 
 /**
- * Validación básica del correo electrónico.
+ * Validación del usuario o correo electrónico (acepta nombre de usuario sin @ o email).
  */
-export const validateEmail = (email: string): string | null => {
-  if (!email.trim()) {
-    return 'El correo electrónico es obligatorio';
+export const validateUsernameOrEmail = (identifier: string): string | null => {
+  if (!identifier || !identifier.trim()) {
+    return 'Ingresa tu usuario o correo electrónico';
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return 'Ingresa un correo electrónico válido';
+  if (identifier.trim().length < 2) {
+    return 'El usuario debe tener al menos 2 caracteres';
   }
   return null;
 };
+
+export const validateEmail = validateUsernameOrEmail;
 
 /**
  * Validación básica de la contraseña.

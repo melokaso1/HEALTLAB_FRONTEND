@@ -131,11 +131,11 @@ const Login: React.FC = () => {
                 )}
 
                 <form onSubmit={handleLogin} noValidate>
-                  {/* Campo correo */}
+                  {/* Campo usuario / correo */}
                   <div className="login-field">
                     <div className="login-field__header">
-                      <label htmlFor="login-email" className="login-field__label">
-                        Correo electrónico
+                      <label htmlFor="login-username" className="login-field__label">
+                        Usuario o correo electrónico
                       </label>
                     </div>
                     <div className="login-field__input-wrapper">
@@ -143,16 +143,16 @@ const Login: React.FC = () => {
                         <User size={16} strokeWidth={2} />
                       </span>
                       <input
-                        id="login-email"
-                        type="email"
+                        id="login-username"
+                        type="text"
                         className={`login-field__input${errors.email ? ' login-field__input--error' : ''}`}
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
                           if (errors.email) setErrors((prev) => ({ ...prev, email: null }));
                         }}
-                        placeholder="ejemplo@correo.com"
-                        autoComplete="email"
+                        placeholder="Usuario o correo electrónico"
+                        autoComplete="username"
                         disabled={loading}
                       />
                     </div>
