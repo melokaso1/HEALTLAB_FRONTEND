@@ -54,12 +54,21 @@ export const getRolPermisosApi = async (): Promise<BackendRolPermiso[]> => {
 export const getRolPermisosByRolIdApi = async (
   rolId: string,
 ): Promise<BackendRolPermiso[]> => {
-  if (!rolId) return [];
+  if (
+    !rolId ||
+    rolId === 'admin' ||
+    rolId === 'administrador' ||
+    rolId === 'receptionist' ||
+    rolId === 'recepcionista' ||
+    rolId === 'professional' ||
+    rolId === 'medico'
+  ) {
+    return [];
+  }
   try {
     const data = await apiFetch<BackendRolPermiso[]>(`/RolPermisos/rol/${rolId}`);
     return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.warn(`[permissions.service] Error en GET /RolPermisos/rol/${rolId}:`, error);
+  } catch {
     return [];
   }
 };

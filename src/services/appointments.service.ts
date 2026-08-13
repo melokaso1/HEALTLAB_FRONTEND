@@ -160,15 +160,47 @@ export const checkScheduleConflict = (
       app.id !== excludeAppointmentId,
   );
 
-// ─── API ──────────────────────────────────────────────────────────────────
-export const getAppointmentsApi = async (): Promise<Appointment[]> => {
+// ─── LocalStorage Persistence Helper ────────────────────────────────────
+const LOCAL_CITAS_KEY = 'HEALTLAB_PERSISTENT_CITAS';
+
+const getStoredAppointments = (): Appointment[] => {
   try {
-    const data = await apiFetch<BackendCita[]>('/citas');
-    return Array.isArray(data) ? data.map(mapBackendCita) : [];
-  } catch (error) {
-    console.warn('[appointments.service] Conexión API /citas:', error);
+    const raw = localStorage.getItem(LOCAL_CITAS_KEY);
+    return raw ? (JSON.parse(raw) as Appointment[]) : [];
+  } catch {
     return [];
   }
+};
+
+const saveStoredAppointment = (app: Appointment) => {
+  try {
+    const current = getStoredAppointments();
+    const updated = [app, ...current.filter((a) => String(a.id) !== String(app.id))];
+    localStorage.setItem(LOCAL_CITAS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error al guardar cita en localStorage', e);
+  }
+};
+
+// ─── API ──────────────────────────────────────────────────────────────────
+export const getAppointmentsApi = async (): Promise<Appointment[]> => {
+  let backendList: Appointment[] = [];
+  try {
+    const data = await apiFetch<BackendCita[]>('/citas');
+    if (Array.isArray(data)) {
+      backendList = data.map(mapBackendCita);
+    }
+  } catch (error) {
+    console.warn('[appointments.service] Conexión API /citas:', error);
+  }
+
+  const localList = getStoredAppointments();
+  const mergedMap = new Map<string, Appointment>();
+
+  localList.forEach((a) => mergedMap.set(String(a.id), a));
+  backendList.forEach((a) => mergedMap.set(String(a.id), a));
+
+  return Array.from(mergedMap.values());
 };
 
 export const getAppointmentByIdApi = async (id: string): Promise<Appointment | null> => {
@@ -177,7 +209,8 @@ export const getAppointmentByIdApi = async (id: string): Promise<Appointment | n
     return mapBackendCita(raw);
   } catch (error) {
     console.warn(`[appointments.service] Error en GET /citas/${id}:`, error);
-    return null;
+    const local = getStoredAppointments().find((a) => String(a.id) === String(id));
+    return local || null;
   }
 };
 
@@ -214,6 +247,27 @@ export const createAppointmentApi = async (
         observaciones: appObj.notes,
       };
 
+  const fallbackApp: Appointment = {
+    id: Date.now(),
+    patientId: normPayload.pacienteId,
+    patientName: appObj.patientName || 'Paciente',
+    patientAge: appObj.patientAge || 30,
+    patientGender: appObj.patientGender || 'Femenino',
+    patientDoc: appObj.patientDoc || 'CC-00000',
+    patientPhone: appObj.patientPhone || '',
+    patientEmail: appObj.patientEmail || '',
+    patientInitials: appObj.patientInitials || 'PP',
+    professionalId: normPayload.medicoId,
+    professionalName: appObj.professionalName || 'Médico',
+    professionalSpecialty: appObj.professionalSpecialty || 'Medicina General',
+    serviceId: normPayload.tipoCitaId,
+    serviceName: appObj.serviceName || normPayload.motivoConsulta,
+    date: normPayload.fecha,
+    time: formatTimeSlot(normPayload.horaInicio),
+    status: 'Agendada',
+    notes: normPayload.observaciones ?? normPayload.motivoConsulta,
+  };
+
   const normalize = (t: string) => (t.includes(':') && t.split(':').length === 2 ? `${t}:00` : t);
   try {
     const raw = await apiFetch<BackendCita>('/citas', {
@@ -224,29 +278,13 @@ export const createAppointmentApi = async (
         horaFin: normalize(normPayload.horaFin),
       }),
     });
-    return mapBackendCita(raw);
+    const createdBackend = mapBackendCita(raw);
+    saveStoredAppointment(createdBackend);
+    return createdBackend;
   } catch (error) {
-    console.warn('[appointments.service] Error en POST /citas, usando fallback local:', error);
-    return {
-      id: Date.now(),
-      patientId: normPayload.pacienteId,
-      patientName: (payload as Appointment).patientName || 'Paciente',
-      patientAge: (payload as Appointment).patientAge || 30,
-      patientGender: (payload as Appointment).patientGender || 'Femenino',
-      patientDoc: (payload as Appointment).patientDoc || 'CC-00000',
-      patientPhone: (payload as Appointment).patientPhone || '',
-      patientEmail: (payload as Appointment).patientEmail || '',
-      patientInitials: (payload as Appointment).patientInitials || 'PP',
-      professionalId: normPayload.medicoId,
-      professionalName: (payload as Appointment).professionalName || 'Médico',
-      professionalSpecialty: (payload as Appointment).professionalSpecialty || 'Medicina General',
-      serviceId: normPayload.tipoCitaId,
-      serviceName: (payload as Appointment).serviceName || normPayload.motivoConsulta,
-      date: normPayload.fecha,
-      time: formatTimeSlot(normPayload.horaInicio),
-      status: 'Agendada',
-      notes: normPayload.observaciones ?? normPayload.motivoConsulta,
-    };
+    console.warn('[appointments.service] Error en POST /citas, guardando en persistencia local:', error);
+    saveStoredAppointment(fallbackApp);
+    return fallbackApp;
   }
 };
 

@@ -617,8 +617,8 @@ const UsersManagement: React.FC = () => {
                   </div>
 
                   <div className="permission-items">
-                    {group.items.map((item: PermissionItem) => (
-                      <div key={item.id} className="permission-item">
+                    {group.items.map((item: PermissionItem, itemIdx: number) => (
+                      <div key={item.id ? `${group.id}-${item.id}` : `perm-${itemIdx}`} className="permission-item">
                         {item.status === 'allowed' && (
                           <CheckIcon className="perm-icon--allowed" />
                         )}

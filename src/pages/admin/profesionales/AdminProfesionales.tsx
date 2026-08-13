@@ -29,6 +29,7 @@ import type {
   ScheduleSlot,
 } from './profesional.types';
 import { initialProfesionales } from './mockProfesionales';
+import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
 import './AdminProfesionales.css';
 
 // Helper: Calculate Sunday / Monday start of a week
@@ -63,7 +64,6 @@ const HOURLY_SLOTS = [
   '20:00',
 ];
 
-import { getProfessionalsApi } from '../../../services/professionals.service';
 import type { ProfessionalOption } from '../../../types/appointment.types';
 
 const mapBackendProfToLocal = (p: ProfessionalOption): Professional => {
@@ -272,15 +272,36 @@ const AdminProfesionales: React.FC = () => {
     setIsConfigureScheduleOpen(false);
     showToast('Disponibilidad semanal configurada correctamente.');
   };
-
   // Handler: Add New Professional
-  const handleAddNewDoctor = (newDoctor: Omit<Professional, 'id'>) => {
-    const id = `prof-${Date.now()}`;
-    const createdProf: Professional = { ...newDoctor, id };
-    setProfesionales((prev) => [createdProf, ...prev]);
-    setSelectedId(id);
-    setIsAddDoctorOpen(false);
-    showToast(`Nuevo profesional ${createdProf.tituloPrefix} ${createdProf.nombre} ${createdProf.apellido} registrado.`);
+  const handleAddNewDoctor = async (newDoctor: Omit<Professional, 'id'>) => {
+    try {
+      const createdOpt = await createProfessionalApi({
+        nombre: newDoctor.nombre,
+        apellido: newDoctor.apellido,
+        especialidad: newDoctor.especialidad,
+        registroProfesional: newDoctor.registroProfesional,
+        consultorio: newDoctor.consultorio,
+      });
+
+      const mappedProf = mapBackendProfToLocal(createdOpt);
+      const fullProf: Professional = {
+        ...newDoctor,
+        ...mappedProf,
+        id: createdOpt.id || `prof-${Date.now()}`,
+        nombre: newDoctor.nombre || mappedProf.nombre,
+        apellido: newDoctor.apellido || mappedProf.apellido,
+        especialidad: newDoctor.especialidad || mappedProf.especialidad,
+        disponibilidad: newDoctor.disponibilidad || mappedProf.disponibilidad || [],
+      };
+
+      setProfesionales((prev) => [fullProf, ...prev.filter((p) => String(p.id) !== String(fullProf.id))]);
+      setSelectedId(fullProf.id);
+      setIsAddDoctorOpen(false);
+      showToast(`Nuevo profesional ${fullProf.tituloPrefix} ${fullProf.nombre} ${fullProf.apellido} registrado.`);
+    } catch (error) {
+      console.error('[AdminProfesionales] Error al crear médico:', error);
+      showToast('Error al registrar el profesional en el servidor.');
+    }
   };
 
   // Handler: Create New Appointment

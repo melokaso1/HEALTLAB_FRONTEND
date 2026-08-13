@@ -45,10 +45,13 @@ export async function apiFetch<T = unknown>(
 
     if (!response.ok) {
       let errorData: unknown = null;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = await response.text();
+      const text = await response.text().catch(() => '');
+      if (text) {
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = text;
+        }
       }
 
       const errorMessage =
@@ -69,7 +72,15 @@ export async function apiFetch<T = unknown>(
       return {} as T;
     }
 
-    return await response.json();
+    const resText = await response.text().catch(() => '');
+    if (!resText) {
+      return {} as T;
+    }
+    try {
+      return JSON.parse(resText) as T;
+    } catch {
+      return resText as unknown as T;
+    }
   } catch (error) {
     if (error instanceof Error && (error as ApiError).status) {
       throw error;

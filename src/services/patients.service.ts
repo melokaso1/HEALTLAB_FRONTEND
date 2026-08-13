@@ -117,15 +117,47 @@ const mapBackendPatient = (raw: BackendPaciente): Patient => {
   };
 };
 
-// ─── API ──────────────────────────────────────────────────────────────────
-export const getPatientsApi = async (): Promise<Patient[]> => {
+// ─── LocalStorage Persistence Helper ────────────────────────────────────
+const LOCAL_PACIENTES_KEY = 'HEALTLAB_PERSISTENT_PACIENTES';
+
+const getStoredPatients = (): Patient[] => {
   try {
-    const data = await apiFetch<BackendPaciente[]>('/pacientes');
-    return Array.isArray(data) ? data.map(mapBackendPatient) : [];
-  } catch (error) {
-    console.warn('[patients.service] Conexión API /pacientes:', error);
+    const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
+    return raw ? (JSON.parse(raw) as Patient[]) : [];
+  } catch {
     return [];
   }
+};
+
+const saveStoredPatient = (patient: Patient) => {
+  try {
+    const current = getStoredPatients();
+    const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
+    localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error al guardar paciente en localStorage', e);
+  }
+};
+
+// ─── API ──────────────────────────────────────────────────────────────────
+export const getPatientsApi = async (): Promise<Patient[]> => {
+  let backendList: Patient[] = [];
+  try {
+    const data = await apiFetch<BackendPaciente[]>('/pacientes');
+    if (Array.isArray(data)) {
+      backendList = data.map(mapBackendPatient);
+    }
+  } catch (error) {
+    console.warn('[patients.service] Conexión API /pacientes:', error);
+  }
+
+  const localList = getStoredPatients();
+  const mergedMap = new Map<string, Patient>();
+
+  localList.forEach((p) => mergedMap.set(String(p.id), p));
+  backendList.forEach((p) => mergedMap.set(String(p.id), p));
+
+  return Array.from(mergedMap.values());
 };
 
 export const getPatientByIdApi = async (id: string): Promise<Patient | null> => {
@@ -134,53 +166,80 @@ export const getPatientByIdApi = async (id: string): Promise<Patient | null> => 
     return mapBackendPatient(data);
   } catch (error) {
     console.warn(`[patients.service] Error en GET /pacientes/${id}:`, error);
-    return null;
+    const local = getStoredPatients().find((p) => String(p.id) === String(id));
+    return local || null;
   }
 };
 
 export const createPatientApi = async (
   patient: Partial<Patient> & { personaId?: string },
 ): Promise<Patient> => {
+  const parts = (patient.name ?? '').trim().split(/\s+/);
+  const initials = buildInitials(parts[0] ?? 'Nuevo', parts[1] ?? 'Paciente');
+  const fallbackId = Date.now();
+
+  const localPatient: Patient = {
+    id: fallbackId,
+    name: patient.name ?? 'Nuevo Paciente',
+    gender: patient.gender ?? 'Femenino',
+    age: Number(patient.age) || 30,
+    documentType: patient.documentType ?? 'CC',
+    documentNumber: patient.documentNumber ?? String(Date.now()),
+    contact: {
+      phone: patient.contact?.phone ?? '+57 300 000 0000',
+      email: patient.contact?.email ?? '',
+      address: patient.contact?.address ?? 'Dirección no registrada',
+    },
+    lastVisitDate: 'Hoy',
+    lastVisitSpecialty: 'Medicina General',
+    specialtyBadgeColor: 'green',
+    status: 'active',
+    initials,
+    avatarBg: '#0A9396',
+    medicalData: {
+      bloodType: patient.medicalData?.bloodType ?? 'O+',
+      allergies: patient.medicalData?.allergies ?? ['Ninguna'],
+    },
+    recentActivity: [],
+    history: [],
+    notes: [],
+  };
+
   try {
-    const body = {
-      personaId: patient.personaId ?? '',
+    const body: Record<string, unknown> = {
       activo: patient.status !== 'inactive',
+      nombre: parts[0] ?? 'Nuevo',
+      apellido: parts.slice(1).join(' ') || 'Paciente',
+      numeroDocumento: patient.documentNumber ?? String(Date.now()),
+      tipoDocumento: patient.documentType ?? 'CC',
+      telefono: patient.contact?.phone ?? '',
+      email: patient.contact?.email ?? '',
+      direccion: patient.contact?.address ?? 'Dirección no registrada',
+      persona: {
+        nombre: parts[0] ?? 'Nuevo',
+        apellido: parts.slice(1).join(' ') || 'Paciente',
+        numeroDocumento: patient.documentNumber ?? String(Date.now()),
+      },
     };
+    if (patient.personaId && patient.personaId.length === 36) {
+      body.personaId = patient.personaId;
+    }
     const raw = await apiFetch<BackendPaciente>('/pacientes', {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    return mapBackendPatient(raw);
-  } catch (error) {
-    console.warn('[patients.service] Error en POST /pacientes, registrando en estado local:', error);
-    const parts = (patient.name ?? '').trim().split(/\s+/);
-    const initials = buildInitials(parts[0] ?? 'Nuevo', parts[1] ?? 'Paciente');
-    return {
-      id: Date.now(),
-      name: patient.name ?? 'Nuevo Paciente',
-      gender: patient.gender ?? 'Femenino',
-      age: Number(patient.age) || 30,
-      documentType: patient.documentType ?? 'CC',
-      documentNumber: patient.documentNumber ?? String(Date.now()),
-      contact: {
-        phone: patient.contact?.phone ?? '+57 300 000 0000',
-        email: patient.contact?.email ?? '',
-        address: patient.contact?.address ?? '',
-      },
-      lastVisitDate: 'Hoy',
-      lastVisitSpecialty: 'Medicina General',
-      specialtyBadgeColor: 'green',
-      status: 'active',
-      initials,
-      avatarBg: '#0A9396',
-      medicalData: {
-        bloodType: patient.medicalData?.bloodType ?? 'O+',
-        allergies: patient.medicalData?.allergies ?? ['Ninguna'],
-      },
-      recentActivity: [],
-      history: [],
-      notes: [],
+    const createdBackend = mapBackendPatient(raw);
+    const result = {
+      ...localPatient,
+      ...createdBackend,
+      id: createdBackend.id || fallbackId,
     };
+    saveStoredPatient(result);
+    return result;
+  } catch (error) {
+    console.warn('[patients.service] Error en POST /pacientes, registrando en estado local persistente:', error);
+    saveStoredPatient(localPatient);
+    return localPatient;
   }
 };
 

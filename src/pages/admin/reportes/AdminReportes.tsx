@@ -1,73 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import {
-  BarChart2,
-  Clock,
-  Filter,
-  X,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Info,
-  Calendar as CalendarIcon,
-  User,
-  Stethoscope,
-  FileText,
-  CheckCircle,
-} from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
-import './AdminReportes.css';
-
-// TypeScript Interfaces
-export interface ActionLog {
-  id: number;
-  fechaHora: string;
-  usuario: {
-    nombre: string;
-    rol: string;
-    avatar?: string;
-  };
-  profesional: string;
-  tipoAccion: 'Cita creada' | 'Cita atendida' | 'Nota registrada' | 'Cita cancelada' | 'Cita reprogramada';
-  detalles: string;
-  citaId: number;
-}
-
-export interface PastAppointment {
-  id: number;
-  codigo: string;
-  fecha: string;
-  hora: string;
-  paciente: string;
-  documento: string;
-  profesional: string;
-  especialidad: string;
-  servicio: string;
-  estado: 'agendada' | 'atendida' | 'cancelada' | 'no_asistio';
-  notaProfesional?: string;
-  resultadoAtencion?: string;
-}
-
-// Mock Data
-const initialActionLogs: ActionLog[] = [];
-const mockPastAppointments: PastAppointment[] = [];
-
-const profesionalesLista = [
-  'Todos',
-  'Dr. Carlos Pérez',
-  'Dra. Ana Gómez',
-  'Dr. Juan Rodríguez',
-  'Dra. Laura Martínez',
-  'Dr. Carlos Ruiz',
-  'Dra. Sofía Rojas',
-];
-
-const usuariosLista = ['Todos', 'Ana Gómez', 'Juan Perez', 'Carlos Ruiz', 'María López'];
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Appointment } from '../../../types/appointment.types';
+import { getAppointmentsApi } from '../../../services/appointments.service';
 
 const AdminReportes: React.FC = () => {
   const { user } = useAuth();
   const role = (user?.role || '').toLowerCase();
   const isDoctor = role === 'professional' || role === 'profesional' || role === 'medico' || role === 'doctor';
+  
+  // Real appointments state
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    getAppointmentsApi().then((data) => setAppointments(data));
+  }, []);
+
   // Reportes Filter State
   const [repFechaDesde, setRepFechaDesde] = useState('2025-05-01');
   const [repFechaHasta, setRepFechaHasta] = useState('2025-05-31');
@@ -97,38 +43,24 @@ const AdminReportes: React.FC = () => {
   // Calendar Selected Day Detail Popover State
   const [selectedDayDetail, setSelectedDayDetail] = useState<{ day: number; count: number } | null>(null);
 
-  // Filtered Summary Counts for Left Column
+  // Dynamic counts based on real appointments
   const summaryCounts = useMemo(() => {
-    // Dynamic counts based on filters
-    const isFilteredByDoctor = repProfesional !== 'Todos';
-    const mult = isFilteredByDoctor ? 0.6 : 1;
-
-    let agendada = Math.round(45 * mult);
-    let atendida = Math.round(62 * mult);
-    let cancelada = Math.round(14 * mult);
-    let noAsistio = Math.round(7 * mult);
-
-    if (repEstado === 'Agendada') {
-      atendida = 0;
-      cancelada = 0;
-      noAsistio = 0;
-    } else if (repEstado === 'Atendida') {
-      agendada = 0;
-      cancelada = 0;
-      noAsistio = 0;
-    } else if (repEstado === 'Cancelada') {
-      agendada = 0;
-      atendida = 0;
-      noAsistio = 0;
-    } else if (repEstado === 'No asistió') {
-      agendada = 0;
-      atendida = 0;
-      cancelada = 0;
+    let filtered = appointments;
+    if (repProfesional !== 'Todos') {
+      filtered = filtered.filter((a) => a.professionalName.includes(repProfesional));
     }
+    const agendada = filtered.filter((a) => a.status === 'Agendada').length;
+    const atendida = filtered.filter((a) => a.status === 'Atendida').length;
+    const cancelada = filtered.filter((a) => a.status === 'Cancelada').length;
+    const noAsistio = filtered.filter((a) => a.status === 'No asistió').length;
 
-    const total = agendada + atendida + cancelada + noAsistio;
-    return { agendada, atendida, cancelada, noAsistio, total };
-  }, [repProfesional, repEstado]);
+    if (repEstado === 'Agendada') return { agendada, atendida: 0, cancelada: 0, noAsistio: 0, total: agendada };
+    if (repEstado === 'Atendida') return { agendada: 0, atendida, cancelada: 0, noAsistio: 0, total: atendida };
+    if (repEstado === 'Cancelada') return { agendada: 0, atendida: 0, cancelada, noAsistio: 0, total: cancelada };
+    if (repEstado === 'No asistió') return { agendada: 0, atendida: 0, cancelada: 0, noAsistio, total: noAsistio };
+
+    return { agendada, atendida, cancelada, noAsistio, total: filtered.length };
+  }, [appointments, repProfesional, repEstado]);
 
   // Filtered Action Logs for Right Column
   const filteredActionLogs = useMemo(() => {
@@ -376,7 +308,7 @@ const AdminReportes: React.FC = () => {
 
               <div className="calendar-legend">
                 <span className="dot-indicator dot-indicator--green" />
-                <span>62 Citas en mayo</span>
+                <span>{summaryCounts.total} Citas registradas</span>
               </div>
             </div>
 
@@ -391,115 +323,38 @@ const AdminReportes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    {
-                      id: 'ca1',
-                      fecha: '31/05/2025',
-                      paciente: 'María López',
-                      medico: 'Dra. Laura Martínez',
-                      especialidad: 'Pediatría',
-                    },
-                    {
-                      id: 'ca2',
-                      fecha: '31/05/2025',
-                      paciente: 'Pedro Gómez',
-                      medico: 'Dr. Carlos Ruiz',
-                      especialidad: 'Medicina General',
-                    },
-                    {
-                      id: 'ca3',
-                      fecha: '30/05/2025',
-                      paciente: 'Andrés Castro',
-                      medico: 'Dr. Carlos Pérez',
-                      especialidad: 'Cardiología',
-                    },
-                    {
-                      id: 'ca4',
-                      fecha: '29/05/2025',
-                      paciente: 'Carlos Mendoza',
-                      medico: 'Dra. Sofía Rojas',
-                      especialidad: 'Dermatología',
-                    },
-                    {
-                      id: 'ca5',
-                      fecha: '28/05/2025',
-                      paciente: 'Juan López Pineda',
-                      medico: 'Dr. Juan Rodríguez',
-                      especialidad: 'Neurología',
-                    },
-                    {
-                      id: 'ca6',
-                      fecha: '27/05/2025',
-                      paciente: 'Ana Rodríguez',
-                      medico: 'Dr. Carlos Ruiz',
-                      especialidad: 'Medicina General',
-                    },
-                    {
-                      id: 'ca7',
-                      fecha: '26/05/2025',
-                      paciente: 'Lucía Mendoza Paz',
-                      medico: 'Dra. Laura Martínez',
-                      especialidad: 'Pediatría',
-                    },
-                    {
-                      id: 'ca8',
-                      fecha: '25/05/2025',
-                      paciente: 'Carlos Eduardo Gómez',
-                      medico: 'Dr. Carlos Pérez',
-                      especialidad: 'Cardiología',
-                    },
-                    {
-                      id: 'ca9',
-                      fecha: '24/05/2025',
-                      paciente: 'Sofía Castro',
-                      medico: 'Dra. Sofía Rojas',
-                      especialidad: 'Dermatología',
-                    },
-                    {
-                      id: 'ca10',
-                      fecha: '23/05/2025',
-                      paciente: 'Roberto Fernández',
-                      medico: 'Dr. Juan Rodríguez',
-                      especialidad: 'Neurología',
-                    },
-                    {
-                      id: 'ca11',
-                      fecha: '22/05/2025',
-                      paciente: 'Elena Silva',
-                      medico: 'Dra. Laura Martínez',
-                      especialidad: 'Pediatría',
-                    },
-                    {
-                      id: 'ca12',
-                      fecha: '21/05/2025',
-                      paciente: 'Gabriel Torres',
-                      medico: 'Dr. Carlos Ruiz',
-                      especialidad: 'Medicina General',
-                    },
-                  ].map((cita) => (
-                    <tr key={cita.id}>
-                      <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {cita.fecha}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{cita.paciente}</td>
-                      <td>{cita.medico}</td>
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            backgroundColor: 'rgba(0, 168, 150, 0.12)',
-                            color: '#00A896',
-                          }}
-                        >
-                          {cita.especialidad}
-                        </span>
+                  {appointments.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
+                        No hay citas atendidas registradas.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    appointments.map((cita) => (
+                      <tr key={cita.id}>
+                        <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                          {cita.date}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{cita.patientName}</td>
+                        <td>{cita.professionalName}</td>
+                        <td>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              backgroundColor: 'rgba(0, 168, 150, 0.12)',
+                              color: '#00A896',
+                            }}
+                          >
+                            {cita.professionalSpecialty || cita.serviceName || 'Medicina General'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -516,7 +371,7 @@ const AdminReportes: React.FC = () => {
               }}
             >
               <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                Mostrando 1 a 12 de 62 registros
+                Mostrando {appointments.length > 0 ? `1 a ${appointments.length}` : '0'} de {appointments.length} registros
               </span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button
