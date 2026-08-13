@@ -73,10 +73,18 @@ const pickColor = (id?: string | number): string => {
 };
 
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
-const mapBackendPatient = (raw: BackendPaciente): Patient => {
+const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: string; apellido?: string; numeroDocumento?: string }): Patient => {
   const p = raw.persona;
-  const nombre = p?.nombre ?? '';
-  const apellido = p?.apellido ?? '';
+  let nombre = p?.nombre ?? raw.nombre ?? '';
+  let apellido = p?.apellido ?? raw.apellido ?? '';
+  let fullName = `${nombre} ${apellido}`.trim();
+
+  if (!fullName && raw.name && raw.name !== 'Nuevo Paciente') {
+    fullName = raw.name;
+  }
+  if (!fullName) fullName = 'Paciente sin nombre';
+
+  const docNum = p?.numeroDocumento ?? raw.numeroDocumento ?? '';
   const telefonoPrincipal =
     p?.telefonos?.find((t) => t.principal)?.numero ??
     p?.telefonos?.[0]?.numero ??
@@ -89,14 +97,14 @@ const mapBackendPatient = (raw: BackendPaciente): Patient => {
 
   return {
     id: raw.id as unknown as number,
-    name: `${nombre} ${apellido}`.trim() || 'Paciente sin nombre',
+    name: fullName,
     gender: mapGender(p?.sexo?.nombre),
     age: calcAge(p?.fechaNacimiento),
     documentType: mapDocType(p?.tipoDocumento?.nombre),
-    documentNumber: p?.numeroDocumento ?? '',
+    documentNumber: docNum,
     contact: {
       phone: telefonoPrincipal,
-      email: '', // el backend no tiene email en Persona; puede venir de Usuario
+      email: '',
       address: direccionPrincipal,
     },
     lastVisitDate: raw.fechaRegistro
@@ -105,7 +113,7 @@ const mapBackendPatient = (raw: BackendPaciente): Patient => {
     lastVisitSpecialty: 'Sin registrar',
     specialtyBadgeColor: 'green',
     status: raw.activo ? 'active' : 'inactive',
-    initials: buildInitials(nombre, apellido),
+    initials: buildInitials(nombre || fullName, apellido),
     avatarBg: pickColor(raw.id),
     medicalData: {
       bloodType: 'N/A',
@@ -123,7 +131,10 @@ const LOCAL_PACIENTES_KEY = 'HEALTLAB_PERSISTENT_PACIENTES';
 const getStoredPatients = (): Patient[] => {
   try {
     const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
-    return raw ? (JSON.parse(raw) as Patient[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Patient[];
+    // Descartar elementos sin nombre quemados del historial local
+    return parsed.filter((p) => p.name && p.name !== 'Paciente sin nombre');
   } catch {
     return [];
   }
@@ -131,6 +142,7 @@ const getStoredPatients = (): Patient[] => {
 
 const saveStoredPatient = (patient: Patient) => {
   try {
+    if (!patient.name || patient.name === 'Paciente sin nombre') return;
     const current = getStoredPatients();
     const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
     localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
@@ -154,8 +166,16 @@ export const getPatientsApi = async (): Promise<Patient[]> => {
   const localList = getStoredPatients();
   const mergedMap = new Map<string, Patient>();
 
-  localList.forEach((p) => mergedMap.set(String(p.id), p));
-  backendList.forEach((p) => mergedMap.set(String(p.id), p));
+  localList.forEach((p) => {
+    if (p.name !== 'Paciente sin nombre') mergedMap.set(String(p.id), p);
+  });
+  backendList.forEach((p) => {
+    if (p.name !== 'Paciente sin nombre' || !mergedMap.has(String(p.id))) {
+      const existing = mergedMap.get(String(p.id));
+      if (existing && p.name === 'Paciente sin nombre') return;
+      mergedMap.set(String(p.id), p);
+    }
+  });
 
   return Array.from(mergedMap.values());
 };
@@ -244,10 +264,19 @@ export const createPatientApi = async (
         }),
       });
       const createdBackend = mapBackendPatient(raw);
-      const result = {
+      const result: Patient = {
         ...localPatient,
         ...createdBackend,
         id: createdBackend.id || fallbackId,
+        name: (createdBackend.name !== 'Paciente sin nombre' ? createdBackend.name : localPatient.name) || 'Paciente Registrado',
+        documentNumber: createdBackend.documentNumber || localPatient.documentNumber,
+        gender: createdBackend.gender !== 'Otro' ? createdBackend.gender : localPatient.gender,
+        age: createdBackend.age || localPatient.age,
+        contact: {
+          phone: createdBackend.contact?.phone || localPatient.contact?.phone || '',
+          email: createdBackend.contact?.email || localPatient.contact?.email || '',
+          address: createdBackend.contact?.address || localPatient.contact?.address || '',
+        },
       };
       saveStoredPatient(result);
       return result;

@@ -29,25 +29,48 @@ const AVATAR_COLORS = [
 const pickColor = (id: string): string =>
   AVATAR_COLORS[id.charCodeAt(0) % AVATAR_COLORS.length];
 
-const mapBackendMedico = (raw: BackendMedico): ProfessionalOption => {
+const mapBackendMedico = (
+  raw: BackendMedico & { name?: string; nombre?: string; apellido?: string; especialidad?: string },
+): ProfessionalOption => {
   const persona = raw.empleado?.persona;
-  const nombre = persona ? `${persona.nombre} ${persona.apellido}`.trim() : 'Médico';
+  let nombre = '';
+
+  if (persona?.nombre || persona?.apellido) {
+    nombre = `${persona.nombre || ''} ${persona.apellido || ''}`.trim();
+  } else if (raw.nombre || raw.apellido) {
+    nombre = `${raw.nombre || ''} ${raw.apellido || ''}`.trim();
+  } else if (raw.name) {
+    nombre = raw.name.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim();
+  }
+
+  if (!nombre || nombre.toLowerCase() === 'médico' || nombre.toLowerCase() === 'medico') {
+    if (raw.registroProfesional) {
+      nombre = `Especialista ${raw.registroProfesional}`;
+    } else {
+      nombre = 'Especialista Médico';
+    }
+  }
+
   const specialty =
-    raw.especialidades?.[0]?.especialidad?.nombre ?? 'Medicina General';
+    raw.especialidades?.[0]?.especialidad?.nombre ?? raw.especialidad ?? 'Medicina General';
+
+  const formattedName = nombre.startsWith('Dr.') || nombre.startsWith('Dra.') ? nombre : `Dr. ${nombre}`;
 
   const initials = nombre
-    .split(' ')
+    .replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '')
+    .split(/\s+/)
+    .filter(Boolean)
     .slice(0, 2)
-    .map((n) => n[0])
+    .map((n) => n[0] ?? '')
     .join('')
-    .toUpperCase();
+    .toUpperCase() || 'EM';
 
   return {
     id: raw.id,
-    name: `Dr. ${nombre}`,
+    name: formattedName,
     specialty,
     initials,
-    avatarBg: pickColor(raw.id),
+    avatarBg: pickColor(String(raw.id || '1')),
   };
 };
 
@@ -57,7 +80,16 @@ const LOCAL_MEDICOS_KEY = 'HEALTLAB_PERSISTENT_MEDICOS';
 const getStoredMedicos = (): ProfessionalOption[] => {
   try {
     const raw = localStorage.getItem(LOCAL_MEDICOS_KEY);
-    return raw ? (JSON.parse(raw) as ProfessionalOption[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ProfessionalOption[];
+    // Filtrar entradas genericas quemadas del historial de navegacion local
+    return parsed.filter(
+      (m) =>
+        m.name &&
+        !m.name.includes('Dr. Médico') &&
+        !m.name.includes('Dr. medico') &&
+        !m.name.includes('Nuevo Médico')
+    );
   } catch {
     return [];
   }
@@ -65,6 +97,7 @@ const getStoredMedicos = (): ProfessionalOption[] => {
 
 const saveStoredMedico = (prof: ProfessionalOption) => {
   try {
+    if (prof.name.includes('Dr. Médico') || prof.name.includes('Nuevo Médico')) return;
     const current = getStoredMedicos();
     const updated = [prof, ...current.filter((p) => String(p.id) !== String(prof.id))];
     localStorage.setItem(LOCAL_MEDICOS_KEY, JSON.stringify(updated));
@@ -88,10 +121,12 @@ export const getProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
   const localList = getStoredMedicos();
   const mergedMap = new Map<string, ProfessionalOption>();
 
-  // Cargar primero los de localStorage
-  localList.forEach((m) => mergedMap.set(String(m.id), m));
-  // Luego los del backend (sobrescribe si coincide ID de backend)
-  backendList.forEach((m) => mergedMap.set(String(m.id), m));
+  localList.forEach((m) => {
+    if (!m.name.includes('Dr. Médico')) mergedMap.set(String(m.id), m);
+  });
+  backendList.forEach((m) => {
+    if (!m.name.includes('Dr. Médico')) mergedMap.set(String(m.id), m);
+  });
 
   return Array.from(mergedMap.values());
 };

@@ -27,6 +27,7 @@ import type {
 } from './profesional.types';
 import { initialProfesionales } from './mockProfesionales';
 import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
+import { getAppointmentsApi, createAppointmentApi } from '../../../services/appointments.service';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './AdminProfesionales.css';
 
@@ -93,9 +94,41 @@ const AdminProfesionales: React.FC = () => {
   const [profesionales, setProfesionales] = useState<Professional[]>(initialProfesionales);
 
   useEffect(() => {
-    getProfessionalsApi().then((profs) => {
+    Promise.all([getProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
       if (Array.isArray(profs) && profs.length > 0) {
-        setProfesionales(profs.map(mapBackendProfToLocal));
+        const localProfs = profs.map(mapBackendProfToLocal);
+
+        const abrevMap: Record<number, DiaSemana> = {
+          0: 'DOM', 1: 'LUN', 2: 'MAR', 3: 'MIÉ', 4: 'JUE', 5: 'VIE', 6: 'SÁB',
+        };
+
+        const updatedProfs = localProfs.map((prof) => {
+          const profApps = (apps || []).filter(
+            (a) => String(a.professionalId) === String(prof.id) || (a.professionalName && a.professionalName.includes(prof.nombre))
+          );
+          const mappedCitas: MedicalAppointment[] = profApps.map((a) => {
+            const dateParts = a.date ? a.date.split('-') : [];
+            let diaAbrev: DiaSemana = 'LUN';
+            if (dateParts.length === 3) {
+              const d = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+              diaAbrev = abrevMap[d.getDay()] || 'LUN';
+            }
+            return {
+              id: String(a.id),
+              pacienteNombre: a.patientName,
+              diaAbrev,
+              fecha: a.date,
+              horaInicio: a.time,
+              horaFin: a.time,
+              estado: a.status === 'Agendada' ? 'Confirmada' : a.status === 'Atendida' ? 'Atendida' : 'Cancelada',
+              motivoConsulta: a.notes || a.serviceName,
+            };
+          });
+          return { ...prof, citas: mappedCitas, citasHoy: mappedCitas.length };
+        });
+
+        setProfesionales(updatedProfs);
+        if (updatedProfs[0]) setSelectedId(updatedProfs[0].id);
       }
     });
   }, []);
@@ -319,20 +352,55 @@ const AdminProfesionales: React.FC = () => {
   };
 
   // Handler: Create New Appointment
-  const handleCreateAppointment = (newApp: Omit<MedicalAppointment, 'id'>) => {
+  const handleCreateAppointment = async (newApp: Omit<MedicalAppointment, 'id'>) => {
     if (!selectedProf) return;
-    const created: MedicalAppointment = { ...newApp, id: `cita-${Date.now()}` };
-    setProfesionales((prev) =>
-      prev.map((p) => {
-        if (p.id === selectedProf.id) {
-          return { ...p, citas: [...p.citas, created], citasHoy: p.citasHoy + 1 };
-        }
-        return p;
-      })
-    );
-    setIsNewAppointmentOpen(false);
-    setNewAppointmentSlot(null);
-    showToast(`Cita médica agendada para ${created.pacienteNombre}.`);
+
+    const abrevMap: Record<number, DiaSemana> = {
+      0: 'DOM', 1: 'LUN', 2: 'MAR', 3: 'MIÉ', 4: 'JUE', 5: 'VIE', 6: 'SÁB',
+    };
+
+    try {
+      const createdBackend = await createAppointmentApi({
+        patientId: '00000000-0000-0000-0000-000000000000',
+        patientName: newApp.pacienteNombre,
+        professionalId: selectedProf.id,
+        professionalName: `${selectedProf.tituloPrefix} ${selectedProf.nombre} ${selectedProf.apellido}`.trim(),
+        professionalSpecialty: selectedProf.especialidad,
+        serviceName: newApp.motivoConsulta || 'Consulta Médica',
+        date: newApp.fecha || new Date().toISOString().split('T')[0],
+        time: newApp.horaInicio || '09:00 AM',
+        notes: newApp.motivoConsulta,
+        status: 'Agendada',
+      });
+
+      const dateParts = (newApp.fecha || '').split('-');
+      let diaAbrev: DiaSemana = newApp.diaAbrev || 'LUN';
+      if (dateParts.length === 3) {
+        const d = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+        diaAbrev = abrevMap[d.getDay()] || 'LUN';
+      }
+
+      const createdLocal: MedicalAppointment = {
+        ...newApp,
+        id: String(createdBackend.id),
+        diaAbrev,
+      };
+
+      setProfesionales((prev) =>
+        prev.map((p) => {
+          if (p.id === selectedProf.id) {
+            return { ...p, citas: [...p.citas, createdLocal], citasHoy: p.citasHoy + 1 };
+          }
+          return p;
+        })
+      );
+      setIsNewAppointmentOpen(false);
+      setNewAppointmentSlot(null);
+      showToast(`Cita médica agendada exitosamente en la base de datos para ${newApp.pacienteNombre}.`);
+    } catch (error: any) {
+      console.error('[AdminProfesionales] Error al agendar cita en backend:', error);
+      showToast(error.message || 'Error al guardar la cita en la base de datos.');
+    }
   };
 
   // Utility: Check if doctor is available in a given day and hour
@@ -1532,6 +1600,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const [pacienteCedula, setPacienteCedula] = useState('');
   const [pacienteNombre, setPacienteNombre] = useState('');
   const [motivoConsulta, setMotivoConsulta] = useState('Consulta Especializada');
   const [diaAbrev, setDiaAbrev] = useState<DiaSemana>(initialSlot?.dayAbrev || 'MIÉ');
@@ -1540,8 +1609,9 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalName = pacienteCedula.trim() ? `CC: ${pacienteCedula.trim()} — ${pacienteNombre.trim()}` : pacienteNombre.trim();
     onSave({
-      pacienteNombre,
+      pacienteNombre: finalName,
       motivoConsulta,
       diaAbrev,
       fecha: '2026-08-12',
@@ -1566,6 +1636,17 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
+            <div className="form-group">
+              <label className="form-label">Cédula / Documento del Paciente</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Ej. 1098472635"
+                value={pacienteCedula}
+                onChange={(e) => setPacienteCedula(e.target.value)}
+              />
+            </div>
+
             <div className="form-group">
               <label className="form-label">Nombre del Paciente</label>
               <input

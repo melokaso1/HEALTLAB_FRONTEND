@@ -102,24 +102,20 @@ const ProfileSettings: React.FC = () => {
     }
 
     try {
-      await apiFetch('/auth/reset-password', {
+      await apiFetch('/auth/cambiar-password', {
         method: 'POST',
         body: JSON.stringify({
-          email: user?.email || email,
-          token: 'current-session',
-          newPassword: newPassword,
+          currentPassword,
+          newPassword,
         }),
       });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showToast('Contraseña actualizada de forma segura en el servidor');
-    } catch (error) {
-      console.warn('[ProfileSettings] Error en actualización de clave en servidor:', error);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      showToast('Contraseña actualizada correctamente');
+      showToast('Contraseña actualizada exitosamente en la base de datos.');
+    } catch (error: any) {
+      console.error('[ProfileSettings] Error al actualizar clave:', error);
+      showToast(error.message || 'Error al actualizar la contraseña en el servidor.');
     }
   };
 

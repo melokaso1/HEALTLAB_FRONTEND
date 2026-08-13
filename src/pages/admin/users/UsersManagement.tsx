@@ -165,12 +165,16 @@ const UsersManagement: React.FC = () => {
 
   const handleDeleteUser = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!id) return;
     toggleUserStatusApi(id, 'active');
     setUsers((prev) =>
       prev.map((user) =>
-        user.id === id ? { ...user, status: 'inactive' } : user
+        String(user.id) === String(id) ? { ...user, status: 'inactive' } : user
       )
     );
+    if (activePanelUserId === id) {
+      setActivePanelUserId(null);
+    }
     showToast('Usuario deshabilitado y movido al archivo');
   };
 
@@ -253,9 +257,9 @@ const UsersManagement: React.FC = () => {
       setNewUserPassword('');
       setIsCreateModalOpen(false);
       showToast(`Usuario ${newUser.name} creado exitosamente`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[UsersManagement] Error al crear usuario:', error);
-      showToast('Error al registrar usuario en el servidor.');
+      showToast(error.message || 'Error al registrar usuario en el servidor.');
     }
   };
 
@@ -481,10 +485,10 @@ const UsersManagement: React.FC = () => {
                   </tr>
                 ) : (
                   filteredUsers.map((user, idx) => {
-                    const isRowSelected = user.id === activePanelUserId;
+                    const isRowSelected = Boolean(activePanelUserId) && String(user.id) === String(activePanelUserId);
                     return (
                       <tr
-                        key={user.id}
+                        key={user.id || `row-${idx}`}
                         className={isRowSelected ? 'users-table__row--selected' : ''}
                         onClick={() => handleTogglePanel(user)}
                       >

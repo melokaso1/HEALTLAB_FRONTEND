@@ -19,7 +19,9 @@ import {
 import type {
   Appointment,
   AppointmentStatus,
+  ProfessionalOption,
 } from '../../../types/appointment.types';
+import type { Patient } from '../../../types/patient.types';
 import {
   mockAppointments,
   mockServices,
@@ -31,8 +33,8 @@ import {
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
-import { mockProfessionals } from '../../../services/professionals.service';
-import { mockPatients } from '../../../services/patients.service';
+import { mockProfessionals, getProfessionalsApi } from '../../../services/professionals.service';
+import { mockPatients, getPatientsApi } from '../../../services/patients.service';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './AppointmentsManagement.css';
@@ -43,17 +45,41 @@ const AppointmentsManagement: React.FC = () => {
 
   // Main Data States
   const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
+  const [patientsList, setPatientsList] = useState<Patient[]>(mockPatients);
+  const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>(mockProfessionals);
+
+  const [filterByDate, setFilterByDate] = useState<boolean>(true);
+  const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('2026-10-28'); // Current active date view
 
   useEffect(() => {
     getAppointmentsApi().then((data) => {
       if (data && data.length > 0) {
         setPatientsAppointments(data);
+        if (data[0]?.date) {
+          setSelectedDate(data[0].date);
+          const parts = data[0].date.split('-');
+          if (parts.length === 3) {
+            const yr = parseInt(parts[0], 10);
+            const mo = parseInt(parts[1], 10) - 1;
+            if (!isNaN(yr) && !isNaN(mo)) {
+              setCalendarViewDate(new Date(yr, mo, 1));
+            }
+          }
+        }
+      }
+    });
+    getPatientsApi().then((data) => {
+      if (data && data.length > 0) {
+        setPatientsList(data);
+      }
+    });
+    getProfessionalsApi().then((data) => {
+      if (data && data.length > 0) {
+        setProfessionalsList(data);
       }
     });
   }, []);
-
-  const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-28'); // Current active date view
 
   // Dynamic Calendar Month Navigation State
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date(2026, 9, 1)); // Oct 2026
@@ -182,11 +208,22 @@ const AppointmentsManagement: React.FC = () => {
 
   // New Appointment Form State
   const [newPatientId, setNewPatientId] = useState<string | number>(mockPatients[0]?.id || 1);
+  const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
   const [newProfId, setNewProfId] = useState<string>('prof-1');
   const [newServiceId, setNewServiceId] = useState<string>('srv-1');
   const [newDate, setNewDate] = useState<string>('2026-10-28');
   const [newTime, setNewTime] = useState<string>('10:00 AM');
   const [newNotes, setNewNotes] = useState<string>('');
+
+  const filteredPatientsList = useMemo(() => {
+    if (!patientSearchQuery.trim()) return patientsList;
+    const q = patientSearchQuery.trim().toLowerCase();
+    return patientsList.filter(
+      (p) =>
+        (p.documentNumber && p.documentNumber.toLowerCase().includes(q)) ||
+        (p.name && p.name.toLowerCase().includes(q))
+    );
+  }, [patientsList, patientSearchQuery]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -283,21 +320,21 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
-    const patientObj = mockPatients.find((p) => String(p.id) === String(newPatientId)) || mockPatients[0];
-    const profObj = mockProfessionals.find((p) => String(p.id) === String(newProfId)) || mockProfessionals[0];
+    const patientObj = patientsList.find((p) => String(p.id) === String(newPatientId)) || patientsList[0];
+    const profObj = professionalsList.find((p) => String(p.id) === String(newProfId)) || professionalsList[0];
     const serviceObj = mockServices.find((s) => String(s.id) === String(newServiceId)) || mockServices[0];
 
     const created: Appointment = {
       id: Date.now(),
-      patientId: patientObj?.id ?? (Number(newPatientId) || 1),
+      patientId: patientObj?.id ?? String(newPatientId),
       patientName: patientObj?.name ?? 'Paciente Seleccionado',
       patientAge: patientObj?.age ?? 30,
       patientGender: patientObj?.gender ?? 'Femenino',
-      patientDoc: patientObj ? `${patientObj.documentType}-${patientObj.documentNumber}` : 'CC-00000',
+      patientDoc: patientObj ? `${patientObj.documentType || 'CC'}-${patientObj.documentNumber}` : 'CC-00000',
       patientPhone: patientObj?.contact?.phone ?? '',
       patientEmail: patientObj?.contact?.email ?? '',
       patientAvatarBg: patientObj?.avatarBg || '#0A9396',
-      patientInitials: patientObj?.initials ?? 'PP',
+      patientInitials: patientObj?.initials ?? 'P',
       professionalId: profObj?.id ?? newProfId,
       professionalName: profObj?.name ?? 'Médico Seleccionado',
       professionalSpecialty: profObj?.specialty ?? 'Medicina General',
@@ -320,7 +357,7 @@ const AppointmentsManagement: React.FC = () => {
       setSelectedAppId(created.id);
       setIsCreateModalOpen(false);
       setNewNotes('');
-      showToast(`Nueva cita agendada para ${patientObj.name} con ${profObj.name}`);
+      showToast(`Nueva cita agendada para ${created.patientName} con ${created.professionalName}`);
     } catch (error) {
       console.error('[AppointmentsManagement] Error al agendar cita:', error);
       showToast('Error al agendar la cita en el servidor');
@@ -330,6 +367,7 @@ const AppointmentsManagement: React.FC = () => {
   // Filtered appointments list for table
   const filteredAppointments = useMemo(() => {
     return appointments.filter((app) => {
+      const matchesDate = !filterByDate || app.date === selectedDate;
       const matchesDoctorUser =
         !isDoctor ||
         app.professionalId === 'prof-1' ||
@@ -341,9 +379,9 @@ const AppointmentsManagement: React.FC = () => {
         app.professionalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.serviceName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesDoctorUser && matchesProf && matchesStatus && matchesSearch;
+      return matchesDate && matchesDoctorUser && matchesProf && matchesStatus && matchesSearch;
     });
-  }, [appointments, isDoctor, user?.name, profFilter, statusFilter, searchTerm]);
+  }, [appointments, selectedDate, filterByDate, isDoctor, user?.name, profFilter, statusFilter, searchTerm]);
 
   // Helper render badge
   const renderStatusBadge = (status: AppointmentStatus) => {
@@ -456,6 +494,7 @@ const AppointmentsManagement: React.FC = () => {
                     }${isSelected ? ' mini-calendar__day-btn--selected' : ''}`}
                     onClick={() => {
                       setSelectedDate(cell.dateStr);
+                      setFilterByDate(true);
                       if (hasApps && cell.dayApps[0]) {
                         setSelectedAppId(cell.dayApps[0].id);
                       }
@@ -506,7 +545,10 @@ const AppointmentsManagement: React.FC = () => {
                     type="date"
                     className="citas-date-input"
                     value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setFilterByDate(true);
+                    }}
                   />
                 </div>
               </div>
@@ -550,6 +592,30 @@ const AppointmentsManagement: React.FC = () => {
           {/* Table Header Filter Bar */}
           <div className="citas-table-toolbar">
             <div className="citas-table-toolbar__filters">
+              {/* Filter by Date Toggle Chip */}
+              <button
+                type="button"
+                onClick={() => setFilterByDate((prev) => !prev)}
+                title={filterByDate ? 'Clic para ver citas de todas las fechas' : 'Clic para filtrar por el día seleccionado'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backgroundColor: filterByDate ? 'rgba(10, 147, 150, 0.15)' : '#F1F5F9',
+                  color: filterByDate ? '#0A9396' : '#64748B',
+                  border: filterByDate ? '1px solid rgba(10, 147, 150, 0.4)' : '1px solid #CBD5E1',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <CalendarDays size={14} />
+                <span>{filterByDate ? `Día: ${selectedDate}` : 'Todas las fechas'}</span>
+              </button>
+
               {/* Search Box */}
               <div className="citas-search-box">
                 <Search size={15} className="citas-search-icon" />
@@ -804,7 +870,7 @@ const AppointmentsManagement: React.FC = () => {
                       value={rescheduleProfId}
                       onChange={(e) => setRescheduleProfId(e.target.value)}
                     >
-                      {mockProfessionals.map((p) => (
+                      {professionalsList.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name} - {p.specialty}
                         </option>
@@ -918,19 +984,40 @@ const AppointmentsManagement: React.FC = () => {
 
                 {/* Patient Selection */}
                 <div className="form-group">
-                  <label className="form-label">Seleccionar Paciente</label>
+                  <label className="form-label">Seleccionar Paciente por Cédula / Documento</label>
+                  <input
+                    type="text"
+                    className="citas-select"
+                    style={{
+                      width: '100%',
+                      marginBottom: '8px',
+                      padding: '8px 12px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '6px',
+                    }}
+                    placeholder="🔍 Escriba el N° de Cédula para filtrar..."
+                    value={patientSearchQuery}
+                    onChange={(e) => setPatientSearchQuery(e.target.value)}
+                  />
                   <select
                     className="citas-select"
                     style={{ width: '100%' }}
                     value={newPatientId}
-                    onChange={(e) => setNewPatientId(Number(e.target.value))}
+                    onChange={(e) => setNewPatientId(e.target.value)}
                     required
                   >
-                    {mockPatients.map((p) => (
+                    {filteredPatientsList.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} (Doc: {p.documentType}-{p.documentNumber})
+                        {p.documentNumber ? `Cédula: ${p.documentNumber} — ${p.name}` : p.name}
                       </option>
                     ))}
+                    {filteredPatientsList.length === 0 && (
+                      <option value="" disabled>
+                        No se encontraron pacientes con esa cédula
+                      </option>
+                    )}
                   </select>
                 </div>
 
@@ -945,7 +1032,7 @@ const AppointmentsManagement: React.FC = () => {
                     disabled={isDoctor}
                     required
                   >
-                    {mockProfessionals.map((p) => (
+                    {professionalsList.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name} - {p.specialty}
                       </option>

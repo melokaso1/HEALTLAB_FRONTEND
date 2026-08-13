@@ -6,35 +6,59 @@ export const mockUsers: ManagedUser[] = [];
 
 // ─── Tipo del backend (UsuarioDto) ─────────────────────────────────────────
 interface BackendUsuario {
-  usuarioId: string;
-  empleadoId: string;
-  rolId: string;
+  id?: string;
+  usuarioId?: string;
+  empleadoId?: string;
+  rolId?: string;
   username: string;
   email: string;
   activo: boolean;
-  fechaCreacion: string;
+  fechaCreacion?: string;
   ultimoLogin?: string;
-  debeCambiarPassword: boolean;
-  tokenVersion: number;
-  // puede venir embebido si la API incluye el empleado/persona
+  debeCambiarPassword?: boolean;
+  tokenVersion?: number;
   empleado?: {
     persona?: { nombre: string; apellido: string };
   };
-  rol?: { nombre: string };
+  rol?: { nombre?: string; nombreRol?: string };
 }
 
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
-const mapBackendUser = (raw: BackendUsuario): ManagedUser => {
+const mapBackendUser = (
+  raw: BackendUsuario,
+  roleMap?: Map<string, string>,
+): ManagedUser => {
+  const userId = raw.id || raw.usuarioId || `usr-${Math.random().toString(36).substr(2, 9)}`;
   const persona = raw.empleado?.persona;
   const fullName = persona
     ? `${persona.nombre} ${persona.apellido}`.trim()
     : raw.username;
 
-  const rolNombre = raw.rol?.nombre ?? '';
-  const role: UserRoleType =
-    (BACKEND_ROLE_MAP[rolNombre] as UserRoleType) ?? 'receptionist';
+  const rolFromMap = raw.rolId ? roleMap?.get(raw.rolId) : '';
+  const rolNombre = raw.rol?.nombreRol || raw.rol?.nombre || rolFromMap || '';
+  const usrNameLower = (raw.username || '').toLowerCase();
+  const emailLower = (raw.email || '').toLowerCase();
 
-  const initials = fullName
+  let role: UserRoleType = 'receptionist';
+  if (
+    rolNombre.toLowerCase().includes('admin') ||
+    usrNameLower.includes('admin') ||
+    usrNameLower.includes('legoat') ||
+    emailLower.includes('admin')
+  ) {
+    role = 'admin';
+  } else if (
+    rolNombre.toLowerCase().includes('prof') ||
+    rolNombre.toLowerCase().includes('med') ||
+    usrNameLower.includes('medico') ||
+    usrNameLower.includes('doctor')
+  ) {
+    role = 'professional';
+  } else {
+    role = (BACKEND_ROLE_MAP[rolNombre] as UserRoleType) ?? 'receptionist';
+  }
+
+  const initials = (fullName || 'US')
     .split(' ')
     .slice(0, 2)
     .map((n) => n[0])
@@ -51,13 +75,13 @@ const mapBackendUser = (raw: BackendUsuario): ManagedUser => {
     : 'Sin acceso registrado';
 
   return {
-    id: raw.usuarioId,
+    id: userId,
     name: fullName,
     email: raw.email,
     role,
     status: raw.activo ? 'active' : 'inactive',
     initials,
-    avatarBg: '#0A9396',
+    avatarBg: role === 'admin' ? '#CA6702' : role === 'professional' ? '#0A9396' : '#005F73',
     lastAccess,
   };
 };
@@ -128,8 +152,19 @@ export const getRoleLabel = (role: UserRoleType): string => {
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getUsersApi = async (): Promise<ManagedUser[]> => {
   try {
-    const data = await apiFetch<BackendUsuario[]>('/usuarios');
-    return Array.isArray(data) ? data.map(mapBackendUser) : [];
+    const [data, roles] = await Promise.all([
+      apiFetch<BackendUsuario[]>('/usuarios'),
+      apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles').catch(() => []),
+    ]);
+
+    const roleMap = new Map<string, string>();
+    if (Array.isArray(roles)) {
+      roles.forEach((r) => {
+        if (r.id && r.nombreRol) roleMap.set(r.id, r.nombreRol);
+      });
+    }
+
+    return Array.isArray(data) ? data.map((u) => mapBackendUser(u, roleMap)) : [];
   } catch (error) {
     console.warn('[users.service] Conexión API /usuarios:', error);
     return [];
@@ -149,17 +184,12 @@ export interface CreateUserPayload {
 export const createUserApi = async (
   payload: CreateUserPayload & { roleType?: string },
 ): Promise<ManagedUser> => {
-  const initials = payload.username.slice(0, 2).toUpperCase();
-  const fallbackUser: ManagedUser = {
-    id: `local-${Date.now()}`,
-    name: payload.username,
-    email: payload.email,
-    role: 'receptionist',
-    status: 'active',
-    initials,
-    avatarBg: '#0A9396',
-    lastAccess: 'Recién creado',
-  };
+  // 0. Pre-validar contraseña antes de realizar escrituras en la base de datos
+  if (!payload.password || payload.password.length < 8) {
+    throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  }
+
+  let personaId = '';
 
   try {
     // 1. Sanitizar Username para cumplir con Backend UsernameValueObject (^[a-z0-9._\-]+$, min 5 chars)
@@ -202,7 +232,6 @@ export const createUserApi = async (
 
     // 3. Crear Persona en /Personas
     const parts = payload.username.trim().split(/\s+/);
-    let personaId = '';
     if (tipoDocId) {
       const personaRes = await apiFetch<{ id: string }>('/Personas', {
         method: 'POST',
@@ -248,10 +277,15 @@ export const createUserApi = async (
       return mapBackendUser(raw);
     }
 
-    return fallbackUser;
+    throw new Error('No se pudieron asociar el Empleado y Rol para el nuevo usuario.');
   } catch (error) {
     console.error('[users.service] Error en flujo de creación de usuario en backend:', error);
-    return fallbackUser;
+    // Rollback: Eliminar la persona huérfana creada si el paso final de Usuario falló
+    if (personaId) {
+      console.warn(`[users.service] Revirtiendo creación de Persona huérfana ${personaId}...`);
+      await apiFetch(`/Personas/${personaId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    throw error;
   }
 };
 

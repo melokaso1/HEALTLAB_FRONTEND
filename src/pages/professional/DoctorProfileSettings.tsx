@@ -17,12 +17,22 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { apiFetch } from '../../services/api';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './DoctorProfileSettings.css';
 
 const DoctorProfileSettings: React.FC = () => {
   const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
+
+  // Toast State
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Form / Modal States
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Doctor Profile Info
   const doctorName = user?.name || 'Dr. Julian Moore';
@@ -32,13 +42,6 @@ const DoctorProfileSettings: React.FC = () => {
   const medicalId = 'MED-8492-CM';
   const facility = 'Pabellón Central - Torre B';
 
-  // Modals
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
-  const [currentPassword, setCurrentPassword] = useState<string>('');
-  const [newPassword, setNewPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => {
@@ -46,14 +49,14 @@ const DoctorProfileSettings: React.FC = () => {
     }, 3000);
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword) {
       showToast('Por favor ingrese su contraseña actual');
       return;
     }
-    if (newPassword.length < 6) {
-      showToast('La nueva contraseña debe tener al menos 6 caracteres');
+    if (newPassword.length < 8) {
+      showToast('La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -61,11 +64,24 @@ const DoctorProfileSettings: React.FC = () => {
       return;
     }
 
-    setIsPasswordModalOpen(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    showToast('Contraseña actualizada exitosamente');
+    try {
+      await apiFetch('/auth/cambiar-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      setIsPasswordModalOpen(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('Contraseña actualizada exitosamente en el servidor.');
+    } catch (error: any) {
+      console.error('[DoctorProfileSettings] Error al actualizar clave:', error);
+      showToast(error.message || 'Error al actualizar la contraseña en el servidor.');
+    }
   };
 
   return (

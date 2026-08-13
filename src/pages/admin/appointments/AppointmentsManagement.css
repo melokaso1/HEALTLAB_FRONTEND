@@ -446,6 +446,13 @@
   transition: all 0.2s ease;
 }
 
+.citas-select option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-size: 13px;
+  padding: 8px;
+}
+
 .citas-filter-select-wrapper .citas-select {
   padding-left: 30px;
 }
@@ -1172,6 +1179,11 @@
 .dark-mode .citas-date-input {
   background: #0F172A;
   border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .citas-select option {
+  background-color: #0F172A;
   color: #F8FAFC;
 }
 
