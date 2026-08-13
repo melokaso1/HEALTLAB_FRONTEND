@@ -5,8 +5,6 @@ import {
   Calendar as CalendarIcon,
   Plus,
   Settings,
-  Award,
-  Building,
   CheckCircle2,
   Search,
   X,
@@ -17,7 +15,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import type { Appointment } from '../../types/appointment.types';
-import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './ProfessionalDashboard.css';
 
 export interface DoctorAppointmentEvent {
@@ -305,63 +302,14 @@ const ProfessionalDashboard: React.FC = () => {
       {/* Top Header Title Row */}
       <div className="prof-agenda__header">
         <div className="prof-agenda__title-group">
-          <h1 className="prof-agenda__title">Mi Agenda Médica</h1>
+          <h1 className="prof-agenda__title">Bienvenido a tu agenda, {doctorName}</h1>
           <p className="prof-agenda__subtitle">
-            Directorio médico, agenda semanal de citas y configuración de disponibilidad.
+            Consulte su programación semanal, gestione citas y configure sus horarios de atención.
           </p>
         </div>
       </div>
 
-      {/* 1. DOCTOR HERO PROFILE CARD (Matching AdminProfesionales) */}
-      <div className="prof-card prof-hero-card">
-        <div className="prof-hero-content">
-          <div className="prof-hero-identity">
-            <img src={medicoAvatar} alt={doctorName} className="prof-hero-avatar" />
-
-            <div className="prof-hero-text-group">
-              <h2 className="prof-hero-name">{doctorName}</h2>
-              <p className="prof-hero-specialty">Cardiología Intervencionista</p>
-
-              <div className="prof-hero-tags-row">
-                <span className="tag-badge">
-                  <Award size={14} color="#0A9396" />
-                  <span>Lic: CMP-45882</span>
-                </span>
-
-                <span className="tag-badge">
-                  <Building size={14} color="#3B82F6" />
-                  <span>Consultorio 302</span>
-                </span>
-
-                <span className="tag-badge active-status">● Activo</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Action buttons top right */}
-          <div className="prof-hero-actions">
-            <button
-              type="button"
-              className="btn-primary btn-add-cita"
-              onClick={() => setIsNewAppointmentOpen(true)}
-            >
-              <Plus size={15} />
-              <span>Agendar Cita</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-outline btn-config-horario"
-              onClick={() => setIsConfigHorarioOpen(true)}
-            >
-              <Settings size={15} />
-              <span>Configurar Horario</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. FULL-WIDTH WEEKLY CALENDAR CARD (Matching AdminProfesionales) */}
+      {/* 2. FULL-WIDTH WEEKLY CALENDAR CARD (Moved up) */}
       <div className="prof-card calendar-card">
         {/* Calendar Toolbar */}
         <div className="calendar-toolbar">
@@ -429,6 +377,16 @@ const ProfessionalDashboard: React.FC = () => {
               <option value="En sala de espera">En sala de espera</option>
               <option value="Cancelada">Canceladas</option>
             </select>
+
+            <button
+              type="button"
+              className="btn-outline btn-config-horario"
+              style={{ padding: '6px 12px', fontSize: '12.5px' }}
+              onClick={() => setIsConfigHorarioOpen(true)}
+            >
+              <Settings size={14} />
+              <span>Configurar Horario</span>
+            </button>
 
             <button
               type="button"

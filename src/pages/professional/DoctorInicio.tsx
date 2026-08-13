@@ -4,7 +4,6 @@ import {
   Users,
   Clock,
   CheckCircle2,
-  Plus,
   ArrowRight,
   Activity,
   Award,
@@ -106,25 +105,6 @@ const DoctorInicio: React.FC = () => {
               </span>
             </div>
           </div>
-        </div>
-
-        <div className="doc-hero-banner__actions">
-          <button
-            type="button"
-            className="doc-btn-primary"
-            onClick={() => navigate('/agenda-medico')}
-          >
-            <Calendar size={16} />
-            <span>Ver Mi Agenda</span>
-          </button>
-          <button
-            type="button"
-            className="doc-btn-outline"
-            onClick={() => navigate('/pacientes')}
-          >
-            <Users size={16} />
-            <span>Mis Pacientes</span>
-          </button>
         </div>
       </div>
 
@@ -310,14 +290,6 @@ const DoctorInicio: React.FC = () => {
             </div>
 
             <div className="doc-quick-actions-list">
-              <button
-                type="button"
-                className="doc-quick-action-btn"
-                onClick={() => navigate('/agenda-medico')}
-              >
-                <Plus size={16} color="#0A9396" />
-                <span>Agendar Nueva Cita</span>
-              </button>
 
               <button
                 type="button"
