@@ -58,7 +58,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         className={`custom-select__trigger ${isOpen ? 'custom-select__trigger--open' : ''}`}
-        onClick={handleToggle}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleToggle();
+        }}
       >
         <span className="custom-select__value">
           {icon}

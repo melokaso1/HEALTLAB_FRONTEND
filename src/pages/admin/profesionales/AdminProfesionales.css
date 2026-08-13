@@ -428,6 +428,63 @@
   margin-top: 2px;
 }
 
+/* Compact Status CustomSelect in Doctor Item */
+.doctor-status-custom-select {
+  min-width: 95px;
+}
+
+.doctor-status-custom-select .custom-select__trigger {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  min-width: 95px;
+  height: 26px;
+}
+
+.doctor-status-custom-select--active .custom-select__trigger {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.doctor-status-custom-select--active .custom-select__trigger:hover {
+  background-color: rgba(16, 185, 129, 0.22);
+}
+
+.doctor-status-custom-select--inactive .custom-select__trigger {
+  background-color: rgba(148, 163, 184, 0.12);
+  color: #94A3B8;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.doctor-status-custom-select--inactive .custom-select__trigger:hover {
+  background-color: rgba(148, 163, 184, 0.22);
+  color: #64748B;
+}
+
+.dark-mode .doctor-status-custom-select--active .custom-select__trigger {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.dark-mode .doctor-status-custom-select--inactive .custom-select__trigger {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #64748B;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+.doctor-status-custom-select .custom-select__menu {
+  min-width: 105px;
+  padding: 4px;
+}
+
+.doctor-status-custom-select .custom-select__option {
+  padding: 6px 8px;
+  font-size: 11.5px;
+}
+
 /* ----------------------------------------------------
    COLUMN 2: DETALLE DEL DOCTOR Y AGENDA SEMANAL
    ---------------------------------------------------- */

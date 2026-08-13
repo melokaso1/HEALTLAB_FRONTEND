@@ -7,7 +7,6 @@ import {
   Calendar as CalendarIcon,
   Clock,
   Building,
-  Award,
   Stethoscope,
   CheckCircle2,
   Settings,
@@ -103,6 +102,22 @@ const AdminProfesionales: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string>(initialProfesionales[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeSpecialty, setActiveSpecialty] = useState<string>('Todos');
+
+  const handleSetDoctorStatus = (profId: string, statusVal: string) => {
+    const isActivo = statusVal === 'Activo';
+    setProfesionales((prev) =>
+      prev.map((p) => {
+        if (p.id === profId) {
+          return {
+            ...p,
+            disponibleHoy: isActivo,
+            estado: isActivo ? 'Activo' : 'Inactivo',
+          };
+        }
+        return p;
+      })
+    );
+  };
 
   // Week Date State (default to current active week in August 2026 or current date)
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
@@ -483,7 +498,7 @@ const AdminProfesionales: React.FC = () => {
                         className={`status-dot-indicator ${
                           prof.disponibleHoy ? 'online' : 'offline'
                         }`}
-                        title={prof.disponibleHoy ? 'Disponible hoy' : 'No disponible'}
+                        title={prof.disponibleHoy ? 'Activo hoy' : 'Inactivo'}
                       />
                     </div>
 
@@ -499,20 +514,21 @@ const AdminProfesionales: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Quick Status Tag */}
-                    <div className="doctor-status-badge">
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          color: prof.disponibleHoy ? '#10B981' : '#94A3B8',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        {prof.disponibleHoy ? '● Disponible' : '● No disponible'}
-                      </span>
+                    {/* Quick Status CustomSelect Dropdown */}
+                    <div className="doctor-status-badge" onClick={(e) => e.stopPropagation()}>
+                      <CustomSelect
+                        value={prof.disponibleHoy ? 'Activo' : 'Inactivo'}
+                        onChange={(val) => handleSetDoctorStatus(prof.id, val)}
+                        options={[
+                          { value: 'Activo', label: '● Activo' },
+                          { value: 'Inactivo', label: '● Inactivo' },
+                        ]}
+                        className={`doctor-status-custom-select ${
+                          prof.disponibleHoy
+                            ? 'doctor-status-custom-select--active'
+                            : 'doctor-status-custom-select--inactive'
+                        }`}
+                      />
                     </div>
                   </div>
                 );
@@ -527,73 +543,7 @@ const AdminProfesionales: React.FC = () => {
         <div className="detail-column">
           {selectedProf ? (
             <>
-              {/* 1. INFORMACIÓN PRINCIPAL CARD */}
-              <div className="hl-card profile-main-card">
-                <div className="profile-main-content">
-                  <div className="profile-identity">
-                    {/* Doctor Photo */}
-                    {selectedProf.foto && !imageErrors[selectedProf.id] ? (
-                      <img
-                        src={selectedProf.foto}
-                        alt={selectedProf.nombre}
-                        className="profile-hero-avatar"
-                        onError={() => handleImageError(selectedProf.id)}
-                      />
-                    ) : (
-                      <div className="profile-hero-fallback">
-                        {selectedProf.nombre[0]}
-                        {selectedProf.apellido[0]}
-                      </div>
-                    )}
-
-                    {/* Doctor Text & Metadata */}
-                    <div className="profile-text-group">
-                      <h2 className="profile-full-name">
-                        {selectedProf.tituloPrefix} {selectedProf.nombre}{' '}
-                        {selectedProf.apellido}
-                      </h2>
-                      <p className="profile-specialty-title">
-                        {selectedProf.especialidad}
-                      </p>
-
-                      <div className="profile-tags-row">
-                        <span className="tag-badge">
-                          <Award size={14} color="#00A896" />
-                          <span>Lic: {selectedProf.registroProfesional}</span>
-                        </span>
-
-                        <span className="tag-badge">
-                          <Building size={14} color="#4C62D6" />
-                          <span>{selectedProf.consultorio}</span>
-                        </span>
-
-                        <span
-                          className={`tag-badge ${
-                            selectedProf.estado === 'Activo'
-                              ? 'active-status'
-                              : 'inactive-status'
-                          }`}
-                        >
-                          {selectedProf.estado === 'Activo' ? '● Activo' : '● Inactivo'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Edit Profile Action Button */}
-                  <div>
-                    <button
-                      className="btn-outline"
-                      onClick={() => setIsEditProfileOpen(true)}
-                    >
-                      <Edit3 size={16} />
-                      <span>Editar perfil</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. NUEVO CALENDARIO / AGENDA SEMANAL DE CITAS */}
+              {/* AGENDA SEMANAL DE CITAS */}
               <div className="hl-card calendar-card">
                 {/* Toolbar Above Calendar: Selector de fechas por semana */}
                 <div className="calendar-toolbar">
