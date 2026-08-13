@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  MoreVertical,
   RotateCcw,
 } from 'lucide-react';
 import type { Patient, GenderType } from '../../../types/patient.types';
@@ -55,10 +54,30 @@ const PatientsManagement: React.FC = () => {
     });
   }, []);
   const [activePatientId, setActivePatientId] = useState<string | number | null>(null);
+  const [lastPatient, setLastPatient] = useState<Patient | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [activeTab, setActiveTab] = useState<'Resumen' | 'Historial' | 'Notas'>('Resumen');
   const [newNoteText, setNewNoteText] = useState('');
+
+  const handleTogglePanel = (patientId: string | number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (activePatientId === patientId) {
+      setActivePatientId(null);
+    } else {
+      setActivePatientId(patientId);
+      const found = patients.find((p) => p.id === patientId);
+      if (found) setLastPatient(found);
+    }
+  };
+
+  const handleClosePanel = () => {
+    setActivePatientId(null);
+  };
+
+  const currentPatient = activePatientId !== null ? (patients.find((p) => p.id === activePatientId) || null) : null;
+  const isPanelOpen = activePatientId !== null && currentPatient !== null;
+  const activePatient = currentPatient || lastPatient;
 
   // Modal State for New Patient
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -122,7 +141,7 @@ const PatientsManagement: React.FC = () => {
   const [newBloodType, setNewBloodType] = useState('O+');
   const [newAllergies, setNewAllergies] = useState('Ninguna');
 
-  const activePatient = activePatientId !== null ? (patients.find((p) => p.id === activePatientId) || null) : null;
+
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -217,18 +236,7 @@ const PatientsManagement: React.FC = () => {
     }
   };
 
-  const handleTogglePanel = (patientId: string | number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (activePatientId === patientId) {
-      setActivePatientId(null);
-    } else {
-      setActivePatientId(patientId);
-    }
-  };
 
-  const handleClosePanel = () => {
-    setActivePatientId(null);
-  };
 
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -375,9 +383,9 @@ const PatientsManagement: React.FC = () => {
       </div>
 
       {/* Grid Layout (Table Left / Patient Details Panel Right) */}
-      <div className={`patients-mgmt__grid${activePatientId !== null && activePatient !== null ? ' patients-mgmt__grid--with-panel' : ''}`}>
+      <div className={`patients-mgmt__grid${isPanelOpen ? ' patients-mgmt__grid--with-panel' : ''}`}>
         {/* Left Column: Table */}
-        <div className="patients-card">
+        <div className="patients-card patients-table-card">
           <div className="patients-table__wrapper">
             <table className="patients-table">
               <thead>
@@ -387,23 +395,24 @@ const PatientsManagement: React.FC = () => {
                   <th>ID / DOCUMENTO</th>
                   <th>CONTACTO</th>
                   <th>ÚLTIMA VISITA</th>
-                  <th style={{ textAlign: 'center' }}>ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="patients-table__empty">
+                    <td colSpan={5} className="patients-table__empty">
                       No se encontraron pacientes con los filtros aplicados.
                     </td>
                   </tr>
                 ) : (
                   filteredPatients.map((patient, idx) => {
-                    const isPanelOpen = patient.id === activePatientId;
+                    const isRowSelected = patient.id === activePatientId;
                     return (
                       <tr
                         key={patient.id}
-                        className={isPanelOpen ? 'patients-table__row--selected' : ''}
+                        className={isRowSelected ? 'patients-table__row--selected' : ''}
+                        onClick={() => handleTogglePanel(patient.id)}
+                        style={{ cursor: 'pointer' }}
                       >
                         <td className="patients-table__index">{idx + 1}</td>
                         <td>
@@ -437,53 +446,6 @@ const PatientsManagement: React.FC = () => {
                           <div className="patient-visit-cell">
                             <span className="patient-visit-date">{patient.lastVisitDate}</span>
                             {renderSpecialtyBadge(patient.lastVisitSpecialty)}
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div className="patients-table__actions" style={{ justifyContent: 'center' }}>
-                            {!isDoctor && (
-                              patient.status === 'active' ? (
-                                <button
-                                  type="button"
-                                  className="trash-btn"
-                                  title="Desactivar / Eliminar paciente"
-                                  onClick={(e) => handleDeletePatient(patient.id, e)}
-                                >
-                                  <TrashIcon className="trash-btn__icon" />
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="reactivate-icon-btn"
-                                  title="Reactivar paciente"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReactivatePatient(patient.id);
-                                  }}
-                                >
-                                  <RotateCcw size={15} />
-                                  <span>Reactivar</span>
-                                </button>
-                              )
-                            )}
-                            {!isDoctor && (
-                              <button
-                                type="button"
-                                className="action-btn"
-                                title="Editar paciente"
-                                onClick={(e) => handleOpenEditPatient(patient, e)}
-                              >
-                                <Edit2 size={15} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className={`action-btn${isPanelOpen ? ' action-btn--active' : ''}`}
-                              title="Ver detalle del paciente (solo lectura)"
-                              onClick={(e) => handleTogglePanel(patient.id, e)}
-                            >
-                              <MoreVertical size={15} />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -522,49 +484,80 @@ const PatientsManagement: React.FC = () => {
         </div>
 
         {/* Right Side Panel: Patient Detail Panel */}
-        {activePatientId !== null && activePatient && (
-          <div className="patients-card patient-detail-panel">
-            {/* Header / Close Button */}
-            <div className="patient-detail__top">
-              <button
-                type="button"
-                className="patient-detail__close-btn"
-                onClick={handleClosePanel}
-                title="Cerrar detalle"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Main Avatar & Name */}
-            <div className="patient-detail__header-info">
-              <div
-                className="patient-detail__avatar"
-                style={{ backgroundColor: activePatient.avatarBg || '#0A9396' }}
-              >
-                {activePatient.initials}
-              </div>
-              <h2 className="patient-detail__name">{activePatient.name}</h2>
-              <span className="patient-detail__doc">
-                ID: {activePatient.documentType}-{activePatient.documentNumber}
-              </span>
-
-              {/* Action Buttons Row */}
-              <div className="patient-detail__actions">
-                <button type="button" className="btn-agendar">
-                  <CalendarPlus size={14} />
-                  <span>Agendar</span>
-                </button>
+        <div className={`patients-mgmt__panel-wrapper${isPanelOpen ? ' patients-mgmt__panel-wrapper--open' : ' patients-mgmt__panel-wrapper--closed'}`}>
+          {activePatient && (
+            <div className="patients-card patient-detail-panel">
+              {/* Header / Close Button */}
+              <div className="patient-detail__top">
                 <button
                   type="button"
-                  className="btn-editar"
-                  onClick={(e) => handleOpenEditPatient(activePatient, e)}
+                  className="patient-detail__close-btn"
+                  onClick={handleClosePanel}
+                  title="Cerrar detalle"
                 >
-                  <Edit2 size={14} />
-                  <span>Editar</span>
+                  <X size={18} />
                 </button>
               </div>
-            </div>
+
+              {/* Main Avatar & Name */}
+              <div className="patient-detail__header-info">
+                <div
+                  className="patient-detail__avatar"
+                  style={{ backgroundColor: activePatient.avatarBg || '#0A9396' }}
+                >
+                  {activePatient.initials}
+                </div>
+                <h2 className="patient-detail__name">{activePatient.name}</h2>
+                <span className="patient-detail__doc">
+                  ID: {activePatient.documentType}-{activePatient.documentNumber}
+                </span>
+
+                {/* Action Buttons Row */}
+                <div className="patient-detail__actions">
+                  <button type="button" className="btn-agendar">
+                    <CalendarPlus size={14} />
+                    <span>Agendar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-editar"
+                    onClick={(e) => handleOpenEditPatient(activePatient, e)}
+                  >
+                    <Edit2 size={14} />
+                    <span>Editar</span>
+                  </button>
+                  {!isDoctor && (
+                    activePatient.status === 'active' ? (
+                      <button
+                        type="button"
+                        className="trash-btn"
+                        title="Desactivar / Eliminar paciente"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePatient(activePatient.id, e);
+                        }}
+                        style={{ height: '34px', padding: '0 10px' }}
+                      >
+                        <TrashIcon className="trash-btn__icon" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="reactivate-icon-btn"
+                        title="Reactivar paciente"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReactivatePatient(activePatient.id);
+                        }}
+                        style={{ height: '34px', padding: '0 10px' }}
+                      >
+                        <RotateCcw size={14} />
+                        <span>Reactivar</span>
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
 
             {/* Navigation Tabs */}
             <div className="patient-detail__tabs">
@@ -753,6 +746,7 @@ const PatientsManagement: React.FC = () => {
           </div>
         )}
       </div>
+    </div>
 
       {/* Modal: Create New Patient */}
       {isCreateModalOpen && (
