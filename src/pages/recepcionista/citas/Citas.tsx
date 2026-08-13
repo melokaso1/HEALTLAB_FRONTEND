@@ -12,10 +12,15 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import './Citas.css';
-import { getAppointmentsApi, createAppointmentApi } from '../../../services/appointments.service';
+import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
+import {
+  findPatientByCedula,
+  createAppointmentFromInput,
+} from '../../../services/createAppointment.logic';
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
+import type { Patient } from '../../../types/patient.types';
 
 interface CalendarEventBlock {
   id: string;
@@ -59,7 +64,9 @@ const RecepCitas: React.FC = () => {
   const [selectedCita, setSelectedCita] = useState<CitaHoy | null>(null);
 
   const [docType, setDocType] = useState('CC');
-  const [pacienteQuery, setPacienteQuery] = useState('');
+  const [cedulaQuery, setCedulaQuery] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isSearchingPatient, setIsSearchingPatient] = useState(false);
   const [profesionalSelect, setProfesionalSelect] = useState('');
   const [servicioSelect, setServicioSelect] = useState('');
   const [fechaInput, setFechaInput] = useState(new Date().toISOString().split('T')[0]);
@@ -206,7 +213,8 @@ const RecepCitas: React.FC = () => {
           const first = hoyMapped[0];
           setSelectedCita(first);
           setIsNuevaCitaOpen(true);
-          setPacienteQuery(first.paciente);
+          setCedulaQuery('');
+          setSelectedPatient(null);
           setServicioSelect(first.servicio);
           setHoraInput(first.hora);
           setNotasInput(`Gestionando cita #${first.id}`);
@@ -222,7 +230,8 @@ const RecepCitas: React.FC = () => {
 
   const handleClearForm = () => {
     setSelectedCita(null);
-    setPacienteQuery('');
+    setCedulaQuery('');
+    setSelectedPatient(null);
     setProfesionalSelect('');
     setServicioSelect('');
     setFechaInput(new Date().toISOString().split('T')[0]);
@@ -231,10 +240,35 @@ const RecepCitas: React.FC = () => {
     setIsNuevaCitaOpen(false);
   };
 
+  const handleBuscarPaciente = async () => {
+    const doc = cedulaQuery.trim();
+    if (!doc) {
+      showToast('Ingrese el número de cédula del paciente.');
+      return;
+    }
+    setIsSearchingPatient(true);
+    setSelectedPatient(null);
+    try {
+      const patient = await findPatientByCedula(doc);
+      if (!patient) {
+        showToast('Paciente no encontrado con esa cédula.');
+        return;
+      }
+      setSelectedPatient(patient);
+      showToast(`Paciente encontrado: ${patient.name}`);
+    } catch (error) {
+      console.error('[Citas.tsx] Error al buscar paciente:', error);
+      showToast('Error al buscar el paciente. Intente de nuevo.');
+    } finally {
+      setIsSearchingPatient(false);
+    }
+  };
+
   const handleSelectCita = (c: CitaHoy) => {
     setSelectedCita(c);
     setIsNuevaCitaOpen(true);
-    setPacienteQuery(c.paciente);
+    setCedulaQuery('');
+    setSelectedPatient(null);
     setServicioSelect(c.servicio);
     setHoraInput(c.hora);
 
@@ -248,10 +282,6 @@ const RecepCitas: React.FC = () => {
 
   const handleAgendarCita = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pacienteQuery.trim()) {
-      showToast('Por favor ingrese la cédula o nombre del paciente.');
-      return;
-    }
 
     const selectedProf = professionals.find((p) => p.id.toString() === profesionalSelect);
 
@@ -282,58 +312,61 @@ const RecepCitas: React.FC = () => {
             : ev
         )
       );
-      showToast(`Cita de ${pacienteQuery} reprogramada con éxito.`);
+      showToast(`Cita de ${selectedCita.paciente} reprogramada con éxito.`);
       handleClearForm();
       return;
     }
 
-    // Creating a new appointment
-    const newCitaPayload: Partial<Appointment> = {
-      patientName: pacienteQuery,
+    if (!selectedPatient) {
+      showToast('Busque y seleccione un paciente por cédula antes de agendar.');
+      return;
+    }
+
+    const result = await createAppointmentFromInput({
+      patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
       professionalId: profesionalSelect,
       professionalName: selectedProf?.name || 'Médico no asignado',
       professionalSpecialty: selectedProf?.specialty || 'Medicina General',
       serviceName: servicioSelect || 'Consulta Medicina General',
       date: fechaInput || new Date().toISOString().split('T')[0],
       time: horaInput || '09:00',
-      status: 'Agendada',
       notes: notasInput,
-    };
+    });
 
-    try {
-      await createAppointmentApi(newCitaPayload as Appointment);
-
-      const newId = `c-${Date.now()}`;
-      const newHoy: CitaHoy = {
-        id: newId,
-        hora: horaInput,
-        paciente: pacienteQuery,
-        profesional: selectedProf?.name || 'Médico no asignado',
-        servicio: servicioSelect || 'Consulta Medicina General',
-        estado: 'Agendada',
-      };
-      setCitasHoyList((prev) => [newHoy, ...prev]);
-
-      const hourPart = horaInput.split(':')[0] || '09';
-      setAgendaEvents((prev) => [
-        {
-          id: newId,
-          dayIndex: (new Date().getDay() + 6) % 7,
-          hour: `${hourPart.padStart(2, '0')}:00`,
-          paciente: pacienteQuery,
-          servicio: servicioSelect || 'Consulta Medicina General',
-          horaLabel: horaInput,
-          color: 'teal',
-        },
-        ...prev,
-      ]);
-
-      handleClearForm();
-      showToast(`Cita agendada para ${pacienteQuery} con éxito.`);
-    } catch (error) {
-      console.error('[Citas.tsx] Error al agendar cita:', error);
-      showToast('Error al registrar la cita en el servidor.');
+    if (!result.ok) {
+      showToast(result.error);
+      return;
     }
+
+    const newId = String(result.appointment.id);
+    const patientLabel = selectedPatient.name;
+    const newHoy: CitaHoy = {
+      id: newId,
+      hora: horaInput,
+      paciente: patientLabel,
+      profesional: selectedProf?.name || 'Médico no asignado',
+      servicio: servicioSelect || 'Consulta Medicina General',
+      estado: 'Agendada',
+    };
+    setCitasHoyList((prev) => [newHoy, ...prev]);
+
+    const hourPart = horaInput.split(':')[0] || '09';
+    setAgendaEvents((prev) => [
+      {
+        id: newId,
+        dayIndex: (new Date().getDay() + 6) % 7,
+        hour: `${hourPart.padStart(2, '0')}:00`,
+        paciente: patientLabel,
+        servicio: servicioSelect || 'Consulta Medicina General',
+        horaLabel: horaInput,
+        color: 'teal',
+      },
+      ...prev,
+    ]);
+
+    handleClearForm();
+    showToast(`Cita agendada para ${patientLabel} con éxito.`);
   };
 
   const handleCancelarCita = () => {
@@ -545,12 +578,13 @@ const RecepCitas: React.FC = () => {
                 <form onSubmit={handleAgendarCita} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {/* Field: Documento del Paciente (CC / TI / RC) */}
                   <div className="form-field-group">
-                    <label className="field-label">Documento del Paciente</label>
+                    <label className="field-label">Cédula del Paciente</label>
                     <div className="search-field-wrapper doc-search-wrapper">
                       <select
                         className="doc-type-inline-select"
                         value={docType}
                         onChange={(e) => setDocType(e.target.value)}
+                        disabled={Boolean(selectedCita)}
                       >
                         <option value="CC">CC</option>
                         <option value="TI">TI</option>
@@ -560,12 +594,45 @@ const RecepCitas: React.FC = () => {
                       <input
                         type="text"
                         className="field-input"
-                        placeholder="Número de documento..."
+                        placeholder="Número de cédula..."
                         inputMode="numeric"
-                        value={pacienteQuery}
-                        onChange={(e) => setPacienteQuery(e.target.value.replace(/\D/g, ''))}
+                        value={cedulaQuery}
+                        disabled={Boolean(selectedCita)}
+                        onChange={(e) => {
+                          setCedulaQuery(e.target.value.replace(/\D/g, ''));
+                          setSelectedPatient(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void handleBuscarPaciente();
+                          }
+                        }}
                       />
+                      {!selectedCita && (
+                        <button
+                          type="button"
+                          className="btn-limpiar"
+                          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                          onClick={() => void handleBuscarPaciente()}
+                          disabled={isSearchingPatient}
+                        >
+                          {isSearchingPatient ? 'Buscando...' : 'Buscar'}
+                        </button>
+                      )}
                     </div>
+                    {selectedCita ? (
+                      <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
+                        Paciente: {selectedCita.paciente}
+                      </span>
+                    ) : selectedPatient ? (
+                      <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
+                        ● {selectedPatient.name}
+                        {selectedPatient.documentNumber
+                          ? ` — ${selectedPatient.documentType} ${selectedPatient.documentNumber}`
+                          : ''}
+                      </span>
+                    ) : null}
                   </div>
 
                   {/* Field: Profesional */}

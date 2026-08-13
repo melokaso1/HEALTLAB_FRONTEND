@@ -28,13 +28,15 @@ import {
   AVAILABLE_TIME_SLOTS,
   checkScheduleConflict,
   getAppointmentsApi,
-  createAppointmentApi,
   cancelAppointmentApi,
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
-import { mockProfessionals, getProfessionalsApi } from '../../../services/professionals.service';
-import { mockPatients, getPatientsApi } from '../../../services/patients.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import {
+  findPatientByCedula,
+  createAppointmentFromInput,
+} from '../../../services/createAppointment.logic';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import Pagination from '../../../components/common/Pagination';
@@ -46,8 +48,7 @@ const AppointmentsManagement: React.FC = () => {
 
   // Main Data States
   const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
-  const [patientsList, setPatientsList] = useState<Patient[]>(mockPatients);
-  const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>(mockProfessionals);
+  const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>([]);
 
   const [filterByDate, setFilterByDate] = useState<boolean>(true);
   const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
@@ -68,11 +69,6 @@ const AppointmentsManagement: React.FC = () => {
             }
           }
         }
-      }
-    });
-    getPatientsApi().then((data) => {
-      if (data && data.length > 0) {
-        setPatientsList(data);
       }
     });
     getProfessionalsApi().then((data) => {
@@ -208,23 +204,21 @@ const AppointmentsManagement: React.FC = () => {
   }, [selectedAppointment]);
 
   // New Appointment Form State
-  const [newPatientId, setNewPatientId] = useState<string | number>(mockPatients[0]?.id || 1);
-  const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
-  const [newProfId, setNewProfId] = useState<string>('prof-1');
+  const [cedulaQuery, setCedulaQuery] = useState<string>('');
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isSearchingPatient, setIsSearchingPatient] = useState(false);
+  const [newProfId, setNewProfId] = useState<string>('');
   const [newServiceId, setNewServiceId] = useState<string>('srv-1');
   const [newDate, setNewDate] = useState<string>('2026-10-28');
   const [newTime, setNewTime] = useState<string>('10:00 AM');
   const [newNotes, setNewNotes] = useState<string>('');
 
-  const filteredPatientsList = useMemo(() => {
-    if (!patientSearchQuery.trim()) return patientsList;
-    const q = patientSearchQuery.trim().toLowerCase();
-    return patientsList.filter(
-      (p) =>
-        (p.documentNumber && p.documentNumber.toLowerCase().includes(q)) ||
-        (p.name && p.name.toLowerCase().includes(q))
-    );
-  }, [patientsList, patientSearchQuery]);
+  // Default professional when list loads / modal opens
+  useEffect(() => {
+    if (professionalsList.length > 0 && !newProfId) {
+      setNewProfId(String(professionalsList[0].id));
+    }
+  }, [professionalsList, newProfId]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -312,6 +306,30 @@ const AppointmentsManagement: React.FC = () => {
     }
   };
 
+  const handleBuscarPaciente = async () => {
+    const doc = cedulaQuery.trim();
+    if (!doc) {
+      showToast('Ingrese el número de cédula del paciente.');
+      return;
+    }
+    setIsSearchingPatient(true);
+    setSelectedPatient(null);
+    try {
+      const patient = await findPatientByCedula(doc);
+      if (!patient) {
+        showToast('Paciente no encontrado con esa cédula.');
+        return;
+      }
+      setSelectedPatient(patient);
+      showToast(`Paciente encontrado: ${patient.name}`);
+    } catch (error) {
+      console.error('[AppointmentsManagement] Error al buscar paciente:', error);
+      showToast('Error al buscar el paciente. Intente de nuevo.');
+    } finally {
+      setIsSearchingPatient(false);
+    }
+  };
+
   // Handler: Create New Appointment
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,48 +339,45 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
-    const patientObj = patientsList.find((p) => String(p.id) === String(newPatientId)) || patientsList[0];
+    if (!selectedPatient) {
+      showToast('Busque y seleccione un paciente por cédula antes de agendar.');
+      return;
+    }
+
     const profObj = professionalsList.find((p) => String(p.id) === String(newProfId)) || professionalsList[0];
     const serviceObj = mockServices.find((s) => String(s.id) === String(newServiceId)) || mockServices[0];
 
-    const created: Appointment = {
-      id: Date.now(),
-      patientId: patientObj?.id ?? String(newPatientId),
-      patientName: patientObj?.name ?? 'Paciente Seleccionado',
-      patientAge: patientObj?.age ?? 30,
-      patientGender: patientObj?.gender ?? 'Femenino',
-      patientDoc: patientObj ? `${patientObj.documentType || 'CC'}-${patientObj.documentNumber}` : 'CC-00000',
-      patientPhone: patientObj?.contact?.phone ?? '',
-      patientEmail: patientObj?.contact?.email ?? '',
-      patientAvatarBg: patientObj?.avatarBg || '#0A9396',
-      patientInitials: patientObj?.initials ?? 'P',
+    const result = await createAppointmentFromInput({
+      patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
       professionalId: profObj?.id ?? newProfId,
       professionalName: profObj?.name ?? 'Médico Seleccionado',
       professionalSpecialty: profObj?.specialty ?? 'Medicina General',
-      serviceId: serviceObj?.id ?? newServiceId,
+      serviceId: serviceObj?.id,
       serviceName: serviceObj?.name ?? 'Consulta Médica',
       date: newDate,
       time: newTime,
-      status: 'Agendada',
       notes: newNotes.trim() || undefined,
-    };
+    });
 
-    try {
-      await createAppointmentApi(created);
-      const fresh = await getAppointmentsApi();
-      if (fresh && fresh.length > 0) {
-        setPatientsAppointments(fresh);
-      } else {
-        setPatientsAppointments([created, ...appointments]);
-      }
-      setSelectedAppId(created.id);
-      setIsCreateModalOpen(false);
-      setNewNotes('');
-      showToast(`Nueva cita agendada para ${created.patientName} con ${created.professionalName}`);
-    } catch (error) {
-      console.error('[AppointmentsManagement] Error al agendar cita:', error);
-      showToast('Error al agendar la cita en el servidor');
+    if (!result.ok) {
+      showToast(result.error);
+      return;
     }
+
+    const created = result.appointment;
+    const fresh = await getAppointmentsApi();
+    if (fresh && fresh.length > 0) {
+      setPatientsAppointments(fresh);
+    } else {
+      setPatientsAppointments([created, ...appointments]);
+    }
+    setSelectedAppId(created.id);
+    setIsCreateModalOpen(false);
+    setCedulaQuery('');
+    setSelectedPatient(null);
+    setNewNotes('');
+    showToast(`Nueva cita agendada para ${created.patientName || selectedPatient.name} con ${created.professionalName}`);
   };
 
   // Filtered appointments list for table
@@ -446,7 +461,11 @@ const AppointmentsManagement: React.FC = () => {
         <button
           type="button"
           className="citas-mgmt__btn-add"
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setCedulaQuery('');
+            setSelectedPatient(null);
+            setIsCreateModalOpen(true);
+          }}
         >
           <Plus size={16} />
           <span>Nueva Cita</span>
@@ -544,7 +563,7 @@ const AppointmentsManagement: React.FC = () => {
                     onChange={(val) => setProfFilter(val)}
                     options={[
                       { value: 'all', label: 'Todos los Médicos' },
-                      ...mockProfessionals.map((p) => ({ value: p.id, label: p.name })),
+                      ...professionalsList.map((p) => ({ value: p.id, label: p.name })),
                     ]}
                   />
                 )}
@@ -661,7 +680,11 @@ const AppointmentsManagement: React.FC = () => {
               <button
                 type="button"
                 className="citas-btn-quick-new"
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={() => {
+                  setCedulaQuery('');
+                  setSelectedPatient(null);
+                  setIsCreateModalOpen(true);
+                }}
               >
                 <Plus size={14} />
                 <span>Nueva del día</span>
@@ -974,43 +997,65 @@ const AppointmentsManagement: React.FC = () => {
                   </div>
                 )}
 
-                {/* Patient Selection */}
+                {/* Patient lookup by cédula */}
                 <div className="form-group">
-                  <label className="form-label">Seleccionar Paciente por Cédula / Documento</label>
-                  <input
-                    type="text"
-                    className="citas-select"
-                    style={{
-                      width: '100%',
-                      marginBottom: '8px',
-                      padding: '8px 12px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '6px',
-                    }}
-                    placeholder="🔍 Escriba el N° de Cédula para filtrar..."
-                    value={patientSearchQuery}
-                    onChange={(e) => setPatientSearchQuery(e.target.value)}
-                  />
-                  <select
-                    className="citas-select"
-                    style={{ width: '100%' }}
-                    value={newPatientId}
-                    onChange={(e) => setNewPatientId(e.target.value)}
-                    required
-                  >
-                    {filteredPatientsList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.documentNumber ? `Cédula: ${p.documentNumber} — ${p.name}` : p.name}
-                      </option>
-                    ))}
-                    {filteredPatientsList.length === 0 && (
-                      <option value="" disabled>
-                        No se encontraron pacientes con esa cédula
-                      </option>
-                    )}
-                  </select>
+                  <label className="form-label">Cédula / Documento del Paciente</label>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      className="citas-select"
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        color: '#fff',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '6px',
+                      }}
+                      placeholder="N° de cédula..."
+                      inputMode="numeric"
+                      value={cedulaQuery}
+                      onChange={(e) => {
+                        setCedulaQuery(e.target.value.replace(/\D/g, ''));
+                        setSelectedPatient(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void handleBuscarPaciente();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => void handleBuscarPaciente()}
+                      disabled={isSearchingPatient}
+                    >
+                      {isSearchingPatient ? 'Buscando...' : 'Buscar'}
+                    </button>
+                  </div>
+                  {selectedPatient ? (
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(10, 147, 150, 0.4)',
+                        background: 'rgba(10, 147, 150, 0.12)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ● {selectedPatient.name}
+                      {selectedPatient.documentNumber
+                        ? ` — ${selectedPatient.documentType} ${selectedPatient.documentNumber}`
+                        : ''}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                      Busque el paciente por cédula antes de agendar.
+                    </span>
+                  )}
                 </div>
 
                 {/* Professional Selection */}
@@ -1104,7 +1149,7 @@ const AppointmentsManagement: React.FC = () => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={Boolean(newAppointmentConflict)}
+                  disabled={Boolean(newAppointmentConflict) || !selectedPatient}
                 >
                   Agendar Cita
                 </button>

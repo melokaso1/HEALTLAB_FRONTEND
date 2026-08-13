@@ -1,5 +1,5 @@
 import type { Patient, GenderType } from '../types/patient.types';
-import { apiFetch } from './api';
+import { apiFetch, type ApiError } from './api';
 
 // ─── Tipos de respuesta del backend ───────────────────────────────────────
 /**
@@ -188,6 +188,33 @@ export const getPatientByIdApi = async (id: string): Promise<Patient | null> => 
     console.warn(`[patients.service] Error en GET /pacientes/${id}:`, error);
     const local = getStoredPatients().find((p) => String(p.id) === String(id));
     return local || null;
+  }
+};
+
+/**
+ * Busca un paciente por número de documento (cédula).
+ * GET /pacientes/por-documento/{numeroDocumento}
+ * 404 → null; otros errores se re-lanzan.
+ */
+export const getPatientByDocumentApi = async (
+  numeroDocumento: string,
+): Promise<Patient | null> => {
+  const doc = numeroDocumento.trim();
+  if (!doc) {
+    throw new Error('El número de documento es requerido');
+  }
+
+  try {
+    const data = await apiFetch<BackendPaciente>(
+      `/pacientes/por-documento/${encodeURIComponent(doc)}`,
+    );
+    return mapBackendPatient(data);
+  } catch (error) {
+    const apiError = error as ApiError;
+    if (apiError.status === 404) {
+      return null;
+    }
+    throw error;
   }
 };
 
