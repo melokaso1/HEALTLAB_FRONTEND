@@ -53,7 +53,7 @@ const PatientsManagement: React.FC = () => {
       }
     });
   }, []);
-  const [activePatientId, setActivePatientId] = useState<string | number | null>(1); // Maria Rodriguez open by default
+  const [activePatientId, setActivePatientId] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [activeTab, setActiveTab] = useState<'Resumen' | 'Historial' | 'Notas'>('Resumen');
@@ -121,7 +121,7 @@ const PatientsManagement: React.FC = () => {
   const [newBloodType, setNewBloodType] = useState('O+');
   const [newAllergies, setNewAllergies] = useState('Ninguna');
 
-  const activePatient = patients.find((p) => p.id === activePatientId) || patients[0];
+  const activePatient = activePatientId !== null ? (patients.find((p) => p.id === activePatientId) || null) : null;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -374,7 +374,7 @@ const PatientsManagement: React.FC = () => {
       </div>
 
       {/* Grid Layout (Table Left / Patient Details Panel Right) */}
-      <div className={`patients-mgmt__grid${activePatientId !== null ? ' patients-mgmt__grid--with-panel' : ''}`}>
+      <div className={`patients-mgmt__grid${activePatientId !== null && activePatient !== null ? ' patients-mgmt__grid--with-panel' : ''}`}>
         {/* Left Column: Table */}
         <div className="patients-card">
           <div className="patients-table__wrapper">

@@ -52,7 +52,7 @@ const AppointmentsManagement: React.FC = () => {
     });
   }, []);
 
-  const [selectedAppId, setSelectedAppId] = useState<string | number | null>(1); // Default to first appointment
+  const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('2026-10-28'); // Current active date view
 
   // Dynamic Calendar Month Navigation State
@@ -403,7 +403,7 @@ const AppointmentsManagement: React.FC = () => {
       </div>
 
       {/* Grid Layout (Full width or 3-column depending on whether panel is open) */}
-      <div className={`citas-mgmt__grid${selectedAppId !== null ? ' citas-mgmt__grid--with-panel' : ''}`}>
+      <div className={`citas-mgmt__grid${selectedAppId !== null && selectedAppointment !== null ? ' citas-mgmt__grid--with-panel' : ''}`}>
         {/* Column 1: Left Widget Panel (Interactive Calendar & Upcoming Quick View) */}
         <div className="citas-card citas-left-panel">
           {/* Mini Calendar Widget */}
