@@ -5,8 +5,6 @@ import {
   Filter,
   X,
   Search,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Info,
   Calendar as CalendarIcon,
@@ -17,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import type { Appointment } from '../../../types/appointment.types';
+import Pagination from '../../../components/common/Pagination';
 import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getReporteConteoPorEstadoApi } from '../../../services/reports.service';
 import './AdminReportes.css';
@@ -153,6 +152,30 @@ const AdminReportes: React.FC = () => {
       return true;
     });
   }, [citasSearch, citasEstado]);
+
+  // Pagination States for 3 tables
+  const [repCurrentPage, setRepCurrentPage] = useState(1);
+  const [actCurrentPage, setActCurrentPage] = useState(1);
+  const [pastCurrentPage, setPastCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => { setActCurrentPage(1); }, [actSearch, actUsuario, actProfesional, actTipoAccion]);
+  useEffect(() => { setPastCurrentPage(1); }, [citasSearch, citasEstado]);
+
+  const repTotalPages = Math.ceil(appointments.length / itemsPerPage) || 1;
+  const paginatedAppointments = useMemo(() => {
+    return appointments.slice((repCurrentPage - 1) * itemsPerPage, repCurrentPage * itemsPerPage);
+  }, [appointments, repCurrentPage]);
+
+  const actTotalPages = Math.ceil(filteredActionLogs.length / itemsPerPage) || 1;
+  const paginatedActionLogs = useMemo(() => {
+    return filteredActionLogs.slice((actCurrentPage - 1) * itemsPerPage, actCurrentPage * itemsPerPage);
+  }, [filteredActionLogs, actCurrentPage]);
+
+  const pastTotalPages = Math.ceil(filteredPastAppointments.length / itemsPerPage) || 1;
+  const paginatedPastAppointments = useMemo(() => {
+    return filteredPastAppointments.slice((pastCurrentPage - 1) * itemsPerPage, pastCurrentPage * itemsPerPage);
+  }, [filteredPastAppointments, pastCurrentPage]);
 
   // Helper for Action Badges
   const getActionBadge = (tipo: ActionLog['tipoAccion']) => {
@@ -378,14 +401,14 @@ const AdminReportes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.length === 0 ? (
+                  {paginatedAppointments.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
                         No hay citas atendidas registradas.
                       </td>
                     </tr>
                   ) : (
-                    appointments.map((cita) => (
+                    paginatedAppointments.map((cita) => (
                       <tr key={cita.id}>
                         <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
                           {cita.date}
@@ -414,67 +437,16 @@ const AdminReportes: React.FC = () => {
               </table>
             </div>
 
-            {/* Footer de Paginación para igualar la altura con la columna del Historial */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '12px',
-                marginTop: 'auto',
-                borderTop: '1px solid #E2E8F0',
-              }}
-            >
-              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                Mostrando {appointments.length > 0 ? `1 a ${appointments.length}` : '0'} de {appointments.length} registros
-              </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #00A896',
-                    backgroundColor: 'rgba(0, 168, 150, 0.15)',
-                    color: '#00A896',
-                    cursor: 'pointer',
-                  }}
-                >
-                  1
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: 'transparent',
-                    color: '#64748B',
-                    cursor: 'pointer',
-                  }}
-                >
-                  2
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: 'transparent',
-                    color: '#64748B',
-                    cursor: 'pointer',
-                  }}
-                >
-                  3
-                </button>
-              </div>
+            {/* Footer de Paginación */}
+            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--hl-border, #E2E8F0)' }}>
+              <Pagination
+                currentPage={repCurrentPage}
+                totalPages={repTotalPages}
+                totalItems={appointments.length}
+                itemsPerPage={itemsPerPage}
+                itemLabel="registros"
+                onPageChange={(p) => setRepCurrentPage(p)}
+              />
             </div>
           </div>
         </section>
@@ -631,18 +603,18 @@ const AdminReportes: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredActionLogs.length === 0 ? (
+                    {paginatedActionLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
                           No se encontraron registros de acciones con los filtros seleccionados.
                         </td>
                       </tr>
                     ) : (
-                      filteredActionLogs.map((log) => (
+                      paginatedActionLogs.map((log) => (
                         <tr key={log.id}>
                           <td className="td-datetime">{log.fechaHora}</td>
                           <td>
-                            <div className="user-profile-cell">
+                            <div className="user-info">
                               {log.usuario.avatar ? (
                                 <img
                                   src={log.usuario.avatar}
@@ -698,33 +670,15 @@ const AdminReportes: React.FC = () => {
               </div>
 
               {/* Paginación */}
-              <div className="table-pagination">
-                <span className="pagination-info">
-                  Mostrando 1 a {filteredActionLogs.length} de 25 registros
-                </span>
-                <div className="pagination-controls">
-                  <button type="button" className="pag-btn" disabled aria-label="Página anterior">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button type="button" className="pag-btn pag-btn--active">
-                    1
-                  </button>
-                  <button type="button" className="pag-btn">
-                    2
-                  </button>
-                  <button type="button" className="pag-btn">
-                    3
-                  </button>
-                  <button type="button" className="pag-btn">
-                    4
-                  </button>
-                  <button type="button" className="pag-btn">
-                    5
-                  </button>
-                  <button type="button" className="pag-btn" aria-label="Página siguiente">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+              <div style={{ marginTop: '12px' }}>
+                <Pagination
+                  currentPage={actCurrentPage}
+                  totalPages={actTotalPages}
+                  totalItems={filteredActionLogs.length}
+                  itemsPerPage={itemsPerPage}
+                  itemLabel="registros"
+                  onPageChange={(p) => setActCurrentPage(p)}
+                />
               </div>
 
               {/* Banner Informativo Inferior */}
@@ -829,14 +783,14 @@ const AdminReportes: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPastAppointments.length === 0 ? (
+                    {paginatedPastAppointments.length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>
                           No se encontraron citas pasadas con los filtros seleccionados.
                         </td>
                       </tr>
                     ) : (
-                      filteredPastAppointments.map((cita) => (
+                      paginatedPastAppointments.map((cita) => (
                         <tr key={cita.id}>
                           <td className="td-datetime">{cita.fecha}</td>
                           <td className="td-datetime">{cita.hora}</td>
@@ -867,21 +821,15 @@ const AdminReportes: React.FC = () => {
               </div>
 
               {/* Paginación */}
-              <div className="table-pagination">
-                <span className="pagination-info">
-                  Mostrando 1 a {filteredPastAppointments.length} de {filteredPastAppointments.length} registros
-                </span>
-                <div className="pagination-controls">
-                  <button type="button" className="pag-btn" disabled aria-label="Página anterior">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button type="button" className="pag-btn pag-btn--active">
-                    1
-                  </button>
-                  <button type="button" className="pag-btn" disabled aria-label="Página siguiente">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+              <div style={{ marginTop: '12px' }}>
+                <Pagination
+                  currentPage={pastCurrentPage}
+                  totalPages={pastTotalPages}
+                  totalItems={filteredPastAppointments.length}
+                  itemsPerPage={itemsPerPage}
+                  itemLabel="registros"
+                  onPageChange={(p) => setPastCurrentPage(p)}
+                />
               </div>
             </div>
           )}

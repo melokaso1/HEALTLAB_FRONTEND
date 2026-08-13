@@ -4,6 +4,7 @@ import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
+import Pagination from '../../../components/common/Pagination';
 import './Historial.css';
 
 interface HistorialRecord {
@@ -149,6 +150,12 @@ const RecepHistorial: React.FC = () => {
     });
   }, [records, appliedFilters]);
 
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage) || 1;
+  const paginatedRecords = useMemo(() => {
+    return filteredRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredRecords, currentPage]);
+
   const handleExport = () => {
     showToast('Exportando reporte histórico en formato CSV...');
   };
@@ -271,14 +278,14 @@ const RecepHistorial: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.length === 0 ? (
+              {paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#64748B' }}>
                     No se encontraron registros de citas con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((rec) => (
+                paginatedRecords.map((rec) => (
                   <tr key={rec.id}>
                     <td>
                       <div className="fecha-cell">
@@ -334,44 +341,15 @@ const RecepHistorial: React.FC = () => {
         </div>
 
         {/* Footer Pagination */}
-        <div className="recep-table-footer">
-          <span className="recep-records-count">
-            Mostrando {filteredRecords.length} de 145 registros
-          </span>
-
-          <div className="pagination-controls">
-            <button
-              className="page-btn"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </button>
-            <button
-              className={`page-btn ${currentPage === 1 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(1)}
-            >
-              1
-            </button>
-            <button
-              className={`page-btn ${currentPage === 2 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(2)}
-            >
-              2
-            </button>
-            <button
-              className={`page-btn ${currentPage === 3 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(3)}
-            >
-              3
-            </button>
-            <button
-              className="page-btn"
-              onClick={() => setCurrentPage((p) => Math.min(3, p + 1))}
-            >
-              Siguiente
-            </button>
-          </div>
+        <div className="recep-table-footer" style={{ padding: 0 }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRecords.length}
+            itemsPerPage={itemsPerPage}
+            itemLabel="registros"
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </div>
 

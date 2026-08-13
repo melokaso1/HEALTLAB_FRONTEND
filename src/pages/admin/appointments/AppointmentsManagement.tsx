@@ -35,6 +35,7 @@ import { mockProfessionals } from '../../../services/professionals.service';
 import { mockPatients } from '../../../services/patients.service';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
+import Pagination from '../../../components/common/Pagination';
 import './AppointmentsManagement.css';
 
 const AppointmentsManagement: React.FC = () => {
@@ -345,6 +346,18 @@ const AppointmentsManagement: React.FC = () => {
     });
   }, [appointments, isDoctor, user?.name, profFilter, statusFilter, searchTerm]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, profFilter]);
+
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage) || 1;
+  const paginatedAppointments = useMemo(() => {
+    return filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredAppointments, currentPage]);
+
   // Helper render badge
   const renderStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
@@ -604,39 +617,32 @@ const AppointmentsManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredAppointments.length === 0 ? (
+                {paginatedAppointments.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="citas-table__empty">
                       No hay citas registradas con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
-                  filteredAppointments.map((app) => {
+                  paginatedAppointments.map((app) => {
                     const isSelected = app.id === selectedAppId;
                     return (
                       <tr
                         key={app.id}
                         className={isSelected ? 'citas-table__row--selected' : ''}
                       >
-                        <td className="citas-table__time-cell">{app.time}</td>
+                        <td className="citas-table__time">{app.time}</td>
                         <td>
-                          <div className="citas-table__patient">
+                          <div className="citas-table__patient-cell">
                             <span className="citas-table__patient-name">{app.patientName}</span>
+                            <span className="citas-table__patient-sub">DNI: {app.patientDoc}</span>
                           </div>
                         </td>
-                        <td>
-                          <div className="citas-table__prof">
-                            <span className="citas-table__prof-name">
-                              {isDoctor ? 'Consultorio 302' : app.professionalName}
-                            </span>
-                          </div>
+                        <td style={{ fontWeight: 500 }}>
+                          {isDoctor ? 'Consultorio 102' : app.professionalName}
                         </td>
-                        <td>
-                          <span className="citas-table__service">{app.serviceName}</span>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {renderStatusBadge(app.status)}
-                        </td>
+                        <td>{app.serviceName}</td>
+                        <td style={{ textAlign: 'center' }}>{renderStatusBadge(app.status)}</td>
                         <td style={{ textAlign: 'center' }}>
                           <div className="citas-table__actions" style={{ justifyContent: 'center' }}>
                             <button
@@ -658,29 +664,15 @@ const AppointmentsManagement: React.FC = () => {
           </div>
 
           {/* Table Footer */}
-          <div className="citas-table-footer">
-            <span>
-              Mostrando {filteredAppointments.length > 0 ? 1 : 0} - {filteredAppointments.length} de{' '}
-              {appointments.length} citas
-            </span>
-            <div className="pagination-controls">
-              <button type="button" className="pagination-btn" disabled>
-                <ChevronLeft size={16} />
-              </button>
-              <button type="button" className="pagination-btn pagination-btn--active">
-                1
-              </button>
-              <button type="button" className="pagination-btn">
-                2
-              </button>
-              <button type="button" className="pagination-btn">
-                3
-              </button>
-              <span style={{ fontSize: '12px', color: '#94A3B8' }}>...</span>
-              <button type="button" className="pagination-btn">
-                <ChevronRight size={16} />
-              </button>
-            </div>
+          <div className="citas-table-footer" style={{ padding: 0 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredAppointments.length}
+              itemsPerPage={itemsPerPage}
+              itemLabel="citas"
+              onPageChange={(page) => setCurrentPage(page)}
+            />
           </div>
         </div>
 
