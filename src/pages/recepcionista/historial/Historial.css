@@ -103,25 +103,64 @@
   color: var(--hl-text-sub);
 }
 
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.filter-field-icon {
+  position: absolute;
+  left: 10px;
+  color: #00A896;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .filter-input,
 .filter-select {
   width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 12px;
-  background-color: var(--hl-card-bg);
-  border: 1px solid var(--hl-border);
+  background-color: #F8FAFC !important;
+  border: 1.5px solid #94A3B8 !important;
   border-radius: var(--hl-radius-md);
-  font-size: 13px;
-  color: var(--hl-text-main);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1E293B !important;
   outline: none;
   transition: all 0.2s ease;
   box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300A896' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+
+.filter-input {
+  background-image: none;
+  cursor: text;
+}
+
+.filter-input.with-icon,
+.filter-select.with-icon {
+  padding-left: 34px;
+}
+
+.filter-input:hover,
+.filter-select:hover {
+  border-color: #00A896 !important;
 }
 
 .filter-input:focus,
 .filter-select:focus {
-  border-color: var(--hl-primary);
-  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+  background-color: #FFFFFF !important;
+  border-color: #00A896 !important;
+  box-shadow: 0 0 0 3.5px rgba(0, 168, 150, 0.2) !important;
 }
 
 .btn-filtrar {
@@ -332,4 +371,28 @@
   background-color: var(--hl-primary);
   color: #FFFFFF;
   border-color: var(--hl-primary);
+}
+
+.dark-mode .filter-input,
+.dark-mode .filter-select {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+.dark-mode .filter-input:hover,
+.dark-mode .filter-select:hover {
+  border-color: #00A896 !important;
+}
+
+.dark-mode .filter-input:focus,
+.dark-mode .filter-select:focus {
+  background-color: #0F172A !important;
+  border-color: #00A896 !important;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.25) !important;
+}
+
+.dark-mode .filter-select option {
+  background-color: #0F172A;
+  color: #F8FAFC;
 }
