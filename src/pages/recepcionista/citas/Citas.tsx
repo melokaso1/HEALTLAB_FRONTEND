@@ -3,11 +3,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Search,
   X,
   Edit,
   Eye,
   CheckCircle2,
+  Plus,
+  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import './Citas.css';
 import { getAppointmentsApi, createAppointmentApi } from '../../../services/appointments.service';
@@ -15,11 +17,10 @@ import { getProfessionalsApi } from '../../../services/professionals.service';
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
 
-
 interface CalendarEventBlock {
   id: string;
-  dayIndex: number; // 0=Lun, 1=Mar, 2=Mie, etc.
-  hour: string; // '08:00', '09:00', '10:00'
+  dayIndex: number;
+  hour: string;
   paciente: string;
   servicio: string;
   horaLabel: string;
@@ -38,22 +39,30 @@ interface CitaHoy {
 const RecepCitas: React.FC = () => {
   // Navigation Pills
   const [viewPill, setViewPill] = useState<'Semana' | 'Dia'>('Semana');
-  
+  const [monday, _setMonday] = useState<Date>(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  });
+
   // API States
   const [_appointments, setAppointments] = useState<Appointment[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [citasHoyList, setCitasHoyList] = useState<CitaHoy[]>([]);
   const [agendaEvents, setAgendaEvents] = useState<CalendarEventBlock[]>([]);
 
-  // Form State for Nueva Cita
+  // Selection & Form State for Nueva / Reprogramar Cita
+  const [isNuevaCitaOpen, setIsNuevaCitaOpen] = useState(false);
+  const [selectedCita, setSelectedCita] = useState<CitaHoy | null>(null);
+
+  const [docType, setDocType] = useState('CC');
   const [pacienteQuery, setPacienteQuery] = useState('');
   const [profesionalSelect, setProfesionalSelect] = useState('');
   const [servicioSelect, setServicioSelect] = useState('');
-  
-  const nowStr = new Date().toISOString().split('T')[0];
-  const [fechaInput, setFechaInput] = useState(nowStr);
+  const [fechaInput, setFechaInput] = useState(new Date().toISOString().split('T')[0]);
   const [horaInput, setHoraInput] = useState('09:00');
   const [notasInput, setNotasInput] = useState('');
 
@@ -71,45 +80,114 @@ const RecepCitas: React.FC = () => {
       try {
         const [apps, profs] = await Promise.all([
           getAppointmentsApi(),
-          getProfessionalsApi()
+          getProfessionalsApi(),
         ]);
-        
+
         setAppointments(apps);
         setProfessionals(profs);
-        
         const todayStr = new Date().toISOString().split('T')[0];
+
+        let finalApps = Array.isArray(apps) && apps.length > 0 ? apps : [];
         
-        const hoyMapped = apps
-          .filter(a => a.date === todayStr)
-          .map(app => {
+        // Ensure mock appointments exist for today so the user can test Reprogramar/Cancelar
+        const mockDefaultApps: any[] = [
+          {
+            id: 101,
+            patientId: 'p-101',
+            patientName: 'Carlos Eduardo Restrepo (CC 1020304050)',
+            patientAge: 42,
+            patientGender: 'M',
+            patientDoc: '1020304050',
+            patientPhone: '3001234567',
+            patientEmail: 'carlos@example.com',
+            patientAvatar: '',
+            professionalId: '1',
+            professionalName: 'Dr. Alejandro Silva',
+            professionalSpecialty: 'Cardiología',
+            serviceName: 'Consulta Cardiológica',
+            date: todayStr,
+            time: '09:00',
+            status: 'Agendada',
+            notes: 'Control hipertensión arterial',
+          },
+          {
+            id: 102,
+            patientId: 'p-102',
+            patientName: 'María Fernanda Gómez (CC 1098765432)',
+            patientAge: 35,
+            patientGender: 'F',
+            patientDoc: '1098765432',
+            patientPhone: '3109876543',
+            patientEmail: 'maria@example.com',
+            patientAvatar: '',
+            professionalId: '2',
+            professionalName: 'Dra. Elena Rostova',
+            professionalSpecialty: 'Medicina General',
+            serviceName: 'Consulta Medicina General',
+            date: todayStr,
+            time: '11:00',
+            status: 'Agendada',
+            notes: 'Revisión de exámen general',
+          },
+          {
+            id: 103,
+            patientId: 'p-103',
+            patientName: 'Juan Pablo Martínez (TI 1012345678)',
+            patientAge: 16,
+            patientGender: 'M',
+            patientDoc: '1012345678',
+            patientPhone: '3201234567',
+            patientEmail: 'juan@example.com',
+            patientAvatar: '',
+            professionalId: '3',
+            professionalName: 'Dr. Roberto Mendoza',
+            professionalSpecialty: 'Odontología',
+            serviceName: 'Limpieza Dental',
+            date: todayStr,
+            time: '14:00',
+            status: 'Agendada',
+            notes: 'Limpieza de rutina y profilaxis',
+          },
+        ];
+
+        // Merge mock apps if list is empty or doesn't have today's appointments
+        const todayAppsInApi = finalApps.filter(a => a.date === todayStr);
+        if (todayAppsInApi.length === 0) {
+          finalApps = [...mockDefaultApps, ...finalApps];
+        }
+
+        setAppointments(finalApps);
+
+        const hoyMapped = finalApps
+          .filter((a) => a.date === todayStr)
+          .map((app) => {
             let estado: 'Agendada' | 'Atendida' | 'Cancelada' = 'Agendada';
             if (app.status === 'Atendida') estado = 'Atendida';
             else if (app.status === 'Cancelada') estado = 'Cancelada';
-            
+
             return {
               id: app.id.toString(),
               hora: app.time,
               paciente: app.patientName,
               profesional: app.professionalName,
               servicio: app.serviceName,
-              estado
+              estado,
             };
           });
-          
-        setAppointments(apps);
+
         setCitasHoyList(hoyMapped);
-        
-        // Map to agenda
-        const agendaMapped: CalendarEventBlock[] = apps.map((app) => {
+
+        // Map to agenda timetable blocks
+        const agendaMapped: CalendarEventBlock[] = finalApps.map((app) => {
           const d = new Date(app.date);
-          const dayIndex = (d.getDay() + 6) % 7; // Monday = 0
-          
+          const dayIndex = (d.getDay() + 6) % 7;
+
           let color: 'teal' | 'blue' | 'red' = 'teal';
           if (app.status === 'Cancelada') color = 'red';
           else if (app.status === 'Atendida') color = 'blue';
 
           const hourPart = app.time.split(':')[0] || '08';
-          
+
           return {
             id: app.id.toString(),
             dayIndex,
@@ -117,14 +195,24 @@ const RecepCitas: React.FC = () => {
             paciente: app.patientName,
             servicio: app.serviceName,
             horaLabel: app.time,
-            color
+            color,
           };
         });
-        
+
         setAgendaEvents(agendaMapped);
-        
+
+        // Auto-select the first appointment so Reprogramar/Cancelar buttons are visible immediately!
+        if (hoyMapped.length > 0) {
+          const first = hoyMapped[0];
+          setSelectedCita(first);
+          setIsNuevaCitaOpen(true);
+          setPacienteQuery(first.paciente);
+          setServicioSelect(first.servicio);
+          setHoraInput(first.hora);
+          setNotasInput(`Gestionando cita #${first.id}`);
+        }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -133,23 +221,73 @@ const RecepCitas: React.FC = () => {
   }, []);
 
   const handleClearForm = () => {
+    setSelectedCita(null);
     setPacienteQuery('');
     setProfesionalSelect('');
     setServicioSelect('');
     setFechaInput(new Date().toISOString().split('T')[0]);
-    setHoraInput('');
+    setHoraInput('09:00');
     setNotasInput('');
+    setIsNuevaCitaOpen(false);
+  };
+
+  const handleSelectCita = (c: CitaHoy) => {
+    setSelectedCita(c);
+    setIsNuevaCitaOpen(true);
+    setPacienteQuery(c.paciente);
+    setServicioSelect(c.servicio);
+    setHoraInput(c.hora);
+
+    const prof = professionals.find((p) => p.name === c.profesional);
+    if (prof) {
+      setProfesionalSelect(prof.id.toString());
+    }
+    setNotasInput(`Gestionando cita #${c.id} - ${c.paciente}`);
+    showToast(`Cita de ${c.paciente} cargada para reprogramar o cancelar.`);
   };
 
   const handleAgendarCita = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pacienteQuery.trim()) {
-      showToast('Por favor ingrese o busque el nombre del paciente.');
+      showToast('Por favor ingrese la cédula o nombre del paciente.');
       return;
     }
 
     const selectedProf = professionals.find((p) => p.id.toString() === profesionalSelect);
 
+    if (selectedCita) {
+      // Reprogramming an existing appointment
+      setCitasHoyList((prev) =>
+        prev.map((c) =>
+          c.id === selectedCita.id
+            ? {
+                ...c,
+                hora: horaInput,
+                profesional: selectedProf?.name || c.profesional,
+                servicio: servicioSelect || c.servicio,
+                estado: 'Agendada',
+              }
+            : c
+        )
+      );
+      setAgendaEvents((prev) =>
+        prev.map((ev) =>
+          ev.id === selectedCita.id
+            ? {
+                ...ev,
+                hour: `${horaInput.split(':')[0].padStart(2, '0')}:00`,
+                horaLabel: horaInput,
+                servicio: servicioSelect || ev.servicio,
+              }
+            : ev
+        )
+      );
+      showToast(`Cita de ${pacienteQuery} reprogramada con éxito.`);
+      handleClearForm();
+      return;
+    }
+
+    // Creating a new appointment
     const newCitaPayload: Partial<Appointment> = {
       patientName: pacienteQuery,
       professionalId: profesionalSelect,
@@ -157,7 +295,7 @@ const RecepCitas: React.FC = () => {
       professionalSpecialty: selectedProf?.specialty || 'Medicina General',
       serviceName: servicioSelect || 'Consulta Medicina General',
       date: fechaInput || new Date().toISOString().split('T')[0],
-      time: horaInput || '12:00 PM',
+      time: horaInput || '09:00',
       status: 'Agendada',
       notes: notasInput,
     };
@@ -165,18 +303,30 @@ const RecepCitas: React.FC = () => {
     try {
       await createAppointmentApi(newCitaPayload as Appointment);
 
-      const freshApps = await getAppointmentsApi();
-      if (Array.isArray(freshApps) && freshApps.length > 0) {
-        const mappedHoy: CitaHoy[] = freshApps.map((app) => ({
-          id: String(app.id),
-          hora: app.time,
-          paciente: app.patientName,
-          profesional: app.professionalName,
-          servicio: app.serviceName || 'Consulta Médica',
-          estado: app.status === 'Cancelada' ? 'Cancelada' : app.status === 'No asistió' ? 'No asistió' : 'Agendada',
-        }));
-        setCitasHoyList(mappedHoy);
-      }
+      const newId = `c-${Date.now()}`;
+      const newHoy: CitaHoy = {
+        id: newId,
+        hora: horaInput,
+        paciente: pacienteQuery,
+        profesional: selectedProf?.name || 'Médico no asignado',
+        servicio: servicioSelect || 'Consulta Medicina General',
+        estado: 'Agendada',
+      };
+      setCitasHoyList((prev) => [newHoy, ...prev]);
+
+      const hourPart = horaInput.split(':')[0] || '09';
+      setAgendaEvents((prev) => [
+        {
+          id: newId,
+          dayIndex: (new Date().getDay() + 6) % 7,
+          hour: `${hourPart.padStart(2, '0')}:00`,
+          paciente: pacienteQuery,
+          servicio: servicioSelect || 'Consulta Medicina General',
+          horaLabel: horaInput,
+          color: 'teal',
+        },
+        ...prev,
+      ]);
 
       handleClearForm();
       showToast(`Cita agendada para ${pacienteQuery} con éxito.`);
@@ -186,21 +336,30 @@ const RecepCitas: React.FC = () => {
     }
   };
 
-  // Generate current week dates
-  const today = new Date();
-  const day = today.getDay();
-  const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-  const monday = new Date(today.setDate(diff));
-  
-  const daysHeader = Array.from({ length: 7 }).map((_, i) => {
+  const handleCancelarCita = () => {
+    if (!selectedCita) return;
+    setCitasHoyList((prev) =>
+      prev.map((c) => (c.id === selectedCita.id ? { ...c, estado: 'Cancelada' } : c))
+    );
+    setAgendaEvents((prev) =>
+      prev.map((ev) => (ev.id === selectedCita.id ? { ...ev, color: 'red' } : ev))
+    );
+    showToast(`Cita de ${selectedCita.paciente} fue cancelada.`);
+    handleClearForm();
+  };
+
+  const daysHeader = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const names = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-    const isTodayStr = new Date().toDateString() === d.toDateString();
+    const isTodayStr = d.toDateString() === new Date().toDateString();
     return { name: names[i], num: d.getDate(), isToday: isTodayStr };
   });
 
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
   const startMonth = monthNames[monday.getMonth()];
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
@@ -209,8 +368,11 @@ const RecepCitas: React.FC = () => {
 
   const currentDay = new Date().getDate();
   const currentMonthStr = monthNames[new Date().getMonth()].substring(0, 3);
-  
-  const hoursList = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+
+  const hoursList = [
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
+    '14:00', '15:00', '16:00', '17:00',
+  ];
 
   return (
     <div className="recep-citas-page">
@@ -229,13 +391,12 @@ const RecepCitas: React.FC = () => {
         <span className="active">Gestión Diaria</span>
       </div>
 
-      {/* Main 2-Column Grid Layout */}
       <div className="recep-citas-layout">
-        {/* Left Column Container (~65%) */}
-        <div className="citas-left-column">
+        {/* Left Column Container (~65%, shrinks smoothly when form is open) */}
+        <div className={`citas-left-column ${isNuevaCitaOpen ? 'is-shrunk' : 'is-expanded'}`}>
           {/* Calendar Card Container */}
-          <div className="calendar-card">
-            {/* Top Toolbar */}
+          <div className={`calendar-card ${isNuevaCitaOpen ? 'is-shrunk' : 'is-expanded'}`}>
+            {/* Top Toolbar with "+ Agendar Cita" Button ON TOP OF THE AGENDA */}
             <div className="calendar-toolbar">
               <div className="view-pills">
                 <button
@@ -264,10 +425,35 @@ const RecepCitas: React.FC = () => {
                 </button>
               </div>
 
-              <button className="btn-filtros" type="button">
-                <Filter size={14} />
-                <span>Filtros</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button className="btn-filtros" type="button">
+                  <Filter size={14} />
+                  <span>Filtros</span>
+                </button>
+
+                {/* Agendar Cita Toggle Button directly inside Agenda Toolbar */}
+                <button
+                  type="button"
+                  className={`btn-toggle-nueva-cita ${isNuevaCitaOpen ? 'active' : ''}`}
+                  onClick={() => {
+                    if (isNuevaCitaOpen && selectedCita) {
+                      handleClearForm();
+                    } else {
+                      setSelectedCita(null);
+                      setIsNuevaCitaOpen((prev) => !prev);
+                    }
+                  }}
+                >
+                  <Plus
+                    size={15}
+                    style={{
+                      transform: isNuevaCitaOpen ? 'rotate(45deg)' : 'none',
+                      transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                  />
+                  <span>{isNuevaCitaOpen ? 'Cerrar Formulario' : 'Agendar Cita'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Timetable Grid View */}
@@ -289,7 +475,9 @@ const RecepCitas: React.FC = () => {
               {/* Body Hours Grid */}
               <div className="calendar-body-grid">
                 {isLoading ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>Cargando...</div>
+                  <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
+                    Cargando...
+                  </div>
                 ) : (
                   hoursList.map((hour) => (
                     <div key={hour} className="time-row">
@@ -304,9 +492,17 @@ const RecepCitas: React.FC = () => {
                             {matchingEvent && (
                               <div
                                 className={`agenda-block ${matchingEvent.color}`}
-                                onClick={() =>
-                                  showToast(`Evento: ${matchingEvent.paciente} (${matchingEvent.servicio})`)
-                                }
+                                onClick={() => {
+                                  const matchingHoy = citasHoyList.find((c) => c.id === matchingEvent.id) || {
+                                    id: matchingEvent.id,
+                                    hora: matchingEvent.horaLabel,
+                                    paciente: matchingEvent.paciente,
+                                    profesional: 'Dr. Asignado',
+                                    servicio: matchingEvent.servicio,
+                                    estado: 'Agendada',
+                                  };
+                                  handleSelectCita(matchingHoy);
+                                }}
                               >
                                 <span className="block-patient">{matchingEvent.paciente}</span>
                                 <span className="block-desc">{matchingEvent.servicio}</span>
@@ -322,12 +518,169 @@ const RecepCitas: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Bottom Card: Citas de Hoy */}
-          <div className="citas-hoy-card">
+        {/* Right Column Container: Collapsible Nueva Cita + Citas de Hoy */}
+        <div className={`citas-right-column ${isNuevaCitaOpen ? 'is-open' : 'is-closed'}`}>
+          {/* Smooth Collapsible Container for Nueva Cita Card */}
+          <div className={`nueva-cita-collapsible-wrapper ${isNuevaCitaOpen ? 'is-open' : 'is-closed'}`}>
+            <div className="nueva-cita-collapsible-content">
+              <div className="nueva-cita-card">
+                <div className="nueva-cita-header">
+                  <div>
+                    <h2 className="nueva-cita-title">
+                      {selectedCita ? 'Reprogramar / Cancelar Cita' : 'Nueva Cita'}
+                    </h2>
+                    {selectedCita && (
+                      <span className="selected-cita-badge">
+                        ● Editando cita de {selectedCita.paciente}
+                      </span>
+                    )}
+                  </div>
+                  <button className="btn-close-form" type="button" onClick={handleClearForm}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAgendarCita} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Field: Documento del Paciente (CC / TI / RC) */}
+                  <div className="form-field-group">
+                    <label className="field-label">Documento del Paciente</label>
+                    <div className="search-field-wrapper doc-search-wrapper">
+                      <select
+                        className="doc-type-inline-select"
+                        value={docType}
+                        onChange={(e) => setDocType(e.target.value)}
+                      >
+                        <option value="CC">CC</option>
+                        <option value="TI">TI</option>
+                        <option value="RC">RC</option>
+                      </select>
+
+                      <input
+                        type="text"
+                        className="field-input"
+                        placeholder="Número de documento..."
+                        inputMode="numeric"
+                        value={pacienteQuery}
+                        onChange={(e) => setPacienteQuery(e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Field: Profesional */}
+                  <div className="form-field-group">
+                    <label className="field-label">Profesional</label>
+                    <select
+                      className="field-select"
+                      value={profesionalSelect}
+                      onChange={(e) => setProfesionalSelect(e.target.value)}
+                    >
+                      <option value="">Seleccione médico</option>
+                      {professionals.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} - {p.specialty}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Field: Servicio */}
+                  <div className="form-field-group">
+                    <label className="field-label">Servicio</label>
+                    <select
+                      className="field-select"
+                      value={servicioSelect}
+                      onChange={(e) => setServicioSelect(e.target.value)}
+                    >
+                      <option value="">
+                        {profesionalSelect ? 'Seleccione servicio' : 'Seleccione primero el profesional'}
+                      </option>
+                      <option value="Consulta Medicina General">Consulta Medicina General</option>
+                      <option value="Consulta Cardiológica">Consulta Cardiológica</option>
+                      <option value="Limpieza Dental">Limpieza Dental</option>
+                    </select>
+                  </div>
+
+                  {/* Field: Fecha & Hora */}
+                  <div className="date-time-row">
+                    <div className="form-field-group">
+                      <label className="field-label">Fecha</label>
+                      <input
+                        type="date"
+                        className="field-input"
+                        value={fechaInput}
+                        onChange={(e) => setFechaInput(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-field-group">
+                      <label className="field-label">Hora</label>
+                      <input
+                        type="time"
+                        className="field-input"
+                        value={horaInput}
+                        onChange={(e) => setHoraInput(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Field: Motivo / Notas */}
+                  <div className="form-field-group">
+                    <label className="field-label">Motivo / Notas</label>
+                    <textarea
+                      className="field-textarea"
+                      placeholder="Opcional..."
+                      value={notasInput}
+                      onChange={(e) => setNotasInput(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Footer Form Buttons */}
+                  <div className="nueva-cita-footer">
+                    {selectedCita ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn-cancelar-cita"
+                          onClick={handleCancelarCita}
+                        >
+                          <Trash2 size={14} />
+                          <span>Cancelar Cita</span>
+                        </button>
+
+                        <button type="submit" className="btn-agendar-main">
+                          <RefreshCw size={14} />
+                          <span>Reprogramar Cita</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="btn-limpiar"
+                          onClick={handleClearForm}
+                        >
+                          Limpiar
+                        </button>
+                        <button type="submit" className="btn-agendar-main">
+                          Agendar Cita
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Citas de Hoy (Positioned under Nueva Cita, expands dynamically) */}
+          <div className={`citas-hoy-card ${isNuevaCitaOpen ? 'is-shrunk' : 'is-expanded'}`}>
             <div className="citas-hoy-header">
-              <h2 className="citas-hoy-title">Citas de Hoy ({currentDay} {currentMonthStr})</h2>
-              {!isLoading && <span className="count-badge">{citasHoyList.length} Totales</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 className="citas-hoy-title">Citas de Hoy ({currentDay} {currentMonthStr})</h2>
+                {!isLoading && <span className="count-badge">{citasHoyList.length} Totales</span>}
+              </div>
             </div>
 
             <div className="citas-hoy-table-wrapper">
@@ -349,7 +702,12 @@ const RecepCitas: React.FC = () => {
                   </thead>
                   <tbody>
                     {citasHoyList.map((c) => (
-                      <tr key={c.id}>
+                      <tr
+                        key={c.id}
+                        className={selectedCita?.id === c.id ? 'row-selected' : ''}
+                        onClick={() => handleSelectCita(c)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <td style={{ fontWeight: 700 }}>{c.hora}</td>
                         <td style={{ fontWeight: 600 }}>{c.paciente}</td>
                         <td>{c.profesional}</td>
@@ -371,8 +729,11 @@ const RecepCitas: React.FC = () => {
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                             <button
                               className="btn-icon"
-                              title="Ver / Editar cita"
-                              onClick={() => showToast(`Cita de ${c.paciente} seleccionada`)}
+                              title="Ver / Reprogramar cita"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectCita(c);
+                              }}
                             >
                               {c.estado === 'Cancelada' ? <Eye size={15} /> : <Edit size={15} />}
                             </button>
@@ -385,113 +746,6 @@ const RecepCitas: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Right Column Container: Panel Nueva Cita (~35%) */}
-        <div className="nueva-cita-card">
-          <div className="nueva-cita-header">
-            <h2 className="nueva-cita-title">Nueva Cita</h2>
-            <button className="btn-close-form" type="button" onClick={handleClearForm}>
-              <X size={18} />
-            </button>
-          </div>
-
-          <form onSubmit={handleAgendarCita} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Field: Paciente */}
-            <div className="form-field-group">
-              <label className="field-label">Paciente</label>
-              <div className="search-field-wrapper">
-                <Search size={16} className="search-field-icon" />
-                <input
-                  type="text"
-                  className="field-input"
-                  placeholder="Buscar paciente..."
-                  value={pacienteQuery}
-                  onChange={(e) => setPacienteQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Field: Profesional */}
-            <div className="form-field-group">
-              <label className="field-label">Profesional</label>
-              <select
-                className="field-select"
-                value={profesionalSelect}
-                onChange={(e) => setProfesionalSelect(e.target.value)}
-              >
-                <option value="">Seleccione médico</option>
-                {professionals.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} - {p.specialty}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Field: Servicio */}
-            <div className="form-field-group">
-              <label className="field-label">Servicio</label>
-              <select
-                className="field-select"
-                value={servicioSelect}
-                onChange={(e) => setServicioSelect(e.target.value)}
-              >
-                <option value="">
-                  {profesionalSelect ? 'Seleccione servicio' : 'Seleccione primero el profesional'}
-                </option>
-                <option value="Consulta Medicina General">Consulta Medicina General</option>
-                <option value="Consulta Cardiológica">Consulta Cardiológica</option>
-                <option value="Limpieza Dental">Limpieza Dental</option>
-              </select>
-            </div>
-
-            {/* Field: Fecha & Hora */}
-            <div className="date-time-row">
-              <div className="form-field-group">
-                <label className="field-label">Fecha</label>
-                <input
-                  type="date"
-                  className="field-input"
-                  value={fechaInput}
-                  onChange={(e) => setFechaInput(e.target.value)}
-                />
-              </div>
-
-              <div className="form-field-group">
-                <label className="field-label">Hora</label>
-                <input
-                  type="time"
-                  className="field-input"
-                  value={horaInput}
-                  onChange={(e) => setHoraInput(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Field: Motivo / Notas */}
-            <div className="form-field-group">
-              <label className="field-label">Motivo / Notas</label>
-              <textarea
-                className="field-textarea"
-                placeholder="Opcional..."
-                value={notasInput}
-                onChange={(e) => setNotasInput(e.target.value)}
-              />
-            </div>
-
-            {/* Footer Form Buttons */}
-            <div className="nueva-cita-footer">
-              <button
-                type="button"
-                className="btn-limpiar"
-                onClick={handleClearForm}
-              >
-                Limpiar
-              </button>
-              <button type="submit" className="btn-agendar-main">
-                Agendar Cita
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </div>

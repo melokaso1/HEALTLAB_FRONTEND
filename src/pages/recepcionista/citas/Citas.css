@@ -25,7 +25,7 @@
   color: var(--hl-text-main);
 }
 
-/* Main 2-Column Flex Layout (Clean Separation without Overlap) */
+/* Main 2-Column Flex Layout (Pixel Perfect Top & Bottom Alignment) */
 .recep-citas-layout {
   display: flex;
   gap: 20px;
@@ -39,7 +39,7 @@
   .recep-citas-layout {
     flex-direction: column;
   }
-  .nueva-cita-card {
+  .citas-right-column {
     width: 100% !important;
   }
 }
@@ -51,9 +51,10 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Calendar Card Container (Shrunk & Compact) */
+/* Calendar Card Container */
 .calendar-card {
   background-color: var(--hl-card-bg);
   border: 1px solid var(--hl-border);
@@ -62,9 +63,18 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 580px;
   width: 100%;
   box-sizing: border-box;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+.calendar-card.is-shrunk {
+  transform: scale(0.992);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 /* Top Toolbar inside Calendar Card */
@@ -154,11 +164,41 @@
   color: var(--hl-primary);
 }
 
+.btn-toggle-nueva-cita {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background-color: #00A896;
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--hl-radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 168, 150, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-nueva-cita:hover {
+  background-color: #028090;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 168, 150, 0.35);
+}
+
+.btn-toggle-nueva-cita.active {
+  background-color: var(--hl-card-bg);
+  color: var(--hl-text-main);
+  border: 1px solid var(--hl-border);
+  box-shadow: none;
+}
+
 /* Calendar Grid Timetable Rules */
 .calendar-timetable {
   display: flex;
   flex-direction: column;
   width: 100%;
+  flex: 1;
   overflow-x: auto;
   box-sizing: border-box;
 }
@@ -218,8 +258,8 @@
 .calendar-body-grid {
   display: flex;
   flex-direction: column;
-  max-height: 240px;
-  overflow-y: auto;
+  flex: 1;
+  overflow-y: hidden;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -236,7 +276,8 @@
   display: grid;
   grid-template-columns: 55px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--hl-border);
-  min-height: 64px;
+  flex: 1;
+  min-height: 48px;
 }
 
 .time-label-cell {
@@ -260,40 +301,39 @@
   border-right: none;
 }
 
-/* Appointment Block Cards inside Grid */
+/* Event Block Cards */
 .agenda-block {
+  padding: 6px 8px;
   border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 11px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  box-sizing: border-box;
-  overflow: hidden;
+  gap: 2px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .agenda-block:hover {
-  transform: scale(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .agenda-block.teal {
-  background-color: #00A896;
-  color: #FFFFFF;
+  background-color: #E6FFFA;
+  border-left: 3.5px solid #00A896;
+  color: #004D40;
 }
 
 .agenda-block.blue {
-  background-color: #EEF2FF;
-  color: #4C62D6;
-  border-left: 3px solid #4C62D6;
+  background-color: #EBF8FF;
+  border-left: 3.5px solid #3182CE;
+  color: #1A365D;
 }
 
 .agenda-block.red {
-  background-color: #FFF1F2;
-  color: #E82C6A;
-  border-left: 3px solid #E82C6A;
+  background-color: #FFF5F5;
+  border-left: 3.5px solid #E53E3E;
+  color: #742A2A;
 }
 
 .block-patient {
@@ -322,16 +362,277 @@
   margin-top: 1px;
 }
 
-/* Bottom Card: Citas de Hoy (Stretches to align bottom with right panel) */
+/* Right Column Container (~350px - 380px Width) */
+.citas-right-column {
+  width: 350px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.citas-right-column.is-open {
+  width: 380px;
+}
+
+/* Smooth Collapsible Container for Nueva Cita Card using CSS Grid */
+.nueva-cita-collapsible-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: 0px;
+  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              margin-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nueva-cita-collapsible-wrapper.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-bottom: 16px;
+}
+
+.nueva-cita-collapsible-wrapper.is-closed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: 0px;
+}
+
+.nueva-cita-collapsible-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Right Panel: Nueva Cita Card */
+.nueva-cita-card {
+  width: 100%;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-lg);
+  box-shadow: var(--hl-shadow-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  margin-bottom: 0px;
+}
+
+.nueva-cita-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nueva-cita-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  margin: 0;
+}
+
+.selected-cita-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #00A896;
+  margin-top: 2px;
+}
+
+.btn-close-form {
+  background: none;
+  border: none;
+  color: var(--hl-text-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-form:hover {
+  color: var(--hl-danger);
+}
+
+/* Form Fields */
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background-color: var(--hl-bg-page);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  color: var(--hl-text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.search-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.doc-search-wrapper {
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  background-color: var(--hl-bg-page);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.doc-search-wrapper:focus-within {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.doc-type-inline-select {
+  background-color: rgba(0, 168, 150, 0.1);
+  border: none;
+  border-right: 1px solid var(--hl-border);
+  color: #00A896;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 10px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.doc-search-wrapper .field-input {
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.date-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field-textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.nueva-cita-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-limpiar {
+  flex: 1;
+  padding: 9px 16px;
+  background-color: var(--hl-card-bg);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-limpiar:hover {
+  background-color: var(--hl-bg-page);
+}
+
+.btn-cancelar-cita {
+  flex: 1;
+  padding: 9px 12px;
+  background-color: #EF4444;
+  border: none;
+  border-radius: var(--hl-radius-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-cancelar-cita:hover {
+  background-color: #DC2626;
+}
+
+.btn-agendar-main {
+  flex: 1.5;
+  padding: 9px 16px;
+  background-color: #00A896;
+  border: none;
+  border-radius: var(--hl-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: var(--hl-shadow-sm);
+}
+
+.btn-agendar-main:hover {
+  background-color: #028090;
+}
+
+/* Bottom Card: Citas de Hoy (Expands and shrinks with smooth 0.4s bezier transition) */
 .citas-hoy-card {
   background-color: var(--hl-card-bg);
   border: 1px solid var(--hl-border);
   border-radius: var(--hl-radius-lg);
   box-shadow: var(--hl-shadow-sm);
   overflow: hidden;
-  flex: 1;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  transition: flex 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.citas-hoy-card.is-expanded {
+  height: 100%;
+  flex: 1;
+}
+
+.citas-hoy-card.is-shrunk {
+  flex: 1;
 }
 
 .citas-hoy-header {
@@ -392,7 +693,8 @@
   border-bottom: none;
 }
 
-.citas-hoy-table tr:hover td {
+.citas-hoy-table tr:hover td,
+.citas-hoy-table tr.row-selected td {
   background-color: var(--hl-bg-page);
 }
 
@@ -419,153 +721,6 @@
 .status-bullet-badge.agendada {
   background-color: #EEF2FF;
   color: #4C62D6;
-}
-
-/* Right Panel: Nueva Cita Card (~360px Fixed Width) */
-.nueva-cita-card {
-  width: 360px;
-  flex-shrink: 0;
-  background-color: var(--hl-card-bg);
-  border: 1px solid var(--hl-border);
-  border-radius: var(--hl-radius-lg);
-  box-shadow: var(--hl-shadow-sm);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-sizing: border-box;
-}
-
-.nueva-cita-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nueva-cita-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--hl-text-main);
-  margin: 0;
-}
-
-.btn-close-form {
-  background: none;
-  border: none;
-  color: var(--hl-text-sub);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close-form:hover {
-  color: var(--hl-danger);
-}
-
-.form-field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.field-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--hl-text-main);
-}
-
-.search-field-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-field-icon {
-  position: absolute;
-  left: 10px;
-  color: var(--hl-text-sub);
-}
-
-.field-input,
-.field-select,
-.field-textarea {
-  width: 100%;
-  padding: 9px 12px;
-  background-color: var(--hl-card-bg);
-  border: 1px solid var(--hl-border);
-  border-radius: var(--hl-radius-md);
-  font-size: 13px;
-  color: var(--hl-text-main);
-  outline: none;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.search-field-wrapper .field-input {
-  padding-left: 32px;
-}
-
-.field-input:focus,
-.field-select:focus,
-.field-textarea:focus {
-  border-color: var(--hl-primary);
-  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
-}
-
-.date-time-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.field-textarea {
-  min-height: 80px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.nueva-cita-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.btn-limpiar {
-  flex: 1;
-  padding: 9px 16px;
-  background-color: var(--hl-card-bg);
-  border: 1px solid var(--hl-border);
-  border-radius: var(--hl-radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--hl-text-main);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-limpiar:hover {
-  background-color: var(--hl-bg-page);
-}
-
-.btn-agendar-main {
-  flex: 1.5;
-  padding: 9px 16px;
-  background-color: var(--hl-primary);
-  border: none;
-  border-radius: var(--hl-radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  color: #FFFFFF;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: var(--hl-shadow-sm);
-}
-
-.btn-agendar-main:hover {
-  background-color: var(--hl-primary-hover);
 }
 
 /* Dark Mode Overrides */
@@ -603,8 +758,9 @@
   border-color: #334155;
 }
 
-.dark-mode .citas-hoy-table tr:hover td {
-  background-color: rgba(255, 255, 255, 0.03);
+.dark-mode .citas-hoy-table tr:hover td,
+.dark-mode .citas-hoy-table tr.row-selected td {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .dark-mode .status-bullet-badge.atendida {
@@ -620,4 +776,33 @@
 .dark-mode .status-bullet-badge.agendada {
   background-color: rgba(76, 98, 214, 0.25);
   color: #818CF8;
+}
+
+.dark-mode .field-input,
+.dark-mode .field-select,
+.dark-mode .field-textarea {
+  background-color: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.dark-mode .field-select option {
+  background-color: #0F172A;
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-search-wrapper {
+  background-color: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .doc-type-inline-select {
+  background-color: rgba(0, 168, 150, 0.2);
+  border-color: #334155;
+  color: #2DD4BF;
+}
+
+.dark-mode .doc-type-inline-select option {
+  background-color: #0F172A;
+  color: #F8FAFC;
 }
