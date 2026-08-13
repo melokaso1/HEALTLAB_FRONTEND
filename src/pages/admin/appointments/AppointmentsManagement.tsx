@@ -27,6 +27,8 @@ import {
   AVAILABLE_TIME_SLOTS,
   checkScheduleConflict,
   getAppointmentsApi,
+  createAppointmentApi,
+  cancelAppointmentApi,
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
@@ -217,55 +219,63 @@ const AppointmentsManagement: React.FC = () => {
   }, [appointments, newProfId, newDate, newTime, isCreateModalOpen]);
 
   // Handler: Change Status Quickly
-  const handleStatusChange = (appId: string | number, newStatus: AppointmentStatus) => {
-    updateAppointmentStatusApi(appId, newStatus);
-    setPatientsAppointments((prev) =>
-      prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-    );
-    showToast(`Estado de cita cambiado a ${newStatus}`);
+  const handleStatusChange = async (appId: string | number, newStatus: AppointmentStatus) => {
+    try {
+      await updateAppointmentStatusApi(appId, newStatus);
+      const fresh = await getAppointmentsApi();
+      if (fresh && fresh.length > 0) {
+        setPatientsAppointments(fresh);
+      } else {
+        setPatientsAppointments((prev) =>
+          prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
+        );
+      }
+      showToast(`Estado de cita cambiado a ${newStatus}`);
+    } catch (error) {
+      console.error('[AppointmentsManagement] Error al cambiar estado de cita:', error);
+      showToast('Error al actualizar el estado de la cita en el servidor');
+    }
   };
 
   // Handler: Reschedule Appointment
-  const handleRescheduleSubmit = (e: React.FormEvent) => {
+  const handleRescheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAppointment) return;
 
-    const targetProf = mockProfessionals.find((p) => p.id === rescheduleProfId);
-    const targetService = mockServices.find((s) => s.id === rescheduleServiceId);
-
-    rescheduleAppointmentApi(selectedAppointment.id, rescheduleDate, rescheduleTime);
-
-    setPatientsAppointments((prev) =>
-      prev.map((app) => {
-        if (app.id === selectedAppointment.id) {
-          return {
-            ...app,
-            professionalId: rescheduleProfId,
-            professionalName: targetProf?.name || app.professionalName,
-            professionalSpecialty: targetProf?.specialty || app.professionalSpecialty,
-            serviceId: rescheduleServiceId,
-            serviceName: targetService?.name || app.serviceName,
-            date: rescheduleDate,
-            time: rescheduleTime,
-          };
-        }
-        return app;
-      })
-    );
-
-    showToast(`Cita reprogramada exitosamente para ${rescheduleDate} a las ${rescheduleTime}`);
+    try {
+      await rescheduleAppointmentApi(selectedAppointment.id, rescheduleDate, rescheduleTime);
+      const fresh = await getAppointmentsApi();
+      if (fresh && fresh.length > 0) {
+        setPatientsAppointments(fresh);
+      }
+      showToast(`Cita reprogramada exitosamente para ${rescheduleDate} a las ${rescheduleTime}`);
+    } catch (error) {
+      console.error('[AppointmentsManagement] Error al reprogramar cita:', error);
+      showToast('Error al reprogramar la cita en el servidor');
+    }
   };
 
   // Handler: Cancel Appointment
-  const handleCancelAppointment = (appId: string | number) => {
-    setPatientsAppointments((prev) =>
-      prev.map((app) => (app.id === appId ? { ...app, status: 'Cancelada' } : app))
-    );
-    showToast('La cita ha sido cancelada correctamente');
+  const handleCancelAppointment = async (appId: string | number) => {
+    try {
+      await cancelAppointmentApi(appId);
+      const fresh = await getAppointmentsApi();
+      if (fresh && fresh.length > 0) {
+        setPatientsAppointments(fresh);
+      } else {
+        setPatientsAppointments((prev) =>
+          prev.map((app) => (app.id === appId ? { ...app, status: 'Cancelada' } : app))
+        );
+      }
+      showToast('La cita ha sido cancelada correctamente');
+    } catch (error) {
+      console.error('[AppointmentsManagement] Error al cancelar cita:', error);
+      showToast('Error al cancelar la cita en el servidor');
+    }
   };
 
   // Handler: Create New Appointment
-  const handleCreateAppointment = (e: React.FormEvent) => {
+  const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newAppointmentConflict) {
@@ -299,11 +309,22 @@ const AppointmentsManagement: React.FC = () => {
       notes: newNotes.trim() || undefined,
     };
 
-    setPatientsAppointments([created, ...appointments]);
-    setSelectedAppId(created.id);
-    setIsCreateModalOpen(false);
-    setNewNotes('');
-    showToast(`Nueva cita agendada para ${patientObj.name} con ${profObj.name}`);
+    try {
+      await createAppointmentApi(created);
+      const fresh = await getAppointmentsApi();
+      if (fresh && fresh.length > 0) {
+        setPatientsAppointments(fresh);
+      } else {
+        setPatientsAppointments([created, ...appointments]);
+      }
+      setSelectedAppId(created.id);
+      setIsCreateModalOpen(false);
+      setNewNotes('');
+      showToast(`Nueva cita agendada para ${patientObj.name} con ${profObj.name}`);
+    } catch (error) {
+      console.error('[AppointmentsManagement] Error al agendar cita:', error);
+      showToast('Error al agendar la cita en el servidor');
+    }
   };
 
   // Filtered appointments list for table
@@ -562,14 +583,16 @@ const AppointmentsManagement: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="citas-btn-quick-new"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <Plus size={14} />
-              <span>Nueva del día</span>
-            </button>
+            {!isDoctor && (
+              <button
+                type="button"
+                className="citas-btn-quick-new"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <Plus size={14} />
+                <span>Nueva del día</span>
+              </button>
+            )}
           </div>
 
           {/* Table Viewport */}
@@ -717,149 +740,152 @@ const AppointmentsManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Change Status Action Row */}
-            <div className="status-selector-section">
-              <label className="status-selector-label">CAMBIAR ESTADO RÁPIDO</label>
-              <div className="status-selector-buttons">
-                <button
-                  type="button"
-                  className={`btn-status-toggle btn-status-toggle--agendada${
-                    selectedAppointment.status === 'Agendada' ? ' active' : ''
-                  }`}
-                  onClick={() => handleStatusChange(selectedAppointment.id, 'Agendada')}
-                >
-                  Agendada
-                </button>
-                <button
-                  type="button"
-                  className={`btn-status-toggle btn-status-toggle--atendida${
-                    selectedAppointment.status === 'Atendida' ? ' active' : ''
-                  }`}
-                  onClick={() => handleStatusChange(selectedAppointment.id, 'Atendida')}
-                >
-                  Atendida
-                </button>
-                <button
-                  type="button"
-                  className={`btn-status-toggle btn-status-toggle--cancelada${
-                    selectedAppointment.status === 'Cancelada' ? ' active' : ''
-                  }`}
-                  onClick={() => handleStatusChange(selectedAppointment.id, 'Cancelada')}
-                >
-                  Cancelada
-                </button>
-                <button
-                  type="button"
-                  className={`btn-status-toggle btn-status-toggle--no-asistio${
-                    selectedAppointment.status === 'No asistió' ? ' active' : ''
-                  }`}
-                  onClick={() => handleStatusChange(selectedAppointment.id, 'No asistió')}
-                >
-                  No asistió
-                </button>
-              </div>
-            </div>
-
-            {/* Reschedule Form */}
-            <form onSubmit={handleRescheduleSubmit} className="reschedule-form">
-              <div className="reschedule-form__title">REPROGRAMAR CITA</div>
-
-              {/* Schedule Conflict Warning Banner */}
-              {rescheduleConflict && (
-                <div className="conflict-alert" role="alert">
-                  <AlertTriangle size={18} className="conflict-alert__icon" />
-                  <div className="conflict-alert__text">
-                    <strong>¡Conflicto de horario!</strong>
-                    <span>
-                      El {rescheduleConflict.professionalName} ya tiene una cita agendada el{' '}
-                      {rescheduleDate} a las {rescheduleTime}.
-                    </span>
+            {/* Change Status & Reschedule Section - Hidden for Doctor role */}
+            {!isDoctor ? (
+              <>
+                <div className="status-selector-section">
+                  <label className="status-selector-label">CAMBIAR ESTADO RÁPIDO</label>
+                  <div className="status-selector-buttons">
+                    <button
+                      type="button"
+                      className={`btn-status-toggle btn-status-toggle--agendada${
+                        selectedAppointment.status === 'Agendada' ? ' active' : ''
+                      }`}
+                      onClick={() => handleStatusChange(selectedAppointment.id, 'Agendada')}
+                    >
+                      Agendada
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-status-toggle btn-status-toggle--atendida${
+                        selectedAppointment.status === 'Atendida' ? ' active' : ''
+                      }`}
+                      onClick={() => handleStatusChange(selectedAppointment.id, 'Atendida')}
+                    >
+                      Atendida
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-status-toggle btn-status-toggle--cancelada${
+                        selectedAppointment.status === 'Cancelada' ? ' active' : ''
+                      }`}
+                      onClick={() => handleStatusChange(selectedAppointment.id, 'Cancelada')}
+                    >
+                      Cancelada
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-status-toggle btn-status-toggle--no-asistio${
+                        selectedAppointment.status === 'No asistió' ? ' active' : ''
+                      }`}
+                      onClick={() => handleStatusChange(selectedAppointment.id, 'No asistió')}
+                    >
+                      No asistió
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Professional Select */}
-              <div className="form-group">
-                <label className="form-label">Profesional</label>
-                <select
-                  className="citas-select"
-                  style={{ width: '100%', ...(isDoctor ? { opacity: 0.85, cursor: 'not-allowed' } : {}) }}
-                  value={rescheduleProfId}
-                  onChange={(e) => setRescheduleProfId(e.target.value)}
-                  disabled={isDoctor}
-                >
-                  {mockProfessionals.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} - {p.specialty}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <form onSubmit={handleRescheduleSubmit} className="reschedule-form">
+                  <div className="reschedule-form__title">REPROGRAMAR CITA</div>
 
-              {/* Service Select */}
-              <div className="form-group">
-                <label className="form-label">Servicio</label>
-                <select
-                  className="citas-select"
-                  style={{ width: '100%' }}
-                  value={rescheduleServiceId}
-                  onChange={(e) => setRescheduleServiceId(e.target.value)}
-                >
-                  {mockServices.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} (${s.price.toLocaleString('es-CO')})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {rescheduleConflict && (
+                    <div className="conflict-alert" role="alert">
+                      <AlertTriangle size={18} className="conflict-alert__icon" />
+                      <div className="conflict-alert__text">
+                        <strong>¡Conflicto de horario!</strong>
+                        <span>
+                          El {rescheduleConflict.professionalName} ya tiene una cita agendada el{' '}
+                          {rescheduleDate} a las {rescheduleTime}.
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Date & Time Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div className="form-group">
-                  <label className="form-label">Fecha</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={rescheduleDate}
-                    onChange={(e) => setRescheduleDate(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Hora</label>
-                  <select
-                    className="citas-select"
-                    style={{ width: '100%' }}
-                    value={rescheduleTime}
-                    onChange={(e) => setRescheduleTime(e.target.value)}
-                  >
-                    {AVAILABLE_TIME_SLOTS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                  <div className="form-group">
+                    <label className="form-label">Profesional</label>
+                    <select
+                      className="citas-select"
+                      style={{ width: '100%' }}
+                      value={rescheduleProfId}
+                      onChange={(e) => setRescheduleProfId(e.target.value)}
+                    >
+                      {mockProfessionals.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} - {p.specialty}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="reschedule-actions">
-                <button
-                  type="submit"
-                  className="btn-reprogramar"
-                  disabled={Boolean(rescheduleConflict)}
-                >
-                  Reprogramar
-                </button>
-                <button
-                  type="button"
-                  className="btn-cancelar-cita"
-                  onClick={() => handleCancelAppointment(selectedAppointment.id)}
-                >
-                  Cancelar Cita
-                </button>
+                  <div className="form-group">
+                    <label className="form-label">Servicio</label>
+                    <select
+                      className="citas-select"
+                      style={{ width: '100%' }}
+                      value={rescheduleServiceId}
+                      onChange={(e) => setRescheduleServiceId(e.target.value)}
+                    >
+                      {mockServices.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} (${s.price.toLocaleString('es-CO')})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Fecha</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={rescheduleDate}
+                        onChange={(e) => setRescheduleDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Hora</label>
+                      <select
+                        className="citas-select"
+                        style={{ width: '100%' }}
+                        value={rescheduleTime}
+                        onChange={(e) => setRescheduleTime(e.target.value)}
+                      >
+                        {AVAILABLE_TIME_SLOTS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="reschedule-actions">
+                    <button
+                      type="submit"
+                      className="btn-reprogramar"
+                      disabled={Boolean(rescheduleConflict)}
+                    >
+                      Reprogramar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-cancelar-cita"
+                      onClick={() => handleCancelAppointment(selectedAppointment.id)}
+                    >
+                      Cancelar Cita
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', marginTop: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
+                  🔒 Modo de Solo Lectura (Médico): La modificación, cancelación o reprogramación de citas está reservada al personal de Recepción y Administración.
+                </span>
               </div>
-            </form>
+            )}
           </div>
         )}
       </div>

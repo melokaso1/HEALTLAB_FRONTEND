@@ -130,28 +130,48 @@ const PatientsManagement: React.FC = () => {
     }, 3000);
   };
 
-  const handleDeletePatient = (id: string | number, e: React.MouseEvent) => {
+  const handleDeletePatient = async (id: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
-    togglePatientStatusApi(id, 'active');
-    setPatients((prev) =>
-      prev.map((patient) =>
-        patient.id === id ? { ...patient, status: 'inactive' } : patient
-      )
-    );
-    showToast('Paciente deshabilitado y movido al archivo');
+    try {
+      await togglePatientStatusApi(id, 'active');
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(fresh);
+      } else {
+        setPatients((prev) =>
+          prev.map((patient) =>
+            patient.id === id ? { ...patient, status: 'inactive' } : patient
+          )
+        );
+      }
+      showToast('Paciente deshabilitado y movido al archivo');
+    } catch (error) {
+      console.error('[PatientsManagement] Error al cambiar estado del paciente:', error);
+      showToast('Error al actualizar el paciente en el servidor');
+    }
   };
 
-  const handleReactivatePatient = (id: string | number, e?: React.MouseEvent) => {
+  const handleReactivatePatient = async (id: string | number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    togglePatientStatusApi(id, 'inactive');
-    setPatients((prev) =>
-      prev.map((patient) =>
-        patient.id === id ? { ...patient, status: 'active' } : patient
-      )
-    );
-    setActivePatientId(id);
-    setIsCreateModalOpen(false);
-    showToast('Paciente reactivado exitosamente');
+    try {
+      await togglePatientStatusApi(id, 'inactive');
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(fresh);
+      } else {
+        setPatients((prev) =>
+          prev.map((patient) =>
+            patient.id === id ? { ...patient, status: 'active' } : patient
+          )
+        );
+      }
+      setActivePatientId(id);
+      setIsCreateModalOpen(false);
+      showToast('Paciente reactivado exitosamente');
+    } catch (error) {
+      console.error('[PatientsManagement] Error al reactivar paciente:', error);
+      showToast('Error al reactivar el paciente en el servidor');
+    }
   };
 
   const handleOpenEditPatient = (patient: Patient, e?: React.MouseEvent) => {
@@ -170,53 +190,30 @@ const PatientsManagement: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditPatient = (e: React.FormEvent) => {
+  const handleSaveEditPatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTargetPatient) return;
 
-    const updatedInitials = editName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase();
+    try {
+      await updatePatientApi(editTargetPatient.id, {
+        name: editName,
+        documentType: editDocType,
+        documentNumber: editDocNum,
+        gender: editGender,
+        age: Number(editAge) || 30,
+      });
 
-    updatePatientApi(editTargetPatient.id, {
-      name: editName,
-      documentType: editDocType,
-      documentNumber: editDocNum,
-      gender: editGender,
-      age: Number(editAge) || 30,
-    });
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(fresh);
+      }
 
-    setPatients((prev) =>
-      prev.map((p) => {
-        if (p.id === editTargetPatient.id) {
-          return {
-            ...p,
-            name: editName,
-            documentType: editDocType,
-            documentNumber: editDocNum,
-            gender: editGender,
-            age: Number(editAge) || 30,
-            initials: updatedInitials,
-            contact: {
-              phone: editPhone,
-              email: editEmail,
-              address: editAddress,
-            },
-            medicalData: {
-              bloodType: editBloodType,
-              allergies: editAllergies ? editAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
-            },
-          };
-        }
-        return p;
-      })
-    );
-
-    setIsEditModalOpen(false);
-    showToast(`Información de ${editName} actualizada exitosamente`);
+      setIsEditModalOpen(false);
+      showToast(`Información de ${editName} actualizada exitosamente`);
+    } catch (error) {
+      console.error('[PatientsManagement] Error al guardar edicion de paciente:', error);
+      showToast('Error al actualizar la información del paciente');
+    }
   };
 
   const handleTogglePanel = (patientId: string | number, e: React.MouseEvent) => {
@@ -232,66 +229,50 @@ const PatientsManagement: React.FC = () => {
     setActivePatientId(null);
   };
 
-  const handleCreatePatient = (e: React.FormEvent) => {
+  const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newDocNum.trim()) {
       showToast('Por favor completa el nombre y número de documento');
       return;
     }
 
-    const initials = newName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase();
-
-    const newPatient: Patient = {
-      id: Date.now(),
-      name: newName,
-      gender: newGender,
-      age: Number(newAge) || 30,
-      documentType: newDocType,
-      documentNumber: newDocNum,
-      contact: {
-        phone: newPhone || '+57 300 000 0000',
-        email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '')}@email.com`,
-        address: newAddress || 'Dirección no registrada',
-      },
-      lastVisitDate: 'Hoy',
-      lastVisitSpecialty: 'Medicina General',
-      specialtyBadgeColor: 'green',
-      status: 'active',
-      initials: initials,
-      avatarBg: '#0A9396',
-      medicalData: {
-        bloodType: newBloodType,
-        allergies: newAllergies ? newAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
-      },
-      recentActivity: [
-        {
-          id: Date.now() + 1,
-          title: 'Apertura de Expediente',
-          date: 'Hoy',
-          note: 'Paciente registrado en el sistema.',
-          category: 'consulta',
+    try {
+      const created = await createPatientApi({
+        name: newName,
+        gender: newGender,
+        age: Number(newAge) || 30,
+        documentType: newDocType,
+        documentNumber: newDocNum,
+        contact: {
+          phone: newPhone || '+57 300 000 0000',
+          email: newEmail,
+          address: newAddress,
         },
-      ],
-      history: [],
-      notes: [],
-    };
+        medicalData: {
+          bloodType: newBloodType,
+          allergies: newAllergies ? newAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
+        },
+      });
 
-    createPatientApi(newPatient);
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(fresh);
+      } else {
+        setPatients((prev) => [created, ...prev]);
+      }
 
-    setPatients((prev) => [newPatient, ...prev]);
-    setActivePatientId(newPatient.id);
-    setIsCreateModalOpen(false);
-    setNewName('');
-    setNewDocNum('');
-    setNewPhone('');
-    setNewEmail('');
-    setNewAddress('');
-    showToast(`Paciente ${newPatient.name} creado exitosamente`);
+      setActivePatientId(created.id);
+      setIsCreateModalOpen(false);
+      setNewName('');
+      setNewDocNum('');
+      setNewPhone('');
+      setNewEmail('');
+      setNewAddress('');
+      showToast(`Paciente ${created.name || newName} creado exitosamente`);
+    } catch (error) {
+      console.error('[PatientsManagement] Error al crear paciente:', error);
+      showToast('Error al registrar el paciente en el servidor. Intente nuevamente.');
+    }
   };
 
   // Check if any deactivated patients match current create modal input
@@ -378,15 +359,17 @@ const PatientsManagement: React.FC = () => {
             <option value="all">Estado: Todos</option>
           </select>
 
-          {/* Add Patient Button */}
-          <button
-            type="button"
-            className="patients-mgmt__btn-add"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus size={16} />
-            <span>Nuevo Paciente</span>
-          </button>
+          {/* Add Patient Button - HIdden for Doctor role */}
+          {!isDoctor && (
+            <button
+              type="button"
+              className="patients-mgmt__btn-add"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              <Plus size={16} />
+              <span>Nuevo Paciente</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -457,41 +440,45 @@ const PatientsManagement: React.FC = () => {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div className="patients-table__actions" style={{ justifyContent: 'center' }}>
-                            {patient.status === 'active' ? (
+                            {!isDoctor && (
+                              patient.status === 'active' ? (
+                                <button
+                                  type="button"
+                                  className="trash-btn"
+                                  title="Desactivar / Eliminar paciente"
+                                  onClick={(e) => handleDeletePatient(patient.id, e)}
+                                >
+                                  <TrashIcon className="trash-btn__icon" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="reactivate-icon-btn"
+                                  title="Reactivar paciente"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReactivatePatient(patient.id);
+                                  }}
+                                >
+                                  <RotateCcw size={15} />
+                                  <span>Reactivar</span>
+                                </button>
+                              )
+                            )}
+                            {!isDoctor && (
                               <button
                                 type="button"
-                                className="trash-btn"
-                                title="Desactivar / Eliminar paciente"
-                                onClick={(e) => handleDeletePatient(patient.id, e)}
+                                className="action-btn"
+                                title="Editar paciente"
+                                onClick={(e) => handleOpenEditPatient(patient, e)}
                               >
-                                <TrashIcon className="trash-btn__icon" />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="reactivate-icon-btn"
-                                title="Reactivar paciente"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReactivatePatient(patient.id);
-                                }}
-                              >
-                                <RotateCcw size={15} />
-                                <span>Reactivar</span>
+                                <Edit2 size={15} />
                               </button>
                             )}
                             <button
                               type="button"
-                              className="action-btn"
-                              title="Editar paciente"
-                              onClick={(e) => handleOpenEditPatient(patient, e)}
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                            <button
-                              type="button"
                               className={`action-btn${isPanelOpen ? ' action-btn--active' : ''}`}
-                              title="Ver detalle del paciente"
+                              title="Ver detalle del paciente (solo lectura)"
                               onClick={(e) => handleTogglePanel(patient.id, e)}
                             >
                               <MoreVertical size={15} />

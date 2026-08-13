@@ -10,7 +10,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import './Citas.css';
-import { getAppointmentsApi } from '../../../services/appointments.service';
+import { getAppointmentsApi, createAppointmentApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
@@ -32,7 +32,7 @@ interface CitaHoy {
   paciente: string;
   profesional: string;
   servicio: string;
-  estado: 'Atendida' | 'Cancelada' | 'Agendada';
+  estado: 'Atendida' | 'Cancelada' | 'Agendada' | 'No asistió';
 }
 
 const RecepCitas: React.FC = () => {
@@ -141,26 +141,49 @@ const RecepCitas: React.FC = () => {
     setNotasInput('');
   };
 
-  const handleAgendarCita = (e: React.FormEvent) => {
+  const handleAgendarCita = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pacienteQuery.trim()) {
       showToast('Por favor ingrese o busque el nombre del paciente.');
       return;
     }
 
-    // TODO: need pacienteId and tipoCitaId guids instead of local creation
-    const newCita: CitaHoy = {
-      id: `ch-${Date.now()}`,
-      hora: horaInput || '12:00',
-      paciente: pacienteQuery,
-      profesional: professionals.find(p => p.id.toString() === profesionalSelect)?.name || 'Médico no asignado',
-      servicio: servicioSelect || 'Consulta Medicina General',
-      estado: 'Agendada',
+    const selectedProf = professionals.find((p) => p.id.toString() === profesionalSelect);
+
+    const newCitaPayload: Partial<Appointment> = {
+      patientName: pacienteQuery,
+      professionalId: profesionalSelect,
+      professionalName: selectedProf?.name || 'Médico no asignado',
+      professionalSpecialty: selectedProf?.specialty || 'Medicina General',
+      serviceName: servicioSelect || 'Consulta Medicina General',
+      date: fechaInput || new Date().toISOString().split('T')[0],
+      time: horaInput || '12:00 PM',
+      status: 'Agendada',
+      notes: notasInput,
     };
 
-    setCitasHoyList((prev) => [newCita, ...prev]);
-    handleClearForm();
-    showToast(`Cita agendada para ${newCita.paciente} con éxito.`);
+    try {
+      await createAppointmentApi(newCitaPayload as Appointment);
+
+      const freshApps = await getAppointmentsApi();
+      if (Array.isArray(freshApps) && freshApps.length > 0) {
+        const mappedHoy: CitaHoy[] = freshApps.map((app) => ({
+          id: String(app.id),
+          hora: app.time,
+          paciente: app.patientName,
+          profesional: app.professionalName,
+          servicio: app.serviceName || 'Consulta Médica',
+          estado: app.status === 'Cancelada' ? 'Cancelada' : app.status === 'No asistió' ? 'No asistió' : 'Agendada',
+        }));
+        setCitasHoyList(mappedHoy);
+      }
+
+      handleClearForm();
+      showToast(`Cita agendada para ${pacienteQuery} con éxito.`);
+    } catch (error) {
+      console.error('[Citas.tsx] Error al agendar cita:', error);
+      showToast('Error al registrar la cita en el servidor.');
+    }
   };
 
   // Generate current week dates

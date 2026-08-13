@@ -1044,8 +1044,22 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
   const [targetDay, setTargetDay] = useState<string>('TODOS');
   const [targetJornada, setTargetJornada] = useState<Jornada | 'AMBAS'>('AMBAS');
   const [horaInicio, setHoraInicio] = useState<string>('08:00');
-  const [horaFin, setHoraFin] = useState<string>('13:00');
+  const [horaFin, setHoraFin] = useState<string>('18:00');
   const [activo, setActivo] = useState<boolean>(true);
+
+  const handleJornadaChange = (val: Jornada | 'AMBAS') => {
+    setTargetJornada(val);
+    if (val === 'Mañana') {
+      setHoraInicio('08:00');
+      setHoraFin('12:00');
+    } else if (val === 'Tarde') {
+      setHoraInicio('13:00');
+      setHoraFin('18:00');
+    } else {
+      setHoraInicio('08:00');
+      setHoraFin('18:00');
+    }
+  };
 
   const handleToggleSlot = (index: number) => {
     setSchedule((prev) =>
@@ -1067,15 +1081,31 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
     setSchedule((prev) =>
       prev.map((slot) => {
         const matchesDay = targetDay === 'TODOS' || slot.dia === targetDay;
-        const matchesJornada = targetJornada === 'AMBAS' || slot.jornada === targetJornada;
 
-        if (matchesDay && matchesJornada) {
-          return {
-            ...slot,
-            horaInicio: horaInicio || slot.horaInicio,
-            horaFin: horaFin || slot.horaFin,
-            activo,
-          };
+        if (matchesDay) {
+          if (targetJornada === 'AMBAS') {
+            return {
+              ...slot,
+              horaInicio: slot.jornada === 'Mañana' ? '08:00' : '13:00',
+              horaFin: slot.jornada === 'Mañana' ? '12:00' : '18:00',
+              activo,
+            };
+          }
+
+          if (slot.jornada === targetJornada) {
+            return {
+              ...slot,
+              horaInicio: horaInicio || slot.horaInicio,
+              horaFin: horaFin || slot.horaFin,
+              activo: true,
+            };
+          } else {
+            // Desactivar la jornada opuesta cuando se selecciona un turno especifico (ej: solo Mañana)
+            return {
+              ...slot,
+              activo: false,
+            };
+          }
         }
         return slot;
       })
@@ -1134,7 +1164,7 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                 <select
                   className="form-select"
                   value={targetJornada}
-                  onChange={(e) => setTargetJornada(e.target.value as Jornada | 'AMBAS')}
+                  onChange={(e) => handleJornadaChange(e.target.value as Jornada | 'AMBAS')}
                 >
                   <option value="AMBAS">Ambas (Mañana y Tarde)</option>
                   <option value="Mañana">Mañana</option>

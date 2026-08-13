@@ -10,7 +10,7 @@ import {
   Check,
   UserCheck,
 } from 'lucide-react';
-import { getPatientsApi } from '../../../services/patients.service';
+import { getPatientsApi, createPatientApi, updatePatientApi } from '../../../services/patients.service';
 import './Pacientes.css';
 
 interface PatientRecord {
@@ -125,34 +125,77 @@ const RecepPacientes: React.FC = () => {
     );
   };
 
-  const handleCreatePatient = (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
-    // TODO: Call createPatientApi here once we have personaId. For now, keep local creation.
-    const initials = newP.nombre
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase();
+  const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
+    try {
+      await createPatientApi({
+        name: newP.nombre,
+        gender: newP.genero === 'F' ? 'Femenino' : 'Masculino',
+        age: newP.edad,
+        documentType: 'CC',
+        documentNumber: newP.documento,
+        contact: {
+          phone: newP.telefono,
+          email: newP.email,
+          address: 'Dirección no registrada',
+        },
+      });
 
-    const colors: Array<'mint' | 'purple' | 'gray'> = ['mint', 'purple', 'gray'];
-    const randomBg = colors[Math.floor(Math.random() * colors.length)];
-
-    const created: PatientRecord = {
-      ...newP,
-      id: `p-${Date.now()}`,
-      iniciales: initials,
-      avatarBg: randomBg,
-    };
-
-    setPatients((prev) => [created, ...prev]);
-    setIsNewPatientOpen(false);
-    showToast(`Paciente ${newP.nombre} registrado exitosamente.`);
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(
+          fresh.map((p) => ({
+            id: String(p.id),
+            documento: `${p.documentType}-${p.documentNumber}`,
+            nombre: p.name,
+            iniciales: p.initials || 'P',
+            avatarBg: 'mint',
+            genero: p.gender === 'Femenino' ? 'F' : 'M',
+            edad: p.age,
+            telefono: p.contact.phone,
+            email: p.contact.email,
+            estado: p.status === 'active' ? 'Activo' : 'Inactivo',
+          }))
+        );
+      }
+      setIsNewPatientOpen(false);
+      showToast(`Paciente ${newP.nombre} registrado exitosamente.`);
+    } catch (error) {
+      console.error('[Pacientes.tsx] Error al crear paciente:', error);
+      showToast('Error al registrar el paciente en la API');
+    }
   };
 
-  const handleUpdatePatient = (updated: PatientRecord) => {
-    setPatients((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    setEditingPatient(null);
-    showToast(`Información de ${updated.nombre} actualizada.`);
+  const handleUpdatePatient = async (updated: PatientRecord) => {
+    try {
+      await updatePatientApi(updated.id, {
+        name: updated.nombre,
+        gender: updated.genero === 'F' ? 'Femenino' : 'Masculino',
+        age: updated.edad,
+      });
+
+      const fresh = await getPatientsApi();
+      if (fresh && fresh.length > 0) {
+        setPatients(
+          fresh.map((p) => ({
+            id: String(p.id),
+            documento: `${p.documentType}-${p.documentNumber}`,
+            nombre: p.name,
+            iniciales: p.initials || 'P',
+            avatarBg: 'mint',
+            genero: p.gender === 'Femenino' ? 'F' : 'M',
+            edad: p.age,
+            telefono: p.contact.phone,
+            email: p.contact.email,
+            estado: p.status === 'active' ? 'Activo' : 'Inactivo',
+          }))
+        );
+      }
+      setEditingPatient(null);
+      showToast(`Información de ${updated.nombre} actualizada.`);
+    } catch (error) {
+      console.error('[Pacientes.tsx] Error al actualizar paciente:', error);
+      showToast('Error al actualizar la información en la API');
+    }
   };
 
   const handleExport = () => {

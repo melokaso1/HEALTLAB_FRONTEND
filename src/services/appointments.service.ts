@@ -194,20 +194,34 @@ export interface CreateCitaPayload {
   horaFin: string;
   motivoConsulta: string;
   observaciones?: string;
-  usuarioCreacionId: string;
+  usuarioCreacionId?: string;
 }
 
 export const createAppointmentApi = async (
-  payload: CreateCitaPayload,
+  payload: CreateCitaPayload | Appointment | Partial<Appointment>,
 ): Promise<Appointment> => {
+  const appObj = payload as Partial<Appointment>;
+  const normPayload: CreateCitaPayload = 'pacienteId' in payload && (payload as CreateCitaPayload).pacienteId
+    ? (payload as CreateCitaPayload)
+    : {
+        pacienteId: String(appObj.patientId || '00000000-0000-0000-0000-000000000000'),
+        medicoId: String(appObj.professionalId || '00000000-0000-0000-0000-000000000000'),
+        tipoCitaId: String(appObj.serviceId || '00000000-0000-0000-0000-000000000000'),
+        fecha: appObj.date || new Date().toISOString().split('T')[0],
+        horaInicio: parseTimeSlot(appObj.time || '10:00 AM'),
+        horaFin: parseTimeSlot(appObj.time || '10:30 AM'),
+        motivoConsulta: appObj.notes || appObj.serviceName || 'Consulta Médica',
+        observaciones: appObj.notes,
+      };
+
   const normalize = (t: string) => (t.includes(':') && t.split(':').length === 2 ? `${t}:00` : t);
   try {
     const raw = await apiFetch<BackendCita>('/citas', {
       method: 'POST',
       body: JSON.stringify({
-        ...payload,
-        horaInicio: normalize(payload.horaInicio),
-        horaFin: normalize(payload.horaFin),
+        ...normPayload,
+        horaInicio: normalize(normPayload.horaInicio),
+        horaFin: normalize(normPayload.horaFin),
       }),
     });
     return mapBackendCita(raw);
@@ -215,23 +229,23 @@ export const createAppointmentApi = async (
     console.warn('[appointments.service] Error en POST /citas, usando fallback local:', error);
     return {
       id: Date.now(),
-      patientId: payload.pacienteId,
-      patientName: 'Paciente',
-      patientAge: 0,
-      patientGender: '',
-      patientDoc: '',
-      patientPhone: '',
-      patientEmail: '',
-      patientInitials: 'PP',
-      professionalId: payload.medicoId,
-      professionalName: 'Médico',
-      professionalSpecialty: 'Medicina General',
-      serviceId: payload.tipoCitaId,
-      serviceName: payload.motivoConsulta,
-      date: payload.fecha,
-      time: formatTimeSlot(payload.horaInicio),
+      patientId: normPayload.pacienteId,
+      patientName: (payload as Appointment).patientName || 'Paciente',
+      patientAge: (payload as Appointment).patientAge || 30,
+      patientGender: (payload as Appointment).patientGender || 'Femenino',
+      patientDoc: (payload as Appointment).patientDoc || 'CC-00000',
+      patientPhone: (payload as Appointment).patientPhone || '',
+      patientEmail: (payload as Appointment).patientEmail || '',
+      patientInitials: (payload as Appointment).patientInitials || 'PP',
+      professionalId: normPayload.medicoId,
+      professionalName: (payload as Appointment).professionalName || 'Médico',
+      professionalSpecialty: (payload as Appointment).professionalSpecialty || 'Medicina General',
+      serviceId: normPayload.tipoCitaId,
+      serviceName: (payload as Appointment).serviceName || normPayload.motivoConsulta,
+      date: normPayload.fecha,
+      time: formatTimeSlot(normPayload.horaInicio),
       status: 'Agendada',
-      notes: payload.observaciones ?? payload.motivoConsulta,
+      notes: normPayload.observaciones ?? normPayload.motivoConsulta,
     };
   }
 };
