@@ -133,29 +133,79 @@ export const createProfessionalApi = async (
   };
 
   try {
-    const apiBody = {
-      nombre: p.nombre || '',
-      apellido: p.apellido || '',
-      especialidad: p.especialidad || 'Medicina General',
-      registroProfesional: p.registroProfesional || `REG-${Date.now().toString().slice(-6)}`,
-      consultorio: p.consultorio || '101',
-      activo: true,
-      persona: {
-        nombre: p.nombre || '',
-        apellido: p.apellido || '',
-        numeroDocumento: String(Date.now()),
-      },
-    };
+    // 1. Consultar catalogos requeridos por el backend
+    let tipoDocId = '';
+    let cargoId = '';
+    try {
+      const tiposDoc = await apiFetch<Array<{ id: string }>>('/TiposDocumento');
+      if (Array.isArray(tiposDoc) && tiposDoc[0]) tipoDocId = tiposDoc[0].id;
 
-    const raw = await apiFetch<BackendMedico>('/medicos', {
-      method: 'POST',
-      body: JSON.stringify(apiBody),
-    });
-    const createdBackend = mapBackendMedico(raw);
-    saveStoredMedico(createdBackend);
-    return createdBackend;
+      const cargos = await apiFetch<Array<{ id: string; codigo?: string }>>('/Cargos');
+      if (Array.isArray(cargos)) {
+        const medCargo = cargos.find((c) => c.codigo === 'MED') || cargos[0];
+        if (medCargo) cargoId = medCargo.id;
+      }
+    } catch (err) {
+      console.warn('[professionals.service] Error consultando catálogos:', err);
+    }
+
+    // 2. Crear Registro en Persona (/Personas)
+    let personaId = '';
+    if (tipoDocId) {
+      try {
+        const personaRes = await apiFetch<{ id: string }>('/Personas', {
+          method: 'POST',
+          body: JSON.stringify({
+            nombre: p.nombre || 'Nuevo',
+            apellido: p.apellido || 'Médico',
+            tipoDocumentoId: tipoDocId,
+            numeroDocumento: String(Date.now()),
+          }),
+        });
+        if (personaRes?.id) personaId = personaRes.id;
+      } catch (err) {
+        console.warn('[professionals.service] Error al crear Persona:', err);
+      }
+    }
+
+    // 3. Crear Registro en Empleado (/Empleados)
+    let empleadoId = '';
+    if (personaId && cargoId) {
+      try {
+        const empRes = await apiFetch<{ id: string }>('/Empleados', {
+          method: 'POST',
+          body: JSON.stringify({
+            personaId,
+            cargoId,
+            fechaIngreso: new Date().toISOString().split('T')[0],
+            activo: true,
+          }),
+        });
+        if (empRes?.id) empleadoId = empRes.id;
+      } catch (err) {
+        console.warn('[professionals.service] Error al crear Empleado:', err);
+      }
+    }
+
+    // 4. Crear Registro en Medico (/Medicos)
+    if (empleadoId) {
+      const raw = await apiFetch<BackendMedico>('/Medicos', {
+        method: 'POST',
+        body: JSON.stringify({
+          empleadoId,
+          registroProfesional: p.registroProfesional || `REG-${Date.now().toString().slice(-6)}`,
+          activo: true,
+        }),
+      });
+      const createdBackend = mapBackendMedico(raw);
+      saveStoredMedico(createdBackend);
+      return createdBackend;
+    }
+
+    saveStoredMedico(localProf);
+    return localProf;
   } catch (error) {
-    console.warn('[professionals.service] Error en POST /medicos, guardando en persistencia local:', error);
+    console.warn('[professionals.service] Error en flujo de creación de médicos:', error);
     saveStoredMedico(localProf);
     return localProf;
   }

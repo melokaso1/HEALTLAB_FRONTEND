@@ -149,33 +149,69 @@ export interface CreateUserPayload {
 export const createUserApi = async (
   payload: CreateUserPayload,
 ): Promise<ManagedUser> => {
+  const initials = payload.username.slice(0, 2).toUpperCase();
+  const fallbackUser: ManagedUser = {
+    id: `local-${Date.now()}`,
+    name: payload.username,
+    email: payload.email,
+    role: 'receptionist',
+    status: 'active',
+    initials,
+    avatarBg: '#0A9396',
+    lastAccess: 'Recién creado',
+  };
+
   try {
-    const raw = await apiFetch<BackendUsuario>('/usuarios', {
-      method: 'POST',
-      body: JSON.stringify({
-        empleadoId: payload.empleadoId,
-        rolId: payload.rolId,
-        username: payload.username,
-        email: payload.email,
-        password: payload.password,
-        activo: payload.activo ?? true,
-        debeCambiarPassword: payload.debeCambiarPassword ?? false,
-      }),
-    });
-    return mapBackendUser(raw);
+    let empleadoId = payload.empleadoId && payload.empleadoId.length === 36 ? payload.empleadoId : '';
+    let rolId = payload.rolId && payload.rolId.length === 36 ? payload.rolId : '';
+
+    // 1. Buscar RolId en /Roles si no viene provisto
+    if (!rolId) {
+      try {
+        const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles');
+        if (Array.isArray(roles) && roles.length > 0) {
+          const matched = roles.find((r) =>
+            r.nombreRol?.toLowerCase().includes(payload.username.toLowerCase()) ||
+            r.nombreRol?.toLowerCase().includes('recep')
+          ) || roles[0];
+          if (matched) rolId = matched.id;
+        }
+      } catch (err) {
+        console.warn('[users.service] Error consultando /Roles:', err);
+      }
+    }
+
+    // 2. Buscar EmpleadoId en /Empleados si no viene provisto
+    if (!empleadoId) {
+      try {
+        const emps = await apiFetch<Array<{ id: string }>>('/Empleados');
+        if (Array.isArray(emps) && emps[0]) empleadoId = emps[0].id;
+      } catch (err) {
+        console.warn('[users.service] Error consultando /Empleados:', err);
+      }
+    }
+
+    // 3. Enviar a /Usuarios en el backend
+    if (empleadoId && rolId) {
+      const raw = await apiFetch<BackendUsuario>('/usuarios', {
+        method: 'POST',
+        body: JSON.stringify({
+          empleadoId,
+          rolId,
+          username: payload.username,
+          email: payload.email,
+          password: payload.password,
+          activo: payload.activo ?? true,
+          debeCambiarPassword: payload.debeCambiarPassword ?? false,
+        }),
+      });
+      return mapBackendUser(raw);
+    }
+
+    return fallbackUser;
   } catch (error) {
     console.warn('[users.service] Error en POST /usuarios, fallback local:', error);
-    const initials = payload.username.slice(0, 2).toUpperCase();
-    return {
-      id: `local-${Date.now()}`,
-      name: payload.username,
-      email: payload.email,
-      role: 'receptionist',
-      status: 'active',
-      initials,
-      avatarBg: '#0A9396',
-      lastAccess: 'Recién creado',
-    };
+    return fallbackUser;
   }
 };
 

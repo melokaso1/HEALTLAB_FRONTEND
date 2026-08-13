@@ -206,38 +206,57 @@ export const createPatientApi = async (
   };
 
   try {
-    const body: Record<string, unknown> = {
-      activo: patient.status !== 'inactive',
-      nombre: parts[0] ?? 'Nuevo',
-      apellido: parts.slice(1).join(' ') || 'Paciente',
-      numeroDocumento: patient.documentNumber ?? String(Date.now()),
-      tipoDocumento: patient.documentType ?? 'CC',
-      telefono: patient.contact?.phone ?? '',
-      email: patient.contact?.email ?? '',
-      direccion: patient.contact?.address ?? 'Dirección no registrada',
-      persona: {
-        nombre: parts[0] ?? 'Nuevo',
-        apellido: parts.slice(1).join(' ') || 'Paciente',
-        numeroDocumento: patient.documentNumber ?? String(Date.now()),
-      },
-    };
-    if (patient.personaId && patient.personaId.length === 36) {
-      body.personaId = patient.personaId;
+    // 1. Obtener TipoDocumentoId real del backend
+    let tipoDocId = '';
+    try {
+      const tiposDoc = await apiFetch<Array<{ id: string }>>('/TiposDocumento');
+      if (Array.isArray(tiposDoc) && tiposDoc[0]) tipoDocId = tiposDoc[0].id;
+    } catch (err) {
+      console.warn('[patients.service] Error consultando TiposDocumento:', err);
     }
-    const raw = await apiFetch<BackendPaciente>('/pacientes', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    const createdBackend = mapBackendPatient(raw);
-    const result = {
-      ...localPatient,
-      ...createdBackend,
-      id: createdBackend.id || fallbackId,
-    };
-    saveStoredPatient(result);
-    return result;
+
+    // 2. Crear Persona en /Personas si no existe
+    let personaId = patient.personaId && patient.personaId.length === 36 ? patient.personaId : '';
+    if (!personaId && tipoDocId) {
+      try {
+        const personaRes = await apiFetch<{ id: string }>('/Personas', {
+          method: 'POST',
+          body: JSON.stringify({
+            nombre: parts[0] ?? 'Nuevo',
+            apellido: parts.slice(1).join(' ') || 'Paciente',
+            tipoDocumentoId: tipoDocId,
+            numeroDocumento: patient.documentNumber || String(Date.now()),
+          }),
+        });
+        if (personaRes?.id) personaId = personaRes.id;
+      } catch (err) {
+        console.warn('[patients.service] Error al crear Persona para Paciente:', err);
+      }
+    }
+
+    // 3. Crear Paciente en /Pacientes
+    if (personaId) {
+      const raw = await apiFetch<BackendPaciente>('/Pacientes', {
+        method: 'POST',
+        body: JSON.stringify({
+          personaId,
+          activo: patient.status !== 'inactive',
+        }),
+      });
+      const createdBackend = mapBackendPatient(raw);
+      const result = {
+        ...localPatient,
+        ...createdBackend,
+        id: createdBackend.id || fallbackId,
+      };
+      saveStoredPatient(result);
+      return result;
+    }
+
+    saveStoredPatient(localPatient);
+    return localPatient;
   } catch (error) {
-    console.warn('[patients.service] Error en POST /pacientes, registrando en estado local persistente:', error);
+    console.warn('[patients.service] Error en flujo de creación de pacientes:', error);
     saveStoredPatient(localPatient);
     return localPatient;
   }

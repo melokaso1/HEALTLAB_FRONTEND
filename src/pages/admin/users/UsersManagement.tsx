@@ -19,6 +19,7 @@ import {
   getRolePermissions,
   getRoleLabel,
   getUsersApi,
+  createUserApi,
   updateUserApi,
   toggleUserStatusApi,
 } from '../../../services/users.service';
@@ -134,6 +135,7 @@ const UsersManagement: React.FC = () => {
   // New user form state
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
 
   // Edit role form state
@@ -207,10 +209,10 @@ const UsersManagement: React.FC = () => {
     showToast(`Rol de ${editTargetUser.name} actualizado a ${getRoleLabel(targetRole)}`);
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim()) {
-      showToast('Por favor completa el nombre y correo electrónico');
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) {
+      showToast('Por favor completa el nombre, correo y contraseña');
       return;
     }
 
@@ -221,25 +223,34 @@ const UsersManagement: React.FC = () => {
       .substring(0, 2)
       .toUpperCase();
 
-    // Local-only creation: creating users via the API requires empleadoId and rolId (Guids)
-    // TODO: integrate with API once employee/role selectors are added to the form
-    const newUser: ManagedUser = {
-      id: `local-${Date.now()}`,
-      name: newUserName,
-      email: newUserEmail,
-      role: newUserRole,
-      status: 'active',
-      initials: initials,
-      avatarBg: '#0A9396',
-      lastAccess: 'Hoy, Recientemente',
-    };
+    try {
+      const created = await createUserApi({
+        username: newUserName,
+        email: newUserEmail,
+        password: newUserPassword,
+        empleadoId: '00000000-0000-0000-0000-000000000000',
+        rolId: '00000000-0000-0000-0000-000000000000',
+      });
 
-    setUsers([newUser, ...users]);
-    setActivePanelUserId(newUser.id);
-    setNewUserName('');
-    setNewUserEmail('');
-    setIsCreateModalOpen(false);
-    showToast(`Usuario ${newUser.name} creado exitosamente`);
+      const newUser: ManagedUser = {
+        ...created,
+        name: newUserName,
+        email: newUserEmail,
+        role: newUserRole,
+        initials,
+      };
+
+      setUsers((prev) => [newUser, ...prev.filter((u) => String(u.id) !== String(newUser.id))]);
+      setActivePanelUserId(newUser.id);
+      setNewUserName('');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setIsCreateModalOpen(false);
+      showToast(`Usuario ${newUser.name} creado exitosamente`);
+    } catch (error) {
+      console.error('[UsersManagement] Error al crear usuario:', error);
+      showToast('Error al registrar usuario en el servidor.');
+    }
   };
 
   const handleResetPassword = () => {
@@ -700,6 +711,18 @@ const UsersManagement: React.FC = () => {
                     value={newUserEmail}
                     onChange={(e) => setNewUserEmail(e.target.value)}
                     required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Contraseña</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="••••••••"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    required
+                    minLength={6}
                   />
                 </div>
                 <div className="form-group">
