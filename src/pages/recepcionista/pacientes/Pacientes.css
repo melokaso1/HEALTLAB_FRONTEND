@@ -431,3 +431,56 @@
   background-color: #00A896;
   border-color: #00A896;
 }
+
+/* Document & Phone Dropdown Wrapper for Modals */
+.doc-search-wrapper {
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  background-color: var(--hl-card-bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.doc-search-wrapper:focus-within {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+}
+
+.doc-type-inline-select {
+  background-color: rgba(0, 168, 150, 0.1);
+  border: none;
+  border-right: 1px solid var(--hl-border);
+  color: #00A896;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 10px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.doc-search-wrapper .form-input {
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dark-mode .doc-search-wrapper {
+  background-color: #0F172A;
+  border-color: #334155;
+}
+
+.dark-mode .doc-type-inline-select {
+  background-color: rgba(0, 168, 150, 0.2);
+  border-color: #334155;
+  color: #2DD4BF;
+}
+
+.dark-mode .doc-type-inline-select option {
+  background-color: #0F172A;
+  color: #F8FAFC;
+}

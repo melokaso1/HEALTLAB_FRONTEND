@@ -35,6 +35,9 @@ const RecepPacientes: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [newPatientDocType, setNewPatientDocType] = useState('CC');
+  const [newPatientPhoneType, setNewPatientPhoneType] = useState('Móvil');
+
   useEffect(() => {
     const fetchPatients = async () => {
       setIsLoading(true);
@@ -419,25 +422,34 @@ const RecepPacientes: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
-                const doc = (form.elements.namedItem('documento') as HTMLInputElement).value;
+                const docType = newPatientDocType;
+                const docNum = (form.elements.namedItem('documento') as HTMLInputElement).value;
                 const nom = (form.elements.namedItem('nombre') as HTMLInputElement).value;
                 const gen = (form.elements.namedItem('genero') as HTMLSelectElement).value as 'F' | 'M';
-                const edad = parseInt((form.elements.namedItem('edad') as HTMLInputElement).value) || 30;
-                const tel = (form.elements.namedItem('telefono') as HTMLInputElement).value;
+                const fechaNac = (form.elements.namedItem('fechaNacimiento') as HTMLInputElement).value;
+                const phoneType = newPatientPhoneType;
+                const telNum = (form.elements.namedItem('telefono') as HTMLInputElement).value;
                 const em = (form.elements.namedItem('email') as HTMLInputElement).value;
 
+                let calculatedEdad = 30;
+                if (fechaNac) {
+                  const birthYear = new Date(fechaNac).getFullYear();
+                  const currentYear = new Date().getFullYear();
+                  calculatedEdad = Math.max(0, currentYear - birthYear);
+                }
+
                 handleCreatePatient({
-                  documento: doc,
+                  documento: `${docType} ${docNum}`,
                   nombre: nom,
                   genero: gen,
-                  edad,
-                  telefono: tel,
+                  edad: calculatedEdad,
+                  telefono: `${phoneType}: ${telNum}`,
                   email: em,
                   estado: 'Activo',
                 });
               }}
             >
-              <div className="modal-body">
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Nombre Completo</label>
                   <input
@@ -449,16 +461,29 @@ const RecepPacientes: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-row">
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="form-group">
-                    <label className="form-label">Documento (DNI / Cédula)</label>
-                    <input
-                      type="text"
-                      name="documento"
-                      className="form-input"
-                      required
-                      placeholder="Ej. 1029384756"
-                    />
+                    <label className="form-label">Documento</label>
+                    <div className="doc-search-wrapper">
+                      <select
+                        className="doc-type-inline-select"
+                        value={newPatientDocType}
+                        onChange={(e) => setNewPatientDocType(e.target.value)}
+                      >
+                        <option value="CC">CC</option>
+                        <option value="TI">TI</option>
+                        <option value="RC">RC</option>
+                      </select>
+                      <input
+                        type="text"
+                        name="documento"
+                        className="form-input"
+                        required
+                        placeholder="Número de documento..."
+                        inputMode="numeric"
+                        onChange={(e) => (e.target.value = e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -470,27 +495,37 @@ const RecepPacientes: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="form-row">
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="form-group">
-                    <label className="form-label">Edad</label>
+                    <label className="form-label">Fecha de Nacimiento</label>
                     <input
-                      type="number"
-                      name="edad"
+                      type="date"
+                      name="fechaNacimiento"
                       className="form-input"
                       required
-                      defaultValue={35}
                     />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Teléfono</label>
-                    <input
-                      type="text"
-                      name="telefono"
-                      className="form-input"
-                      required
-                      placeholder="Ej. +34 612 345 678"
-                    />
+                    <div className="doc-search-wrapper">
+                      <select
+                        className="doc-type-inline-select"
+                        value={newPatientPhoneType}
+                        onChange={(e) => setNewPatientPhoneType(e.target.value)}
+                      >
+                        <option value="Móvil">Móvil</option>
+                        <option value="Fijo">Fijo</option>
+                      </select>
+                      <input
+                        type="text"
+                        name="telefono"
+                        className="form-input"
+                        required
+                        placeholder="Número de teléfono..."
+                        inputMode="numeric"
+                      />
+                    </div>
                   </div>
                 </div>
 

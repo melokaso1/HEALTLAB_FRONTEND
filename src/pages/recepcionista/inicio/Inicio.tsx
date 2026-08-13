@@ -144,31 +144,13 @@ const RecepInicio: React.FC = () => {
         </div>
       )}
 
-      {/* Header Greeting & Quick Actions */}
+      {/* Header Greeting */}
       <div className="recep-inicio-header">
         <div className="recep-inicio-header__text">
           <h1 className="recep-inicio-header__title">Buenos días, Ana</h1>
           <p className="recep-inicio-header__subtitle">
             Aquí está el resumen para hoy, Jueves 24 de Octubre.
           </p>
-        </div>
-
-        <div className="recep-inicio-header__actions">
-          <button
-            className="btn-recep-outline"
-            onClick={() => setIsRegisterPatientOpen(true)}
-          >
-            <UserPlus size={18} />
-            <span>Registrar Paciente</span>
-          </button>
-
-          <button
-            className="btn-recep-primary"
-            onClick={() => setIsScheduleAppointmentOpen(true)}
-          >
-            <CalendarPlus size={18} />
-            <span>Agendar Cita</span>
-          </button>
         </div>
       </div>
 
