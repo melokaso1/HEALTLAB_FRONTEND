@@ -775,10 +775,10 @@ const AdminProfesionales: React.FC = () => {
               <div className="empty-icon-circle">
                 <Stethoscope size={32} />
               </div>
-              <h3 style={{ margin: 0, color: '#0F172A' }}>
+              <h3 style={{ margin: 0, color: 'var(--hl-text-main)' }}>
                 Selecciona un profesional
               </h3>
-              <p style={{ margin: 0, fontSize: '14px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--hl-text-sub)' }}>
                 Elige un médico del directorio para consultar su perfil y agenda semanal de citas.
               </p>
             </div>
@@ -1099,15 +1099,15 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
           <div
             style={{
               padding: '14px',
-              backgroundColor: '#F8FAFC',
+              backgroundColor: 'var(--hl-bg-page)',
               borderRadius: '8px',
-              border: '1px solid #E2E8F0',
+              border: '1px solid var(--hl-border)',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
             }}
           >
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hl-text-main)' }}>
               Configuración rápida por bloque
             </span>
             <div className="form-row">
@@ -1187,7 +1187,7 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hl-text-main)' }}>
               Detalle día por día
             </span>
 
@@ -1195,7 +1195,7 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
               style={{
                 maxHeight: '260px',
                 overflowY: 'auto',
-                border: '1px solid #E2E8F0',
+                border: '1px solid var(--hl-border)',
                 borderRadius: '8px',
               }}
             >
@@ -1207,12 +1207,12 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 14px',
-                    borderBottom: idx < schedule.length - 1 ? '1px solid #E2E8F0' : 'none',
-                    backgroundColor: slot.activo ? '#FFFFFF' : '#F8FAFC',
+                    borderBottom: idx < schedule.length - 1 ? '1px solid var(--hl-border)' : 'none',
+                    backgroundColor: slot.activo ? 'var(--hl-card-bg)' : 'var(--hl-bg-page)',
                   }}
                 >
                   <div style={{ minWidth: '130px', display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 600, fontSize: '13px', color: '#0F172A' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--hl-text-main)' }}>
                       {slot.diaNombre}
                     </span>
                     <span style={{ fontSize: '11px', color: slot.jornada === 'Mañana' ? '#00A896' : '#4C62D6', fontWeight: 600 }}>
@@ -1473,16 +1473,16 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
           <div
             style={{
               padding: '16px',
-              backgroundColor: '#F8FAFC',
+              backgroundColor: 'var(--hl-bg-page)',
               borderRadius: '10px',
-              border: '1px solid #E2E8F0',
+              border: '1px solid var(--hl-border)',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A' }}>
+              <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--hl-text-main)' }}>
                 {appointment.motivoConsulta}
               </span>
               <span className={`status-chip-mini ${appointment.estado.toLowerCase()}`}>
@@ -1491,10 +1491,10 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13.5px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748B' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--hl-text-sub)' }}>
                 <User size={15} color="#00A896" />
                 <span>
-                  Paciente: <strong style={{ color: '#0F172A' }}>{appointment.pacienteNombre}</strong>
+                  Paciente: <strong style={{ color: 'var(--hl-text-main)' }}>{appointment.pacienteNombre}</strong>
                 </span>
               </div>
 
