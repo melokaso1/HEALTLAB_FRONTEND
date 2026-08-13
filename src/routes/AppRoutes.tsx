@@ -22,6 +22,7 @@ import RecepHistorial from '../pages/recepcionista/historial/Historial';
 // Doctor / Professional Views
 import DoctorInicio from '../pages/professional/DoctorInicio';
 import ProfessionalDashboard from '../pages/professional/ProfessionalDashboard';
+import DoctorCitas from '../pages/professional/DoctorCitas';
 import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
 
 import NotFound from '../components/common/NotFound';
@@ -94,14 +95,30 @@ const DashboardContainer: React.FC = () => {
           element={isReceptionist ? <RecepPacientes /> : <PatientsManagement />}
         />
 
-        {/* Citas (Vista agendamiento y gestión diaria para recepcionista) */}
+        {/* Citas */}
         <Route
           path="gestion-citas"
-          element={isReceptionist ? <RecepCitas /> : <AppointmentsManagement />}
+          element={
+            isDoctor ? (
+              <DoctorCitas />
+            ) : isReceptionist ? (
+              <RecepCitas />
+            ) : (
+              <AppointmentsManagement />
+            )
+          }
         />
         <Route
           path="citas"
-          element={isReceptionist ? <RecepCitas /> : <AppointmentsManagement />}
+          element={
+            isDoctor ? (
+              <DoctorCitas />
+            ) : isReceptionist ? (
+              <RecepCitas />
+            ) : (
+              <AppointmentsManagement />
+            )
+          }
         />
 
         {/* Historial */}

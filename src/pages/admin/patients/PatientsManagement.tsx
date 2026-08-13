@@ -8,12 +8,11 @@ import {
   Phone,
   HeartPulse,
   Clock,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   RotateCcw,
 } from 'lucide-react';
 import type { Patient, GenderType } from '../../../types/patient.types';
+import Pagination from '../../../components/common/Pagination';
 import {
   mockPatients,
   getPatientsApi,
@@ -57,6 +56,15 @@ const PatientsManagement: React.FC = () => {
   const [lastPatient, setLastPatient] = useState<Patient | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 6;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
   const [activeTab, setActiveTab] = useState<'Resumen' | 'Historial' | 'Notas'>('Resumen');
   const [newNoteText, setNewNoteText] = useState('');
 
@@ -321,6 +329,12 @@ const PatientsManagement: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage) || 1;
+  const paginatedPatients = filteredPatients.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const renderSpecialtyBadge = (specialty: string) => {
     const isDermatology = specialty.toLowerCase().includes('derm');
     const badgeClass = isDermatology
@@ -398,14 +412,18 @@ const PatientsManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredPatients.length === 0 ? (
+                {paginatedPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="patients-table__empty">
+                    <td
+                      colSpan={4}
+                      style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}
+                    >
                       No se encontraron pacientes con los filtros aplicados.
                     </td>
                   </tr>
                 ) : (
-                  filteredPatients.map((patient, idx) => {
+                  paginatedPatients.map((patient, idx) => {
+                    const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
                     const isRowSelected = patient.id === activePatientId;
                     return (
                       <tr
@@ -414,7 +432,7 @@ const PatientsManagement: React.FC = () => {
                         onClick={() => handleTogglePanel(patient.id)}
                         style={{ cursor: 'pointer' }}
                       >
-                        <td className="patients-table__index">{idx + 1}</td>
+                        <td className="patients-table__index">{globalIdx}</td>
                         <td>
                           <div className="patient-identity">
                             <div
@@ -457,29 +475,15 @@ const PatientsManagement: React.FC = () => {
           </div>
 
           {/* Table Footer / Pagination */}
-          <div className="patients-table__footer">
-            <span>
-              Mostrando {filteredPatients.length > 0 ? 1 : 0} - {filteredPatients.length} de{' '}
-              {patients.filter((p) => statusFilter === 'all' || p.status === statusFilter).length} pacientes
-            </span>
-            <div className="pagination-controls">
-              <button type="button" className="pagination-btn" disabled>
-                <ChevronLeft size={16} />
-              </button>
-              <button type="button" className="pagination-btn pagination-btn--active">
-                1
-              </button>
-              <button type="button" className="pagination-btn">
-                2
-              </button>
-              <button type="button" className="pagination-btn">
-                3
-              </button>
-              <span style={{ fontSize: '12px', color: '#94A3B8', padding: '0 4px' }}>...</span>
-              <button type="button" className="pagination-btn">
-                <ChevronRight size={16} />
-              </button>
-            </div>
+          <div className="patients-table__footer" style={{ padding: 0 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPatients.length}
+              itemsPerPage={itemsPerPage}
+              itemLabel="pacientes"
+              onPageChange={(page) => setCurrentPage(page)}
+            />
           </div>
         </div>
 

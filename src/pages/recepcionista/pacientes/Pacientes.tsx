@@ -10,6 +10,7 @@ import {
   Check,
   UserCheck,
 } from 'lucide-react';
+import Pagination from '../../../components/common/Pagination';
 import { getPatientsApi, createPatientApi, updatePatientApi } from '../../../services/patients.service';
 import './Pacientes.css';
 
@@ -110,6 +111,16 @@ const RecepPacientes: React.FC = () => {
     if (estadoFilter === 'Todos') return patients;
     return patients.filter((p) => p.estado === estadoFilter);
   }, [patients, estadoFilter]);
+
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage) || 1;
+  const paginatedPatients = useMemo(() => {
+    return filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredPatients, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [estadoFilter]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -306,14 +317,14 @@ const RecepPacientes: React.FC = () => {
                     {error}
                   </td>
                 </tr>
-              ) : filteredPatients.length === 0 ? (
+              ) : paginatedPatients.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#64748B' }}>
                     No se encontraron pacientes registrados con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((p) => (
+                paginatedPatients.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <input
@@ -378,45 +389,15 @@ const RecepPacientes: React.FC = () => {
         </div>
 
         {/* Footer Pagination */}
-        <div className="recep-pacientes-footer">
-          <span className="pacientes-count-text">
-            Mostrando {filteredPatients.length} de {patients.length} pacientes
-          </span>
-
-          <div className="pagination-controls">
-            <button
-              className="page-btn"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            >
-              &lt;
-            </button>
-            <button
-              className={`page-btn ${currentPage === 1 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(1)}
-            >
-              1
-            </button>
-            <button
-              className={`page-btn ${currentPage === 2 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(2)}
-            >
-              2
-            </button>
-            <button
-              className={`page-btn ${currentPage === 3 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(3)}
-            >
-              3
-            </button>
-            <button className="page-btn">...</button>
-            <button
-              className="page-btn"
-              onClick={() => setCurrentPage((p) => Math.min(3, p + 1))}
-            >
-              &gt;
-            </button>
-          </div>
+        <div className="recep-pacientes-footer" style={{ padding: 0 }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredPatients.length}
+            itemsPerPage={itemsPerPage}
+            itemLabel="pacientes"
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </div>
 

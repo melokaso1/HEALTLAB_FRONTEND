@@ -36,10 +36,10 @@ const tabRouteMap: Record<string, string> = {
   'historial-atencion': '/historial-atencion',
   profesionales: '/profesionales',
   usuarios: '/usuarios',
-  inicio: '/admin',
+  inicio: '/inicio',
   'agenda-medico': '/agenda-medico',
   pacientes: '/pacientes',
-  citas: '/gestion-citas',
+  citas: '/citas',
   configuracion: '/configuracion',
 };
 

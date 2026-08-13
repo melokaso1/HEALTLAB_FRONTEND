@@ -5,8 +5,6 @@ import {
   Filter,
   X,
   Search,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Calendar as CalendarIcon,
   User,
@@ -15,6 +13,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import type { Appointment } from '../../../types/appointment.types';
+import Pagination from '../../../components/common/Pagination';
 import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 import { getReporteConteoPorEstadoApi } from '../../../services/reports.service';
@@ -44,6 +43,10 @@ const AdminReportes: React.FC = () => {
   const [repProfesional, setRepProfesional] = useState('Todos');
   const [repEstado, setRepEstado] = useState('Todos');
 
+  // Paginación de la columna de reportes
+  const [repCurrentPage, setRepCurrentPage] = useState<number>(1);
+  const itemsPerPage = 6;
+
   // Applied Filters State for "Filtrar" action
   const [appliedFilters, setAppliedFilters] = useState({
     fechaDesde: '2026-01-01',
@@ -71,6 +74,8 @@ const AdminReportes: React.FC = () => {
       return true;
     });
   }, [appointments, appliedFilters]);
+
+  const repTotalPages = useMemo(() => Math.ceil(filteredAppointments.length / itemsPerPage) || 1, [filteredAppointments.length, itemsPerPage]);
 
   // Dynamic counts based on real appointments and applied filters
   const summaryCounts = useMemo(() => {
@@ -329,14 +334,14 @@ const AdminReportes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAppointments.length === 0 ? (
+                  {appointments.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
                         No se encontraron citas con los filtros aplicados.
                       </td>
                     </tr>
                   ) : (
-                    filteredAppointments.map((cita) => (
+                    appointments.map((cita) => (
                       <tr key={cita.id}>
                         <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
                           {cita.date}
@@ -365,67 +370,16 @@ const AdminReportes: React.FC = () => {
               </table>
             </div>
 
-            {/* Footer de Paginación para igualar la altura con la columna del Historial */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '12px',
-                marginTop: 'auto',
-                borderTop: '1px solid #E2E8F0',
-              }}
-            >
-              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                Mostrando {appointments.length > 0 ? `1 a ${appointments.length}` : '0'} de {appointments.length} registros
-              </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #00A896',
-                    backgroundColor: 'rgba(0, 168, 150, 0.15)',
-                    color: '#00A896',
-                    cursor: 'pointer',
-                  }}
-                >
-                  1
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: 'transparent',
-                    color: '#64748B',
-                    cursor: 'pointer',
-                  }}
-                >
-                  2
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: 'transparent',
-                    color: '#64748B',
-                    cursor: 'pointer',
-                  }}
-                >
-                  3
-                </button>
-              </div>
+            {/* Footer de Paginación */}
+            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--hl-border, #E2E8F0)' }}>
+              <Pagination
+                currentPage={repCurrentPage}
+                totalPages={repTotalPages}
+                totalItems={appointments.length}
+                itemsPerPage={itemsPerPage}
+                itemLabel="registros"
+                onPageChange={(p) => setRepCurrentPage(p)}
+              />
             </div>
           </div>
         </section>
@@ -607,17 +561,6 @@ const AdminReportes: React.FC = () => {
               <span className="pagination-info">
                 Mostrando 1 a {filteredHistorialAppointments.length} de {filteredHistorialAppointments.length} registros
               </span>
-              <div className="pagination-controls">
-                <button type="button" className="pag-btn" disabled aria-label="Página anterior">
-                  <ChevronLeft size={16} />
-                </button>
-                <button type="button" className="pag-btn pag-btn--active">
-                  1
-                </button>
-                <button type="button" className="pag-btn" disabled aria-label="Página siguiente">
-                  <ChevronRight size={16} />
-                </button>
-              </div>
             </div>
           </div>
         </section>
