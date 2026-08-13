@@ -90,3 +90,26 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ====================================================
+   GLOBAL SCROLLBAR HIDING (Preserves Scrolling Functionality)
+   ==================================================== */
+/* Hide scrollbar for Chrome, Safari, Opera, Edge */
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+table::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Hide scrollbar for Firefox, IE and Edge */
+*, html, body, div, section, aside, table {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;     /* Firefox */
+}

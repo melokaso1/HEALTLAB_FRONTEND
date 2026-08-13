@@ -8,12 +8,11 @@ import {
   Settings,
   Lock,
   KeyRound,
-  ChevronLeft,
-  ChevronRight,
   RotateCcw,
   X,
 } from 'lucide-react';
 import type { ManagedUser, UserRoleType, PermissionGroup, PermissionItem } from '../../../types/user.types';
+import Pagination from '../../../components/common/Pagination';
 import {
   mockUsers,
   getRolePermissions,
@@ -125,6 +124,14 @@ const UsersManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('active'); // Show active users by default
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter]);
+
   // Modals & Side Panel state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState<boolean>(false);
@@ -216,6 +223,11 @@ const UsersManagement: React.FC = () => {
       return;
     }
 
+    if (newUserPassword.length < 8) {
+      showToast('La contraseña debe tener al menos 8 caracteres para ser aceptada por el backend.');
+      return;
+    }
+
     const initials = newUserName
       .split(' ')
       .map((n) => n[0])
@@ -228,8 +240,9 @@ const UsersManagement: React.FC = () => {
         username: newUserName,
         email: newUserEmail,
         password: newUserPassword,
-        empleadoId: '00000000-0000-0000-0000-000000000000',
-        rolId: '00000000-0000-0000-0000-000000000000',
+        empleadoId: '',
+        rolId: '',
+        roleType: newUserRole,
       });
 
       const newUser: ManagedUser = {
@@ -290,6 +303,14 @@ const UsersManagement: React.FC = () => {
       u.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesRole && matchesStatus && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
+
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const [panelPermissions, setPanelPermissions] = useState<PermissionGroup[]>([]);
 
   useEffect(() => {
@@ -464,7 +485,7 @@ const UsersManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length === 0 ? (
+                {paginatedUsers.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}
@@ -474,7 +495,8 @@ const UsersManagement: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user, idx) => {
+                  paginatedUsers.map((user, idx) => {
+                    const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
                     const isRowSelected = user.id === activePanelUserId;
                     return (
                       <tr
@@ -482,7 +504,7 @@ const UsersManagement: React.FC = () => {
                         className={isRowSelected ? 'users-table__row--selected' : ''}
                         onClick={() => handleTogglePanel(user)}
                       >
-                        <td className="users-table__index">{idx + 1}</td>
+                        <td className="users-table__index">{globalIdx}</td>
                         <td>
                           <div className="user-identity">
                             {user.avatarUrl ? (
@@ -514,20 +536,16 @@ const UsersManagement: React.FC = () => {
             </table>
           </div>
 
-          {/* Table Footer */}
+          {/* Table Footer with Reusable Pagination */}
           <div className="users-table__footer">
-            <span>
-              Mostrando {filteredUsers.length > 0 ? 1 : 0} - {filteredUsers.length} de{' '}
-              {users.filter(u => statusFilter === 'all' || u.status === statusFilter).length} usuarios
-            </span>
-            <div className="pagination-controls">
-              <button type="button" className="pagination-btn" disabled>
-                <ChevronLeft size={16} />
-              </button>
-              <button type="button" className="pagination-btn" disabled>
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredUsers.length}
+              itemsPerPage={itemsPerPage}
+              itemLabel="usuarios"
+              onPageChange={(page) => setCurrentPage(page)}
+            />
           </div>
         </div>
 
@@ -718,11 +736,11 @@ const UsersManagement: React.FC = () => {
                   <input
                     type="password"
                     className="form-input"
-                    placeholder="••••••••"
+                    placeholder="Mínimo 8 caracteres"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
                 <div className="form-group">

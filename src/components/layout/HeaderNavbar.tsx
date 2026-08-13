@@ -6,6 +6,7 @@ import {
   UserCheck,
   Calendar,
   Clock,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './HeaderNavbar.css';
@@ -50,10 +51,10 @@ const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   if (isDoctor) {
     visibleTabs = [
       { id: 'inicio', label: 'Inicio', icon: <Home size={16} /> },
-      { id: 'agenda-medico', label: 'Mi Agenda', icon: <Calendar size={16} /> },
-      { id: 'pacientes', label: 'Mis Pacientes', icon: <UserCheck size={16} /> },
-      { id: 'citas', label: 'Citas', icon: <Calendar size={16} /> },
-      { id: 'historial-atencion', label: 'Historial de Atenciones', icon: <Clock size={16} /> },
+      { id: 'agenda-medico', label: 'Agenda', icon: <Calendar size={16} /> },
+      { id: 'citas', label: 'Consultas', icon: <Clock size={16} /> },
+      { id: 'pacientes', label: 'Pacientes', icon: <UserCheck size={16} /> },
+      { id: 'historial-atencion', label: 'Historial', icon: <FileText size={16} /> },
     ];
   } else if (isReceptionist) {
     visibleTabs = allTabs.filter((t) =>

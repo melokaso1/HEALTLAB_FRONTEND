@@ -40,7 +40,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #0A9396, #005F73);
+  background: #00A896;
   color: #FFFFFF;
   border: none;
   border-radius: 8px;
@@ -203,7 +203,7 @@
 }
 
 .mini-calendar__day-btn--selected .mini-calendar__day-number {
-  background: linear-gradient(135deg, #0A9396, #005F73);
+  background: #00A896;
   color: #FFFFFF !important;
   font-weight: 700;
   box-shadow: 0 3px 8px rgba(10, 147, 150, 0.35);
@@ -1030,7 +1030,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #0A9396, #005F73);
+  background: #00A896;
   color: #FFFFFF;
   border: none;
   border-radius: 8px;

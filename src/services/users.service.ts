@@ -147,7 +147,7 @@ export interface CreateUserPayload {
 }
 
 export const createUserApi = async (
-  payload: CreateUserPayload,
+  payload: CreateUserPayload & { roleType?: string },
 ): Promise<ManagedUser> => {
   const initials = payload.username.slice(0, 2).toUpperCase();
   const fallbackUser: ManagedUser = {
@@ -162,43 +162,83 @@ export const createUserApi = async (
   };
 
   try {
-    let empleadoId = payload.empleadoId && payload.empleadoId.length === 36 ? payload.empleadoId : '';
+    // 1. Sanitizar Username para cumplir con Backend UsernameValueObject (^[a-z0-9._\-]+$, min 5 chars)
+    let sanitizedUsername = payload.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    if (sanitizedUsername.length < 5) {
+      sanitizedUsername = payload.username.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    }
+    if (sanitizedUsername.length < 5) {
+      sanitizedUsername = `${sanitizedUsername}user_${Date.now().toString().slice(-4)}`;
+    }
+
+    // 2. Obtener catálogos requeridos (TipoDocumento, Rol, Cargo)
+    let tipoDocId = '';
     let rolId = payload.rolId && payload.rolId.length === 36 ? payload.rolId : '';
+    let cargoId = '';
 
-    // 1. Buscar RolId en /Roles si no viene provisto
-    if (!rolId) {
-      try {
-        const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles');
-        if (Array.isArray(roles) && roles.length > 0) {
-          const matched = roles.find((r) =>
-            r.nombreRol?.toLowerCase().includes(payload.username.toLowerCase()) ||
-            r.nombreRol?.toLowerCase().includes('recep')
-          ) || roles[0];
-          if (matched) rolId = matched.id;
+    try {
+      const tiposDoc = await apiFetch<Array<{ id: string }>>('/TiposDocumento');
+      if (Array.isArray(tiposDoc) && tiposDoc[0]) tipoDocId = tiposDoc[0].id;
+
+      const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles');
+      if (Array.isArray(roles) && roles.length > 0) {
+        const targetRoleName = payload.roleType || 'receptionist';
+        let matchedRole = roles[0];
+        if (targetRoleName === 'admin') {
+          matchedRole = roles.find((r) => r.nombreRol === 'Administrador') || roles[0];
+        } else if (targetRoleName === 'professional') {
+          matchedRole = roles.find((r) => r.nombreRol === 'Profesional') || roles[0];
+        } else {
+          matchedRole = roles.find((r) => r.nombreRol === 'Recepcionista') || roles[0];
         }
-      } catch (err) {
-        console.warn('[users.service] Error consultando /Roles:', err);
+        rolId = matchedRole.id;
       }
+
+      const cargos = await apiFetch<Array<{ id: string }>>('/Cargos');
+      if (Array.isArray(cargos) && cargos[0]) cargoId = cargos[0].id;
+    } catch (err) {
+      console.warn('[users.service] Error consultando catálogos:', err);
     }
 
-    // 2. Buscar EmpleadoId en /Empleados si no viene provisto
-    if (!empleadoId) {
-      try {
-        const emps = await apiFetch<Array<{ id: string }>>('/Empleados');
-        if (Array.isArray(emps) && emps[0]) empleadoId = emps[0].id;
-      } catch (err) {
-        console.warn('[users.service] Error consultando /Empleados:', err);
-      }
+    // 3. Crear Persona en /Personas
+    const parts = payload.username.trim().split(/\s+/);
+    let personaId = '';
+    if (tipoDocId) {
+      const personaRes = await apiFetch<{ id: string }>('/Personas', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombre: parts[0] || 'Usuario',
+          apellido: parts.slice(1).join(' ') || 'Sistema',
+          tipoDocumentoId: tipoDocId,
+          numeroDocumento: `DOC${Date.now().toString().slice(-7)}`,
+        }),
+      });
+      if (personaRes?.id) personaId = personaRes.id;
     }
 
-    // 3. Enviar a /Usuarios en el backend
+    // 4. Crear Empleado en /Empleados vinculando PersonaId y CargoId
+    let empleadoId = payload.empleadoId && payload.empleadoId.length === 36 ? payload.empleadoId : '';
+    if (personaId && cargoId) {
+      const empRes = await apiFetch<{ id: string }>('/Empleados', {
+        method: 'POST',
+        body: JSON.stringify({
+          personaId,
+          cargoId,
+          fechaIngreso: new Date().toISOString().split('T')[0],
+          activo: true,
+        }),
+      });
+      if (empRes?.id) empleadoId = empRes.id;
+    }
+
+    // 5. Crear Usuario en /Usuarios vinculando EmpleadoId y RolId
     if (empleadoId && rolId) {
       const raw = await apiFetch<BackendUsuario>('/usuarios', {
         method: 'POST',
         body: JSON.stringify({
           empleadoId,
           rolId,
-          username: payload.username,
+          username: sanitizedUsername,
           email: payload.email,
           password: payload.password,
           activo: payload.activo ?? true,
@@ -210,7 +250,7 @@ export const createUserApi = async (
 
     return fallbackUser;
   } catch (error) {
-    console.warn('[users.service] Error en POST /usuarios, fallback local:', error);
+    console.error('[users.service] Error en flujo de creación de usuario en backend:', error);
     return fallbackUser;
   }
 };

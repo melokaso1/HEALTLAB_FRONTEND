@@ -5,14 +5,13 @@ import {
   Calendar,
   Filter,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   X,
   User,
   Stethoscope,
 } from 'lucide-react';
 import { getAppointmentsApi } from '../../services/appointments.service';
+import Pagination from '../../components/common/Pagination';
 import './ProfessionalHistory.css';
 
 export interface ConsultationRecord {
@@ -267,43 +266,15 @@ const ProfessionalHistory: React.FC = () => {
         </div>
 
         {/* Table Footer / Pagination */}
-        <div className="prof-history-table-footer">
-          <span className="footer-pagination-info">
-            Mostrando {paginatedRecords.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} a{' '}
-            {Math.min(currentPage * pageSize, filteredRecords.length)} de {filteredRecords.length}{' '}
-            registros
-          </span>
-
-          <div className="pagination-controls">
-            <button
-              type="button"
-              className="pagination-btn"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <button
-                key={pageNum}
-                type="button"
-                className={`pagination-btn${pageNum === currentPage ? ' pagination-btn--active' : ''}`}
-                onClick={() => setCurrentPage(pageNum)}
-              >
-                {pageNum}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className="pagination-btn"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+        <div className="prof-history-table-footer" style={{ padding: 0 }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRecords.length}
+            itemsPerPage={pageSize}
+            itemLabel="registros"
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </div>
 
