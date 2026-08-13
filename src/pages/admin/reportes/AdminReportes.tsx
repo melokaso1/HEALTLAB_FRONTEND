@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import type { Appointment } from '../../../types/appointment.types';
 import { getAppointmentsApi } from '../../../services/appointments.service';
+import { getReporteConteoPorEstadoApi } from '../../../services/reports.service';
 import './AdminReportes.css';
 
 // TypeScript Interfaces
@@ -65,6 +66,7 @@ const AdminReportes: React.FC = () => {
 
   useEffect(() => {
     getAppointmentsApi().then((data) => setAppointments(data));
+    getReporteConteoPorEstadoApi().catch((err) => console.warn('Error reportes:', err));
   }, []);
 
   // Reportes Filter State

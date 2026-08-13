@@ -216,6 +216,11 @@ const UsersManagement: React.FC = () => {
       return;
     }
 
+    if (newUserPassword.length < 8) {
+      showToast('La contraseña debe tener al menos 8 caracteres para ser aceptada por el backend.');
+      return;
+    }
+
     const initials = newUserName
       .split(' ')
       .map((n) => n[0])
@@ -228,8 +233,9 @@ const UsersManagement: React.FC = () => {
         username: newUserName,
         email: newUserEmail,
         password: newUserPassword,
-        empleadoId: '00000000-0000-0000-0000-000000000000',
-        rolId: '00000000-0000-0000-0000-000000000000',
+        empleadoId: '',
+        rolId: '',
+        roleType: newUserRole,
       });
 
       const newUser: ManagedUser = {
@@ -718,11 +724,11 @@ const UsersManagement: React.FC = () => {
                   <input
                     type="password"
                     className="form-input"
-                    placeholder="••••••••"
+                    placeholder="Mínimo 8 caracteres"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
                 <div className="form-group">
