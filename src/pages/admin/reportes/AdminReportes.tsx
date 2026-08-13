@@ -1,6 +1,59 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import {
+  BarChart2,
+  Clock,
+  Filter,
+  X,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Info,
+  Calendar as CalendarIcon,
+  User,
+  Stethoscope,
+  FileText,
+  CheckCircle,
+} from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 import type { Appointment } from '../../../types/appointment.types';
 import { getAppointmentsApi } from '../../../services/appointments.service';
+import './AdminReportes.css';
+
+// TypeScript Interfaces
+export interface ActionLog {
+  id: number;
+  fechaHora: string;
+  usuario: {
+    nombre: string;
+    rol: string;
+    avatar?: string;
+  };
+  profesional: string;
+  tipoAccion: 'Cita creada' | 'Cita atendida' | 'Nota registrada' | 'Cita cancelada' | 'Cita reprogramada';
+  detalles: string;
+  citaId: number;
+}
+
+export interface PastAppointment {
+  id: number;
+  codigo: string;
+  fecha: string;
+  hora: string;
+  paciente: string;
+  documento: string;
+  profesional: string;
+  especialidad: string;
+  servicio: string;
+  estado: 'agendada' | 'atendida' | 'cancelada' | 'no_asistio';
+  notaProfesional?: string;
+  resultadoAtencion?: string;
+}
+
+const initialActionLogs: ActionLog[] = [];
+const mockPastAppointments: PastAppointment[] = [];
+const profesionalesLista = ['Todos'];
+const usuariosLista = ['Todos'];
 
 const AdminReportes: React.FC = () => {
   const { user } = useAuth();
