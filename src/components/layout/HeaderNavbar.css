@@ -36,16 +36,28 @@
   font-size: 14px;
   font-weight: 500;
   color: #475569;
-  transition: background-color 0.2s ease, color 0.2s ease;
   position: relative;
   box-sizing: border-box;
+  overflow: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.header-navbar__tab:hover {
+/* Hover state */
+.header-navbar__tab:hover:not(.header-navbar__tab--active) {
   color: #0F172A;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 168, 150, 0.08);
 }
 
+.header-navbar__tab:hover .header-navbar__tab-icon {
+  transform: translateY(-2px) scale(1.08);
+}
+
+/* Click / Active press effect */
+.header-navbar__tab:active {
+  transform: scale(0.96);
+}
+
+/* Selected Active Tab - Pure Solid Turquoise */
 .header-navbar__tab--active {
   background: #00A896;
   color: #FFFFFF !important;
@@ -53,9 +65,18 @@
   border-radius: 4px 4px 0 0;
 }
 
+.header-navbar__tab--active .header-navbar__tab-icon {
+  transform: scale(1.08);
+}
+
 .header-navbar__tab-icon {
   display: flex;
   align-items: center;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-navbar__tab-label {
+  transition: font-weight 0.2s ease;
 }
 
 /* Responsive: Hide text labels on small screens to prevent text overlap */
@@ -75,7 +96,9 @@
   }
 }
 
-/* Dark mode overrides */
+/* ==========================================
+   Dark Mode Overrides
+   ========================================== */
 .dark-mode .header-navbar {
   background: #111827;
   border-color: #334155;
@@ -85,9 +108,9 @@
   color: #94A3B8;
 }
 
-.dark-mode .header-navbar__tab:hover {
+.dark-mode .header-navbar__tab:hover:not(.header-navbar__tab--active) {
   color: #F1F5F9;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 168, 150, 0.15);
 }
 
 .dark-mode .header-navbar__tab--active {
