@@ -1,0 +1,166 @@
+/* CustomSelect.css - HealthLab Modern Custom Dropdown */
+
+.custom-select {
+  position: relative;
+  display: inline-block;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  user-select: none;
+}
+
+/* Trigger Button */
+.custom-select__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 140px;
+  white-space: nowrap;
+}
+
+.custom-select__trigger:hover {
+  border-color: #CBD5E1;
+  color: #0F172A;
+  background-color: #F8FAFC;
+}
+
+.custom-select__trigger--open {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.15);
+  background-color: #FFFFFF;
+}
+
+.custom-select__value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-select__chevron {
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.custom-select__chevron--open {
+  transform: rotate(180deg);
+  color: #00A896;
+}
+
+/* Dropdown Menu Popover */
+.custom-select__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 280px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  z-index: 999;
+  box-sizing: border-box;
+  animation: dropdownSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+@keyframes dropdownSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Option List Items */
+.custom-select__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-select__option:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.custom-select__option--selected {
+  background-color: #F0FDFA;
+  color: #00A896;
+  font-weight: 600;
+}
+
+.custom-select__check {
+  color: #00A896;
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   Dark Mode Overrides
+   ========================================== */
+.dark-mode .custom-select__trigger {
+  background: #1E293B;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+.dark-mode .custom-select__trigger:hover {
+  border-color: #475569;
+  color: #F8FAFC;
+  background-color: #26334D;
+}
+
+.dark-mode .custom-select__trigger--open {
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.25);
+  background-color: #1E293B;
+}
+
+.dark-mode .custom-select__menu {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .custom-select__option {
+  color: #E2E8F0;
+}
+
+.dark-mode .custom-select__option:hover {
+  background-color: #334155;
+  color: #FFFFFF;
+}
+
+.dark-mode .custom-select__option--selected {
+  background-color: rgba(0, 168, 150, 0.2);
+  color: #2DD4BF;
+}
+
+.dark-mode .custom-select__check {
+  color: #2DD4BF;
+}

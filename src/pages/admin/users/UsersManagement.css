@@ -114,22 +114,78 @@
   box-shadow: 0 4px 12px rgba(10, 147, 150, 0.35);
 }
 
-/* Grid Layout */
+/* Flex Layout Container */
 .users-mgmt__grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
   gap: 24px;
   align-items: start;
-  transition: all 0.3s ease;
+  width: 100%;
+  position: relative;
+  transition: gap 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.users-mgmt__grid--with-panel {
-  grid-template-columns: 1fr 340px;
+/* Left Table Card */
+.users-table-card {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
+  transition: flex 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              max-width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Right Side Panel Wrapper */
+.users-mgmt__panel-wrapper {
+  flex-shrink: 0;
+  width: 340px;
+  max-width: 340px;
+  transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              max-width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              margin-left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.45s ease-out,
+              transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.users-mgmt__panel-wrapper--open {
+  width: 340px;
+  max-width: 340px;
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  margin-left: 0;
+  visibility: visible;
+}
+
+.users-mgmt__panel-wrapper--closed {
+  width: 0;
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(40px) scale(0.97);
+  margin-left: -24px;
+  pointer-events: none;
+  visibility: hidden;
+  transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              max-width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              margin-left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.35s ease-in,
+              transform 0.5s ease-in,
+              visibility 0s 0.6s;
 }
 
 @media (max-width: 1100px) {
-  .users-mgmt__grid--with-panel {
-    grid-template-columns: 1fr;
+  .users-mgmt__grid {
+    flex-direction: column;
+  }
+
+  .users-mgmt__panel-wrapper,
+  .users-mgmt__panel-wrapper--open {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .users-mgmt__panel-wrapper--closed {
+    margin-left: 0;
   }
 }
 
@@ -140,6 +196,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Main Table Styling */
@@ -428,12 +485,25 @@ input:checked + .toggle-slider .toggle-label--off {
   cursor: not-allowed;
 }
 
+@keyframes panelSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(30px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 /* Right Panel: Role Permissions Side Panel */
 .permissions-panel {
   display: flex;
   flex-direction: column;
   padding: 20px;
   gap: 20px;
+  width: 340px;
+  box-sizing: border-box;
 }
 
 .permissions-panel__top {

@@ -3,7 +3,6 @@ import {
   Search,
   Plus,
   Edit2,
-  MoreVertical,
   Calendar,
   FileText,
   Settings,
@@ -24,6 +23,7 @@ import {
   toggleUserStatusApi,
 } from '../../../services/users.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
+import CustomSelect from '../../../components/common/CustomSelect';
 import './UsersManagement.css';
 
 /* SVG 1: Checkmark Icon */
@@ -128,6 +128,7 @@ const UsersManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState<boolean>(false);
   const [activePanelUserId, setActivePanelUserId] = useState<string | null>(null);
+  const [lastPanelUser, setLastPanelUser] = useState<ManagedUser | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // New user form state
@@ -139,16 +140,19 @@ const UsersManagement: React.FC = () => {
   const [editTargetUser, setEditTargetUser] = useState<ManagedUser | null>(null);
   const [targetRole, setTargetRole] = useState<UserRoleType>('professional');
 
-  const handleTogglePanel = (user: ManagedUser, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleTogglePanel = (user: ManagedUser, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (activePanelUserId === user.id) {
       setActivePanelUserId(null);
     } else {
       setActivePanelUserId(user.id);
+      setLastPanelUser(user);
     }
   };
 
-  const panelUser = users.find((u) => u.id === activePanelUserId);
+  const activeUser = users.find((u) => u.id === activePanelUserId);
+  const isPanelOpen = activePanelUserId !== null && activeUser !== undefined;
+  const panelUser = activeUser || lastPanelUser;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -400,27 +404,27 @@ const UsersManagement: React.FC = () => {
           </div>
 
           {/* Filtro por Rol */}
-          <select
-            className="users-mgmt__select"
+          <CustomSelect
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <option value="all">Todos los Roles</option>
-            <option value="admin">Administrador</option>
-            <option value="professional">Profesional</option>
-            <option value="receptionist">Recepcionista</option>
-          </select>
+            onChange={(val) => setRoleFilter(val)}
+            options={[
+              { value: 'all', label: 'Todos los Roles' },
+              { value: 'admin', label: 'Administrador' },
+              { value: 'professional', label: 'Profesional' },
+              { value: 'receptionist', label: 'Recepcionista' },
+            ]}
+          />
 
           {/* Filtro por Estado */}
-          <select
-            className="users-mgmt__select"
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="active">Estado: Activos</option>
-            <option value="inactive">Estado: Inactivos / Eliminados</option>
-            <option value="all">Estado: Todos</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'active', label: 'Estado: Activos' },
+              { value: 'inactive', label: 'Estado: Inactivos / Eliminados' },
+              { value: 'all', label: 'Estado: Todos' },
+            ]}
+          />
 
           {/* Botón Agregar Usuario */}
           <button
@@ -435,9 +439,9 @@ const UsersManagement: React.FC = () => {
       </div>
 
       {/* Grid Layout (Table Full-Width by default, 2-column when 3-dots clicked) */}
-      <div className={`users-mgmt__grid${activePanelUserId !== null ? ' users-mgmt__grid--with-panel' : ''}`}>
+      <div className={`users-mgmt__grid${isPanelOpen ? ' users-mgmt__grid--with-panel' : ''}`}>
         {/* Left Column: Users Table */}
-        <div className="users-card">
+        <div className="users-card users-table-card">
           <div className="users-table__wrapper">
             <table className="users-table">
               <thead>
@@ -446,14 +450,13 @@ const UsersManagement: React.FC = () => {
                   <th>USUARIO</th>
                   <th>CORREO ELECTRÓNICO</th>
                   <th>ROL</th>
-                  <th style={{ textAlign: 'center' }}>ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}
                     >
                       No se encontraron usuarios con los filtros aplicados.
@@ -461,11 +464,12 @@ const UsersManagement: React.FC = () => {
                   </tr>
                 ) : (
                   filteredUsers.map((user, idx) => {
-                    const isPanelOpen = user.id === activePanelUserId;
+                    const isRowSelected = user.id === activePanelUserId;
                     return (
                       <tr
                         key={user.id}
-                        className={isPanelOpen ? 'users-table__row--selected' : ''}
+                        className={isRowSelected ? 'users-table__row--selected' : ''}
+                        onClick={() => handleTogglePanel(user)}
                       >
                         <td className="users-table__index">{idx + 1}</td>
                         <td>
@@ -491,52 +495,6 @@ const UsersManagement: React.FC = () => {
                           <span className="user-email-cell">{user.email}</span>
                         </td>
                         <td>{renderRoleBadge(user.role)}</td>
-                        <td>
-                          <div
-                            className="users-table__actions"
-                            style={{ justifyContent: 'center' }}
-                          >
-                            {user.status === 'active' ? (
-                              <button
-                                type="button"
-                                className="trash-btn"
-                                title="Desactivar / Eliminar usuario"
-                                onClick={(e) => handleDeleteUser(user.id, e)}
-                              >
-                                <TrashIcon className="trash-btn__icon" />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="reactivate-icon-btn"
-                                title="Reactivar usuario"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReactivateUser(user.id);
-                                }}
-                              >
-                                <RotateCcw size={15} />
-                                <span>Reactivar</span>
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="action-btn"
-                              title="Editar rol"
-                              onClick={(e) => handleOpenEditRole(user, e)}
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className={`action-btn${isPanelOpen ? ' action-btn--active' : ''}`}
-                              title="Ver información y permisos"
-                              onClick={(e) => handleTogglePanel(user, e)}
-                            >
-                              <MoreVertical size={15} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
@@ -562,91 +520,119 @@ const UsersManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Role Permissions Side Panel (Appears ONLY when 3-dots clicked) */}
-        {activePanelUserId !== null && panelUser && (
-          <div className="users-card permissions-panel">
-            <div className="permissions-panel__top">
-              {renderRoleBadge(panelUser.role)}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="permissions-panel__edit-btn"
-                  onClick={() => handleOpenEditRole(panelUser)}
-                >
-                  <Edit2 size={13} />
-                  <span>Editar Rol</span>
-                </button>
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  title="Cerrar panel de información"
-                  onClick={() => setActivePanelUserId(null)}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* User Identity */}
-            <div className="permissions-panel__user-header">
-              <h3 className="permissions-panel__user-name">{panelUser.name}</h3>
-              <span className="permissions-panel__user-sub">
-                Última actividad: {panelUser.lastAccess || 'Ayer, 5:30 PM, actualizando perfil'}
-              </span>
-            </div>
-
-            <div className="permissions-panel__section-title">
-              PERMISOS DE ROL ASIGNADOS
-            </div>
-
-            {/* Groups */}
-            <div className="permission-groups">
-              {activePermissions.map((group) => (
-                <div key={group.id} className="permission-group">
-                  <div className="permission-group__header">
-                    {group.icon === 'calendar' && (
-                      <Calendar size={16} className="permission-group__icon" />
-                    )}
-                    {group.icon === 'file' && (
-                      <FileText size={16} className="permission-group__icon" />
-                    )}
-                    {group.icon === 'gear' && (
-                      <Settings size={16} className="permission-group__icon" />
-                    )}
-                    <span>{group.title}</span>
-                  </div>
-
-                  <div className="permission-items">
-                    {group.items.map((item: PermissionItem) => (
-                      <div key={item.id} className="permission-item">
-                        {item.status === 'allowed' && (
-                          <CheckIcon className="perm-icon--allowed" />
-                        )}
-                        {item.status === 'denied' && (
-                          <CrossIcon className="perm-icon--denied" />
-                        )}
-                        {item.status === 'restricted' && (
-                          <Lock size={14} className="perm-icon--restricted" />
-                        )}
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
+        {/* Right Column: Role Permissions Side Panel */}
+        <div className={`users-mgmt__panel-wrapper${isPanelOpen ? ' users-mgmt__panel-wrapper--open' : ' users-mgmt__panel-wrapper--closed'}`}>
+          {panelUser && (
+            <div className="users-card permissions-panel">
+              <div className="permissions-panel__top">
+                {renderRoleBadge(panelUser.role)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="permissions-panel__edit-btn"
+                    onClick={() => handleOpenEditRole(panelUser)}
+                  >
+                    <Edit2 size={13} />
+                    <span>Editar Rol</span>
+                  </button>
+                  {panelUser.status === 'active' ? (
+                    <button
+                      type="button"
+                      className="trash-btn"
+                      title="Desactivar usuario"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteUser(panelUser.id, e);
+                      }}
+                    >
+                      <TrashIcon className="trash-btn__icon" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="reactivate-icon-btn"
+                      title="Reactivar usuario"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReactivateUser(panelUser.id);
+                      }}
+                    >
+                      <RotateCcw size={13} />
+                      <span>Reactivar</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="modal-close-btn"
+                    title="Cerrar panel de información"
+                    onClick={() => setActivePanelUserId(null)}
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            {/* Reset Password Action */}
-            <button
-              type="button"
-              className="permissions-panel__btn-reset"
-              onClick={handleResetPassword}
-            >
-              <KeyRound size={16} />
-              <span>Restablecer Contraseña</span>
-            </button>
-          </div>
-        )}
+              {/* User Identity */}
+              <div className="permissions-panel__user-header">
+                <h3 className="permissions-panel__user-name">{panelUser.name}</h3>
+                <span className="permissions-panel__user-sub">
+                  Última actividad: {panelUser.lastAccess || 'Ayer, 5:30 PM, actualizando perfil'}
+                </span>
+              </div>
+
+              <div className="permissions-panel__section-title">
+                PERMISOS DE ROL ASIGNADOS
+              </div>
+
+              {/* Groups */}
+              <div className="permission-groups">
+                {activePermissions.map((group) => (
+                  <div key={group.id} className="permission-group">
+                    <div className="permission-group__header">
+                      {group.icon === 'calendar' && (
+                        <Calendar size={16} className="permission-group__icon" />
+                      )}
+                      {group.icon === 'file' && (
+                        <FileText size={16} className="permission-group__icon" />
+                      )}
+                      {group.icon === 'gear' && (
+                        <Settings size={16} className="permission-group__icon" />
+                      )}
+                      <span>{group.title}</span>
+                    </div>
+
+                    <div className="permission-items">
+                      {group.items.map((item: PermissionItem) => (
+                        <div key={item.id} className="permission-item">
+                          {item.status === 'allowed' && (
+                            <CheckIcon className="perm-icon--allowed" />
+                          )}
+                          {item.status === 'denied' && (
+                            <CrossIcon className="perm-icon--denied" />
+                          )}
+                          {item.status === 'restricted' && (
+                            <Lock size={14} className="perm-icon--restricted" />
+                          )}
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reset Password Action */}
+              <button
+                type="button"
+                className="permissions-panel__btn-reset"
+                onClick={handleResetPassword}
+              >
+                <KeyRound size={16} />
+                <span>Restablecer Contraseña</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal: Create User */}

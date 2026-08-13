@@ -24,6 +24,7 @@ import {
   addPatientNoteApi,
 } from '../../../services/patients.service';
 import { useAuth } from '../../../context/AuthContext';
+import CustomSelect from '../../../components/common/CustomSelect';
 import './PatientsManagement.css';
 
 /* SVG Trash / Delete Icon */
@@ -349,15 +350,15 @@ const PatientsManagement: React.FC = () => {
           </div>
 
           {/* Status Filter Dropdown */}
-          <select
-            className="patients-mgmt__select"
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="active">Estado: Activos</option>
-            <option value="inactive">Estado: Inactivos / Eliminados</option>
-            <option value="all">Estado: Todos</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'active', label: 'Estado: Activos' },
+              { value: 'inactive', label: 'Estado: Inactivos / Eliminados' },
+              { value: 'all', label: 'Estado: Todos' },
+            ]}
+          />
 
           {/* Add Patient Button - HIdden for Doctor role */}
           {!isDoctor && (
