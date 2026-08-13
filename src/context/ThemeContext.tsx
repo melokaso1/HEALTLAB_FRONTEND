@@ -10,15 +10,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Helper to detect if the user's PC / Operating System has Dark Mode enabled
+  const getSystemPreference = (): boolean => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  };
+
   const [darkMode, setDarkModeState] = useState<boolean>(() => {
     try {
       const savedTheme = localStorage.getItem('healtlab-theme');
-      if (savedTheme !== null) {
-        return savedTheme === 'dark';
-      }
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark') return true;
+      if (savedTheme === 'light') return false;
+      // Automatically detect and use PC system theme preference upon entering the app
+      return getSystemPreference();
     } catch {
-      return false;
+      return getSystemPreference();
     }
   });
 
@@ -35,8 +43,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('healtlab-theme', val ? 'dark' : 'light');
   };
 
+  // Synchronize CSS dark-mode classes on body and document element
   useEffect(() => {
-    localStorage.setItem('healtlab-theme', darkMode ? 'dark' : 'light');
     if (darkMode) {
       document.body.classList.add('dark-mode');
       document.documentElement.classList.add('dark-mode');
@@ -45,6 +53,29 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       document.documentElement.classList.remove('dark-mode');
     }
   }, [darkMode]);
+
+  // Listen to OS / PC dark mode preference changes in real-time
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemChange = (e: MediaQueryListEvent) => {
+      const savedTheme = localStorage.getItem('healtlab-theme');
+      // If user hasn't explicitly set a custom override, update dynamically with PC system
+      if (!savedTheme) {
+        setDarkModeState(e.matches);
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemChange);
+      return () => mediaQuery.removeEventListener('change', handleSystemChange);
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleSystemChange);
+      return () => mediaQuery.removeListener(handleSystemChange);
+    }
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode, setDarkMode }}>
