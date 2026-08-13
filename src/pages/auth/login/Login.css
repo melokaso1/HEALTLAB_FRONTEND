@@ -10,24 +10,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
-  transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.login-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.95));
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.login-page.dark-mode::before,
-.dark-mode.login-page::before {
-  opacity: 1;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 .login-container {
