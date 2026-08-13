@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -14,12 +14,16 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
-import type { ManagedUser, UserRoleType } from '../../../types/user.types';
+import type { ManagedUser, UserRoleType, PermissionGroup, PermissionItem } from '../../../types/user.types';
 import {
   mockUsers,
   getRolePermissions,
   getRoleLabel,
+  getUsersApi,
+  updateUserApi,
+  toggleUserStatusApi,
 } from '../../../services/users.service';
+import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
 import './UsersManagement.css';
 
 /* SVG 1: Checkmark Icon */
@@ -108,6 +112,14 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const UsersManagement: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>(mockUsers);
+
+  useEffect(() => {
+    getUsersApi().then((data) => {
+      if (data && data.length > 0) {
+        setUsers(data);
+      }
+    });
+  }, []);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('active'); // Show active users by default
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -115,7 +127,7 @@ const UsersManagement: React.FC = () => {
   // Modals & Side Panel state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState<boolean>(false);
-  const [activePanelUserId, setActivePanelUserId] = useState<number | null>(null);
+  const [activePanelUserId, setActivePanelUserId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // New user form state
@@ -145,8 +157,9 @@ const UsersManagement: React.FC = () => {
     }, 3000);
   };
 
-  const handleDeleteUser = (id: number, e: React.MouseEvent) => {
+  const handleDeleteUser = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    toggleUserStatusApi(id, 'active');
     setUsers((prev) =>
       prev.map((user) =>
         user.id === id ? { ...user, status: 'inactive' } : user
@@ -155,7 +168,8 @@ const UsersManagement: React.FC = () => {
     showToast('Usuario deshabilitado y movido al archivo');
   };
 
-  const handleReactivateUser = (id: number) => {
+  const handleReactivateUser = (id: string) => {
+    toggleUserStatusApi(id, 'inactive');
     setUsers((prev) =>
       prev.map((user) =>
         user.id === id ? { ...user, status: 'active' } : user
@@ -179,6 +193,9 @@ const UsersManagement: React.FC = () => {
     e.preventDefault();
     if (!editTargetUser) return;
 
+    // Note: role change requires rolId (Guid). Updating local state only until rolId is available.
+    updateUserApi(editTargetUser.id, {});
+
     setUsers((prev) =>
       prev.map((u) => (u.id === editTargetUser.id ? { ...u, role: targetRole } : u))
     );
@@ -200,15 +217,17 @@ const UsersManagement: React.FC = () => {
       .substring(0, 2)
       .toUpperCase();
 
+    // Local-only creation: creating users via the API requires empleadoId and rolId (Guids)
+    // TODO: integrate with API once employee/role selectors are added to the form
     const newUser: ManagedUser = {
-      id: Date.now(),
+      id: `local-${Date.now()}`,
       name: newUserName,
       email: newUserEmail,
       role: newUserRole,
       status: 'active',
       initials: initials,
       avatarBg: '#0A9396',
-      lastAccess: 'Nunca',
+      lastAccess: 'Hoy, Recientemente',
     };
 
     setUsers([newUser, ...users]);
@@ -256,8 +275,78 @@ const UsersManagement: React.FC = () => {
       u.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesRole && matchesStatus && matchesSearch;
   });
+  const [panelPermissions, setPanelPermissions] = useState<PermissionGroup[]>([]);
 
-  const activePermissions = panelUser
+  useEffect(() => {
+    if (!panelUser) {
+      setPanelPermissions([]);
+      return;
+    }
+
+    const fetchPermissions = async () => {
+      try {
+        const rolPerms = await getRolPermisosByRolIdApi(panelUser.role);
+        const allPerms = await getPermisosApi();
+
+        const activePermIds = new Set(rolPerms.map((rp) => rp.permisoId || rp.permiso?.id));
+
+        const groups: PermissionGroup[] = [
+          {
+            id: 'agenda',
+            title: 'Agenda y Citas',
+            icon: 'calendar',
+            items: allPerms
+              .filter((p) => (p.modulo || '').toLowerCase().includes('agenda') || p.nombre?.toLowerCase().includes('cita'))
+              .map((p) => ({
+                id: p.id,
+                label: p.nombre,
+                status: activePermIds.has(p.id) || panelUser.role === 'admin' ? 'allowed' : 'denied',
+              })),
+          },
+          {
+            id: 'fichas',
+            title: 'Fichas Clínicas',
+            icon: 'file',
+            items: allPerms
+              .filter((p) => (p.modulo || '').toLowerCase().includes('ficha') || p.nombre?.toLowerCase().includes('atencion'))
+              .map((p) => ({
+                id: p.id,
+                label: p.nombre,
+                status: activePermIds.has(p.id) || panelUser.role === 'admin' ? 'allowed' : 'denied',
+              })),
+          },
+          {
+            id: 'config',
+            title: 'Configuración Sistema',
+            icon: 'gear',
+            items: allPerms
+              .filter((p) => (p.modulo || '').toLowerCase().includes('config') || p.nombre?.toLowerCase().includes('usuario'))
+              .map((p) => ({
+                id: p.id,
+                label: p.nombre,
+                status: activePermIds.has(p.id) || panelUser.role === 'admin' ? 'allowed' : 'denied',
+              })),
+          },
+        ];
+
+        const hasItems = groups.some((g) => g.items.length > 0);
+        if (hasItems) {
+          setPanelPermissions(groups);
+        } else {
+          setPanelPermissions(getRolePermissions(panelUser.role));
+        }
+      } catch (error) {
+        console.warn('[UsersManagement] Error al cargar permisos dinámicos:', error);
+        setPanelPermissions(getRolePermissions(panelUser.role));
+      }
+    };
+
+    fetchPermissions();
+  }, [panelUser]);
+
+  const activePermissions = panelPermissions.length > 0
+    ? panelPermissions
+    : panelUser
     ? getRolePermissions(panelUser.role)
     : getRolePermissions('receptionist');
 
@@ -528,7 +617,7 @@ const UsersManagement: React.FC = () => {
                   </div>
 
                   <div className="permission-items">
-                    {group.items.map((item) => (
+                    {group.items.map((item: PermissionItem) => (
                       <div key={item.id} className="permission-item">
                         {item.status === 'allowed' && (
                           <CheckIcon className="perm-icon--allowed" />

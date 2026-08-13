@@ -1,259 +1,314 @@
-import type { Appointment, ServiceOption } from '../types/appointment.types';
+import type { Appointment, AppointmentStatus, ServiceOption } from '../types/appointment.types';
+import { apiFetch } from './api';
 
-export const mockServices: ServiceOption[] = [
-  { id: 'srv-1', name: 'Consulta Dermatológica', category: 'Dermatología', durationMinutes: 30, price: 120000 },
-  { id: 'srv-2', name: 'Medicina General', category: 'Medicina General', durationMinutes: 30, price: 80000 },
-  { id: 'srv-3', name: 'Neurología', category: 'Neurología', durationMinutes: 45, price: 150000 },
-  { id: 'srv-4', name: 'Chequeo Preventivo', category: 'Medicina General', durationMinutes: 60, price: 200000 },
-  { id: 'srv-5', name: 'Consulta Pediatría', category: 'Pediatría', durationMinutes: 30, price: 90000 },
-];
+// ─── Mock estático (servicios/horarios) ───
+export const mockServices: ServiceOption[] = [];
 
 export const AVAILABLE_TIME_SLOTS = [
-  '08:00 AM',
-  '08:30 AM',
-  '09:00 AM',
-  '09:30 AM',
-  '10:00 AM',
-  '10:30 AM',
-  '11:00 AM',
-  '11:30 AM',
-  '01:00 PM',
-  '01:30 PM',
-  '02:00 PM',
-  '02:30 PM',
-  '03:00 PM',
-  '03:30 PM',
-  '04:00 PM',
-  '04:30 PM',
-  '05:00 PM',
+  '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
+  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
+  '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM',
 ];
 
-export const mockAppointments: Appointment[] = [
-  {
-    id: 1,
-    patientId: 1,
-    patientName: 'Maria Rodriguez',
-    patientAge: 34,
-    patientGender: 'Femenino',
-    patientDoc: 'CC-1029384756',
-    patientPhone: '+57 300 123 4567',
-    patientEmail: 'mrodriguez@email.com',
-    patientAvatarBg: '#0A9396',
-    patientInitials: 'MR',
-    professionalId: 'prof-1',
-    professionalName: 'Dr. Ramírez',
-    professionalSpecialty: 'Dermatología',
-    serviceId: 'srv-1',
-    serviceName: 'Consulta Dermatológica',
-    date: '2026-10-28',
-    time: '10:00 AM',
-    status: 'Agendada',
-    notes: 'Revisión de lunar en brazo derecho',
-  },
-  {
-    id: 2,
-    patientId: 2,
-    patientName: 'Juan Gomez',
-    patientAge: 45,
-    patientGender: 'Masculino',
-    patientDoc: 'CE-987654321',
-    patientPhone: '+57 310 987 6543',
-    patientEmail: 'jgomez@email.com',
-    patientAvatarBg: '#005F73',
-    patientInitials: 'JG',
-    professionalId: 'prof-3',
-    professionalName: 'Dra. Smith',
-    professionalSpecialty: 'Medicina General',
-    serviceId: 'srv-2',
-    serviceName: 'Medicina General',
-    date: '2026-10-28',
-    time: '11:30 AM',
-    status: 'Atendida',
-    notes: 'Control de hipertensión',
-  },
-  {
-    id: 3,
-    patientId: 3,
-    patientName: 'Ana Garcia',
-    patientAge: 29,
-    patientGender: 'Femenino',
-    patientDoc: 'CC-1092837465',
-    patientPhone: '+57 301 456 7890',
-    patientEmail: 'agarcia@email.com',
-    patientAvatarBg: '#9B5DE5',
-    patientInitials: 'AG',
-    professionalId: 'prof-1',
-    professionalName: 'Dr. Ramírez',
-    professionalSpecialty: 'Dermatología',
-    serviceId: 'srv-1',
-    serviceName: 'Consulta Dermatológica',
-    date: '2026-10-28',
-    time: '01:00 PM',
-    status: 'Cancelada',
-    notes: 'Canceló por motivos de trabajo',
-  },
-  {
-    id: 4,
-    patientId: 4,
-    patientName: 'Roberto Chen',
-    patientAge: 52,
-    patientGender: 'Masculino',
-    patientDoc: 'CC-79845123',
-    patientPhone: '+57 315 234 5678',
-    patientEmail: 'rchen@email.com',
-    patientAvatarBg: '#EE6C4D',
-    patientInitials: 'RC',
-    professionalId: 'prof-4',
-    professionalName: 'Dr. Evans',
-    professionalSpecialty: 'Neurología',
-    serviceId: 'srv-3',
-    serviceName: 'Neurología',
-    date: '2026-10-28',
-    time: '02:30 PM',
-    status: 'No asistió',
-    notes: 'No respondió al llamado ni confirmó cita',
-  },
-  {
-    id: 5,
-    patientId: 5,
-    patientName: 'Carlos Mendoza',
-    patientAge: 38,
-    patientGender: 'Masculino',
-    patientDoc: 'CC-80123987',
-    patientPhone: '+57 320 876 5432',
-    patientEmail: 'cmendoza@email.com',
-    patientAvatarBg: '#2A9D8F',
-    patientInitials: 'CM',
-    professionalId: 'prof-2',
-    professionalName: 'Dra. María Gonzales',
-    professionalSpecialty: 'Medicina General',
-    serviceId: 'srv-4',
-    serviceName: 'Chequeo Preventivo',
-    date: '2026-10-28',
-    time: '04:00 PM',
-    status: 'Agendada',
-    notes: 'Exámenes de laboratorio anuales',
-  },
-  {
-    id: 6,
-    patientId: 1,
-    patientName: 'Maria Rodriguez',
-    patientAge: 34,
-    patientGender: 'Femenino',
-    patientDoc: 'CC-1029384756',
-    patientPhone: '+57 300 123 4567',
-    patientEmail: 'mrodriguez@email.com',
-    patientAvatarBg: '#0A9396',
-    patientInitials: 'MR',
-    professionalId: 'prof-1',
-    professionalName: 'Dr. Ramírez',
-    professionalSpecialty: 'Dermatología',
-    serviceId: 'srv-1',
-    serviceName: 'Consulta Dermatológica',
-    date: '2026-10-12',
-    time: '10:00 AM',
-    status: 'Atendida',
-    notes: 'Revisión preventiva',
-  },
-  {
-    id: 7,
-    patientId: 2,
-    patientName: 'Juan Gomez',
-    patientAge: 45,
-    patientGender: 'Masculino',
-    patientDoc: 'CE-987654321',
-    patientPhone: '+57 310 987 6543',
-    patientEmail: 'jgomez@email.com',
-    patientAvatarBg: '#005F73',
-    patientInitials: 'JG',
-    professionalId: 'prof-3',
-    professionalName: 'Dra. Smith',
-    professionalSpecialty: 'Medicina General',
-    serviceId: 'srv-2',
-    serviceName: 'Medicina General',
-    date: '2026-10-15',
-    time: '09:30 AM',
-    status: 'Agendada',
-  },
-  {
-    id: 8,
-    patientId: 3,
-    patientName: 'Ana Garcia',
-    patientAge: 29,
-    patientGender: 'Femenino',
-    patientDoc: 'CC-1092837465',
-    patientPhone: '+57 301 456 7890',
-    patientEmail: 'agarcia@email.com',
-    patientAvatarBg: '#9B5DE5',
-    patientInitials: 'AG',
-    professionalId: 'prof-2',
-    professionalName: 'Dra. María Gonzales',
-    professionalSpecialty: 'Medicina General',
-    serviceId: 'srv-2',
-    serviceName: 'Medicina General',
-    date: '2026-10-17',
-    time: '11:00 AM',
-    status: 'Agendada',
-  },
-  {
-    id: 9,
-    patientId: 4,
-    patientName: 'Roberto Chen',
-    patientAge: 52,
-    patientGender: 'Masculino',
-    patientDoc: 'CC-79845123',
-    patientPhone: '+57 315 234 5678',
-    patientEmail: 'rchen@email.com',
-    patientAvatarBg: '#EE6C4D',
-    patientInitials: 'RC',
-    professionalId: 'prof-4',
-    professionalName: 'Dr. Evans',
-    professionalSpecialty: 'Neurología',
-    serviceId: 'srv-3',
-    serviceName: 'Neurología',
-    date: '2026-10-23',
-    time: '03:00 PM',
-    status: 'Agendada',
-  },
-  {
-    id: 10,
-    patientId: 5,
-    patientName: 'Carlos Mendoza',
-    patientAge: 38,
-    patientGender: 'Masculino',
-    patientDoc: 'CC-80123987',
-    patientPhone: '+57 320 876 5432',
-    patientEmail: 'cmendoza@email.com',
-    patientAvatarBg: '#2A9D8F',
-    patientInitials: 'CM',
-    professionalId: 'prof-5',
-    professionalName: 'Dr. Martínez',
-    professionalSpecialty: 'Pediatría',
-    serviceId: 'srv-5',
-    serviceName: 'Consulta Pediatría',
-    date: '2026-10-30',
-    time: '08:30 AM',
-    status: 'Agendada',
-  },
-];
+export const mockAppointments: Appointment[] = [];
 
+// ─── Tipos del backend ────────────────────────────────────────────────────
 /**
- * Validates whether a professional already has an active appointment at the given date & time slot.
- * Returns the conflicting appointment if found, or undefined if clear.
+ * Forma en que el backend serializa CitaEntity con sus relaciones.
  */
+interface BackendCita {
+  id: string;
+  pacienteId: string;
+  medicoId: string;
+  estadoCitaId: string;
+  tipoCitaId: string;
+  fecha: string;            // DateOnly → "YYYY-MM-DD"
+  horaInicio: string;       // TimeOnly → "HH:mm:ss"
+  horaFin: string;
+  motivoConsulta: string;
+  observaciones?: string;
+  usuarioCreacionId: string;
+  fechaCreacion: string;
+  motivoCancelacion?: string;
+  paciente?: {
+    id: string;
+    persona?: {
+      nombre: string;
+      apellido: string;
+      numeroDocumento: string;
+      tipoDocumento?: { nombre: string };
+      sexo?: { nombre: string };
+      telefonos?: Array<{ numero: string; principal?: boolean }>;
+    };
+  };
+  medico?: {
+    id: string;
+    empleado?: {
+      persona?: { nombre: string; apellido: string };
+    };
+    especialidades?: Array<{
+      especialidad?: { nombre: string };
+    }>;
+  };
+  estadoCita?: { nombre: string };
+  tipoCita?: { nombre: string };
+}
+
+// ─── Mapeo de estado ───────────────────────────────────────────────────────
+const MAP_ESTADO: Record<string, AppointmentStatus> = {
+  Agendada: 'Agendada',
+  Confirmada: 'Agendada',
+  Atendida: 'Atendida',
+  Completada: 'Atendida',
+  Cancelada: 'Cancelada',
+  'No asistió': 'No asistió',
+  'No Asistió': 'No asistió',
+};
+
+const mapEstado = (nombre?: string): AppointmentStatus =>
+  MAP_ESTADO[nombre ?? ''] ?? 'Agendada';
+
+// ─── Formateo de hora ──────────────────────────────────────────────────────
+const formatTimeSlot = (timeStr: string): string => {
+  if (!timeStr) return '08:00 AM';
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+// Convierte "02:30 PM" o "14:30" → "14:30:00" para el backend
+const parseTimeSlot = (slot: string): string => {
+  if (!slot) return '08:00:00';
+  const parts = slot.trim().split(' ');
+  const [hStr, mStr] = parts[0].split(':');
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return '08:00:00';
+  const period = parts[1]?.toUpperCase();
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+};
+
+// ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
+const mapBackendCita = (raw: BackendCita): Appointment => {
+  const persona = raw.paciente?.persona;
+  const medicoPersona = raw.medico?.empleado?.persona;
+  const especialidad =
+    raw.medico?.especialidades?.[0]?.especialidad?.nombre ?? 'Medicina General';
+
+  const patientNombre = persona ? `${persona.nombre} ${persona.apellido}`.trim() : 'Paciente';
+  const professionalNombre = medicoPersona
+    ? `Dr. ${medicoPersona.nombre} ${medicoPersona.apellido}`.trim()
+    : 'Médico';
+
+  const telefonoPrincipal =
+    persona?.telefonos?.find((t) => t.principal)?.numero ??
+    persona?.telefonos?.[0]?.numero ??
+    '';
+
+  const initials = patientNombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0] ?? '')
+    .join('')
+    .toUpperCase() || 'P';
+
+  return {
+    id: raw.id,
+    patientId: raw.pacienteId,
+    patientName: patientNombre,
+    patientAge: 0,
+    patientGender: persona?.sexo?.nombre ?? '',
+    patientDoc: persona?.numeroDocumento ?? '',
+    patientPhone: telefonoPrincipal,
+    patientEmail: '',
+    patientInitials: initials,
+    professionalId: raw.medicoId,
+    professionalName: professionalNombre,
+    professionalSpecialty: especialidad,
+    serviceId: raw.tipoCitaId,
+    serviceName: raw.tipoCita?.nombre ?? 'Consulta',
+    date: raw.fecha,
+    time: formatTimeSlot(raw.horaInicio),
+    status: mapEstado(raw.estadoCita?.nombre),
+    notes: raw.observaciones ?? raw.motivoConsulta,
+    createdAt: raw.fechaCreacion,
+  };
+};
+
+// ─── Validación de conflictos (client-side) ────────────────────────────────
 export const checkScheduleConflict = (
   appointments: Appointment[],
   professionalId: string,
   date: string,
   time: string,
-  excludeAppointmentId?: number
-): Appointment | undefined => {
-  return appointments.find(
+  excludeAppointmentId?: number | string,
+): Appointment | undefined =>
+  appointments.find(
     (app) =>
       app.professionalId === professionalId &&
       app.date === date &&
       app.time === time &&
       app.status !== 'Cancelada' &&
-      app.id !== excludeAppointmentId
+      app.id !== excludeAppointmentId,
   );
+
+// ─── API ──────────────────────────────────────────────────────────────────
+export const getAppointmentsApi = async (): Promise<Appointment[]> => {
+  try {
+    const data = await apiFetch<BackendCita[]>('/citas');
+    return Array.isArray(data) ? data.map(mapBackendCita) : [];
+  } catch (error) {
+    console.warn('[appointments.service] Conexión API /citas:', error);
+    return [];
+  }
+};
+
+export const getAppointmentByIdApi = async (id: string): Promise<Appointment | null> => {
+  try {
+    const raw = await apiFetch<BackendCita>(`/citas/${id}`);
+    return mapBackendCita(raw);
+  } catch (error) {
+    console.warn(`[appointments.service] Error en GET /citas/${id}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Crea una cita en el backend.
+ * Requiere que el llamador provea los Guids del backend (pacienteId, medicoId, tipoCitaId, usuarioCreacionId).
+ */
+export interface CreateCitaPayload {
+  pacienteId: string;
+  medicoId: string;
+  tipoCitaId: string;
+  fecha: string;          // "YYYY-MM-DD"
+  horaInicio: string;     // "HH:mm" o "HH:mm:ss" — se normaliza aquí
+  horaFin: string;
+  motivoConsulta: string;
+  observaciones?: string;
+  usuarioCreacionId: string;
+}
+
+export const createAppointmentApi = async (
+  payload: CreateCitaPayload,
+): Promise<Appointment> => {
+  const normalize = (t: string) => (t.includes(':') && t.split(':').length === 2 ? `${t}:00` : t);
+  try {
+    const raw = await apiFetch<BackendCita>('/citas', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...payload,
+        horaInicio: normalize(payload.horaInicio),
+        horaFin: normalize(payload.horaFin),
+      }),
+    });
+    return mapBackendCita(raw);
+  } catch (error) {
+    console.warn('[appointments.service] Error en POST /citas, usando fallback local:', error);
+    return {
+      id: Date.now(),
+      patientId: payload.pacienteId,
+      patientName: 'Paciente',
+      patientAge: 0,
+      patientGender: '',
+      patientDoc: '',
+      patientPhone: '',
+      patientEmail: '',
+      patientInitials: 'PP',
+      professionalId: payload.medicoId,
+      professionalName: 'Médico',
+      professionalSpecialty: 'Medicina General',
+      serviceId: payload.tipoCitaId,
+      serviceName: payload.motivoConsulta,
+      date: payload.fecha,
+      time: formatTimeSlot(payload.horaInicio),
+      status: 'Agendada',
+      notes: payload.observaciones ?? payload.motivoConsulta,
+    };
+  }
+};
+
+/**
+ * Reprograma una cita — el backend usa POST /{id}/reprogramar
+ */
+export const rescheduleAppointmentApi = async (
+  id: string | number,
+  newDate: string,
+  newTime: string,
+): Promise<void> => {
+  try {
+    await apiFetch(`/citas/${id}/reprogramar`, {
+      method: 'POST',
+      body: JSON.stringify({
+        fecha: newDate,
+        horaInicio: parseTimeSlot(newTime),
+        horaFin: parseTimeSlot(newTime), // el llamador puede pasar horaFin si la sabe
+      }),
+    });
+  } catch (error) {
+    console.warn(`[appointments.service] Error en POST /citas/${id}/reprogramar:`, error);
+  }
+};
+
+/**
+ * Cancela una cita — POST /{id}/cancelar
+ */
+export const cancelAppointmentApi = async (
+  id: string | number,
+  motivoCancelacion: string = 'Cancelada por usuario',
+): Promise<void> => {
+  try {
+    await apiFetch(`/citas/${id}/cancelar`, {
+      method: 'POST',
+      body: JSON.stringify({ motivoCancelacion }),
+    });
+  } catch (error) {
+    console.warn(`[appointments.service] Error en POST /citas/${id}/cancelar:`, error);
+  }
+};
+
+/**
+ * Marca que el paciente no asistió — POST /{id}/no-asistio
+ */
+export const markNoShowApi = async (
+  id: string | number,
+  observaciones?: string,
+): Promise<void> => {
+  try {
+    await apiFetch(`/citas/${id}/no-asistio`, {
+      method: 'POST',
+      body: JSON.stringify({ observaciones: observaciones ?? '' }),
+    });
+  } catch (error) {
+    console.warn(`[appointments.service] Error en POST /citas/${id}/no-asistio:`, error);
+  }
+};
+
+/**
+ * Cambia el estado de una cita.
+ * Internamente enruta a cancelar o no-asistio según el estado pedido.
+ */
+export const updateAppointmentStatusApi = async (
+  id: string | number,
+  status: AppointmentStatus,
+): Promise<AppointmentStatus> => {
+  try {
+    if (status === 'Cancelada') {
+      await cancelAppointmentApi(id);
+    } else if (status === 'No asistió') {
+      await markNoShowApi(id);
+    }
+    // 'Atendida' y 'Agendada' no tienen endpoint directo hoy; se ignoran
+  } catch (error) {
+    console.warn(`[appointments.service] Error al cambiar estado de cita ${id}:`, error);
+  }
+  return status;
 };

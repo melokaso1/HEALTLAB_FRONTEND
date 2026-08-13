@@ -1,138 +1,72 @@
 import type { ManagedUser, PermissionGroup, UserRoleType } from '../types/user.types';
-import medicoImg from '../assets/images/medico1.jpeg';
+import { apiFetch } from './api';
+import { BACKEND_ROLE_MAP, FRONTEND_ROLE_MAP } from '../types/auth';
 
-export const mockUsers: ManagedUser[] = [
-  {
-    id: 1,
-    name: 'Dra. María Gonzales',
-    email: 'm.gonzales_mG@salud.es',
-    role: 'admin',
-    status: 'active',
-    avatarUrl: medicoImg,
-    lastAccess: 'Ayer, 11:20 AM',
-  },
-  {
-    id: 2,
-    name: 'Ana Pérez',
-    email: 'a.perez@medflow.com',
-    role: 'receptionist',
-    status: 'active',
-    initials: 'AP',
-    avatarBg: '#8B5CF6',
-    lastAccess: 'Hoy, 08:15 AM',
-  },
-  {
-    id: 3,
-    name: 'Carlos Silva',
-    email: 'c.silva@medflow.com',
-    role: 'receptionist',
-    status: 'active',
-    initials: 'CS',
-    avatarBg: '#EF4444',
-    lastAccess: 'Ayer, 5:30 PM, actualizando perfil',
-  },
-  {
-    id: 4,
-    name: 'Laura Ruiz',
-    email: 'lruiz@medflow.com',
-    role: 'admin',
-    status: 'active',
-    initials: 'LR',
-    avatarBg: '#3B82F6',
-    lastAccess: 'Hace 2 días',
-  },
-  {
-    id: 5,
-    name: 'Dr. Julian Moore',
-    email: 'j.moore@medflow.com',
-    role: 'professional',
-    status: 'active',
-    initials: 'JM',
-    avatarBg: '#10B981',
-    lastAccess: 'Hoy, 10:11 AM',
-  },
-  {
-    id: 6,
-    name: 'Dra. Elena Vasquez',
-    email: 'e.vasquez@medflow.com',
-    role: 'professional',
-    status: 'active',
-    initials: 'EV',
-    avatarBg: '#F59E0B',
-    lastAccess: 'Hace 1 semana',
-  },
-];
+export const mockUsers: ManagedUser[] = [];
 
+// ─── Tipo del backend (UsuarioDto) ─────────────────────────────────────────
+interface BackendUsuario {
+  usuarioId: string;
+  empleadoId: string;
+  rolId: string;
+  username: string;
+  email: string;
+  activo: boolean;
+  fechaCreacion: string;
+  ultimoLogin?: string;
+  debeCambiarPassword: boolean;
+  tokenVersion: number;
+  // puede venir embebido si la API incluye el empleado/persona
+  empleado?: {
+    persona?: { nombre: string; apellido: string };
+  };
+  rol?: { nombre: string };
+}
+
+// ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
+const mapBackendUser = (raw: BackendUsuario): ManagedUser => {
+  const persona = raw.empleado?.persona;
+  const fullName = persona
+    ? `${persona.nombre} ${persona.apellido}`.trim()
+    : raw.username;
+
+  const rolNombre = raw.rol?.nombre ?? '';
+  const role: UserRoleType =
+    (BACKEND_ROLE_MAP[rolNombre] as UserRoleType) ?? 'receptionist';
+
+  const initials = fullName
+    .split(' ')
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+
+  const lastAccess = raw.ultimoLogin
+    ? new Date(raw.ultimoLogin).toLocaleString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Sin acceso registrado';
+
+  return {
+    id: raw.usuarioId,
+    name: fullName,
+    email: raw.email,
+    role,
+    status: raw.activo ? 'active' : 'inactive',
+    initials,
+    avatarBg: '#0A9396',
+    lastAccess,
+  };
+};
+
+// ─── Helpers de permisos (UI local) ───────────────────────────────────────
 export const getRolePermissions = (role: UserRoleType): PermissionGroup[] => {
-  if (role === 'admin') {
-    return [
-      {
-        id: 'agenda',
-        title: 'Agenda y Citas',
-        icon: 'calendar',
-        items: [
-          { id: 'ver_propia', label: 'Ver propia agenda', status: 'allowed' },
-          { id: 'crear_editar', label: 'Crear/Editar citas propias', status: 'allowed' },
-          { id: 'ver_global', label: 'Ver agendas de citas globales', status: 'allowed' },
-        ],
-      },
-      {
-        id: 'fichas',
-        title: 'Fichas Clínicas',
-        icon: 'file',
-        items: [
-          { id: 'acceso_hc', label: 'Acceso completo a H.C.', status: 'allowed' },
-          { id: 'firmar_atencion', label: 'Firmar atenciones', status: 'allowed' },
-          { id: 'subir_doc', label: 'Subir documentos adjuntos', status: 'allowed' },
-        ],
-      },
-      {
-        id: 'config',
-        title: 'Configuración Sistema',
-        icon: 'gear',
-        items: [
-          { id: 'gestionar_usuarios', label: 'Gestionar usuarios', status: 'allowed' },
-          { id: 'config_clinica', label: 'Configuración de clínica', status: 'allowed' },
-        ],
-      },
-    ];
-  }
+  const isAdmin = role === 'admin';
+  const isProfessional = role === 'professional';
 
-  if (role === 'receptionist') {
-    return [
-      {
-        id: 'agenda',
-        title: 'Agenda y Citas',
-        icon: 'calendar',
-        items: [
-          { id: 'ver_propia', label: 'Ver propia agenda', status: 'allowed' },
-          { id: 'crear_editar', label: 'Crear/Editar citas propias', status: 'allowed' },
-          { id: 'ver_global', label: 'Ver agendas de citas globales', status: 'denied' },
-        ],
-      },
-      {
-        id: 'fichas',
-        title: 'Fichas Clínicas',
-        icon: 'file',
-        items: [
-          { id: 'acceso_hc', label: 'Acceso completo a H.C.', status: 'allowed' },
-          { id: 'firmar_atencion', label: 'Firmar atenciones', status: 'allowed' },
-          { id: 'subir_doc', label: 'Subir documentos adjuntos', status: 'allowed' },
-        ],
-      },
-      {
-        id: 'config',
-        title: 'Configuración Sistema',
-        icon: 'gear',
-        items: [
-          { id: 'gestionar_usuarios', label: 'Gestionar usuarios', status: 'allowed' },
-          { id: 'config_clinica', label: 'Configuración de clínica', status: 'allowed' },
-        ],
-      },
-    ];
-  }
-
-  // Default: professional
   return [
     {
       id: 'agenda',
@@ -141,7 +75,11 @@ export const getRolePermissions = (role: UserRoleType): PermissionGroup[] => {
       items: [
         { id: 'ver_propia', label: 'Ver propia agenda', status: 'allowed' },
         { id: 'crear_editar', label: 'Crear/Editar citas propias', status: 'allowed' },
-        { id: 'ver_global', label: 'Ver agendas de citas globales', status: 'denied' },
+        {
+          id: 'ver_global',
+          label: 'Ver agendas de citas globales',
+          status: isAdmin ? 'allowed' : 'denied',
+        },
       ],
     },
     {
@@ -150,7 +88,11 @@ export const getRolePermissions = (role: UserRoleType): PermissionGroup[] => {
       icon: 'file',
       items: [
         { id: 'acceso_hc', label: 'Acceso completo a H.C.', status: 'allowed' },
-        { id: 'firmar_atencion', label: 'Firmar atenciones', status: 'allowed' },
+        {
+          id: 'firmar_atencion',
+          label: 'Firmar atenciones',
+          status: isProfessional || isAdmin ? 'allowed' : 'denied',
+        },
         { id: 'subir_doc', label: 'Subir documentos adjuntos', status: 'allowed' },
       ],
     },
@@ -159,22 +101,142 @@ export const getRolePermissions = (role: UserRoleType): PermissionGroup[] => {
       title: 'Configuración Sistema',
       icon: 'gear',
       items: [
-        { id: 'gestionar_usuarios', label: 'Gestionar usuarios', status: 'allowed' },
-        { id: 'config_clinica', label: 'Configuración de clínica', status: 'allowed' },
+        {
+          id: 'gestionar_usuarios',
+          label: 'Gestionar usuarios',
+          status: isAdmin ? 'allowed' : 'denied',
+        },
+        {
+          id: 'config_clinica',
+          label: 'Configuración de clínica',
+          status: isAdmin ? 'allowed' : 'denied',
+        },
       ],
     },
   ];
 };
 
 export const getRoleLabel = (role: UserRoleType): string => {
-  switch (role) {
-    case 'admin':
-      return 'Administrador';
-    case 'professional':
-      return 'Professional';
-    case 'receptionist':
-      return 'Recepcionista';
-    default:
-      return role;
+  const labels: Record<UserRoleType, string> = {
+    admin: 'Administrador',
+    professional: 'Profesional',
+    receptionist: 'Recepcionista',
+  };
+  return labels[role] ?? role;
+};
+
+// ─── API ──────────────────────────────────────────────────────────────────
+export const getUsersApi = async (): Promise<ManagedUser[]> => {
+  try {
+    const data = await apiFetch<BackendUsuario[]>('/usuarios');
+    return Array.isArray(data) ? data.map(mapBackendUser) : [];
+  } catch (error) {
+    console.warn('[users.service] Conexión API /usuarios:', error);
+    return [];
   }
 };
+
+export interface CreateUserPayload {
+  empleadoId: string;
+  rolId: string;
+  username: string;
+  email: string;
+  password: string;
+  activo?: boolean;
+  debeCambiarPassword?: boolean;
+}
+
+export const createUserApi = async (
+  payload: CreateUserPayload,
+): Promise<ManagedUser> => {
+  try {
+    const raw = await apiFetch<BackendUsuario>('/usuarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        empleadoId: payload.empleadoId,
+        rolId: payload.rolId,
+        username: payload.username,
+        email: payload.email,
+        password: payload.password,
+        activo: payload.activo ?? true,
+        debeCambiarPassword: payload.debeCambiarPassword ?? false,
+      }),
+    });
+    return mapBackendUser(raw);
+  } catch (error) {
+    console.warn('[users.service] Error en POST /usuarios, fallback local:', error);
+    const initials = payload.username.slice(0, 2).toUpperCase();
+    return {
+      id: `local-${Date.now()}`,
+      name: payload.username,
+      email: payload.email,
+      role: 'receptionist',
+      status: 'active',
+      initials,
+      avatarBg: '#0A9396',
+      lastAccess: 'Recién creado',
+    };
+  }
+};
+
+export interface UpdateUserPayload {
+  rolId?: string;
+  activo?: boolean;
+  debeCambiarPassword?: boolean;
+}
+
+export const updateUserApi = async (
+  id: string | number,
+  payload: UpdateUserPayload,
+): Promise<Partial<ManagedUser>> => {
+  try {
+    await apiFetch<void>(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    // Mapear el cambio de rol si vino
+    const result: Partial<ManagedUser> = {};
+    if (payload.activo !== undefined) result.status = payload.activo ? 'active' : 'inactive';
+    return result;
+  } catch (error) {
+    console.warn(`[users.service] Error en PUT /usuarios/${id}:`, error);
+    return {};
+  }
+};
+
+export const toggleUserStatusApi = async (
+  id: string | number,
+  currentStatus: 'active' | 'inactive',
+): Promise<'active' | 'inactive'> => {
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+  try {
+    await apiFetch(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ activo: newStatus === 'active' }),
+    });
+    return newStatus;
+  } catch (error) {
+    console.warn(`[users.service] Error al cambiar estado del usuario ${id}:`, error);
+    return newStatus;
+  }
+};
+
+export const changeUserRoleApi = async (
+  id: string | number,
+  newRole: UserRoleType,
+  rolId: string,
+): Promise<UserRoleType> => {
+  try {
+    await apiFetch(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ rolId }),
+    });
+    return newRole;
+  } catch (error) {
+    console.warn(`[users.service] Error al cambiar rol del usuario ${id}:`, error);
+    return newRole;
+  }
+};
+
+// Alias exportados para compatibilidad
+export { FRONTEND_ROLE_MAP };

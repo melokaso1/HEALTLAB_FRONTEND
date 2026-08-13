@@ -2,7 +2,7 @@ export type UserRoleType = 'admin' | 'professional' | 'receptionist';
 export type UserStatusType = 'active' | 'inactive';
 
 export interface ManagedUser {
-  id: number;
+  id: string;  // Guid from backend
   name: string;
   email: string;
   role: UserRoleType;

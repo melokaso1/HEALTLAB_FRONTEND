@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Users,
@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getAppointmentsApi } from '../../services/appointments.service';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './DoctorInicio.css';
 
 interface TodayAppointment {
-  id: number;
+  id: string | number;
   time: string;
   patientName: string;
   patientAge: number;
@@ -38,63 +39,31 @@ interface DoctorTask {
   priority: 'Alta' | 'Media' | 'Baja';
 }
 
-const mockTodaySchedule: TodayAppointment[] = [
-  {
-    id: 1,
-    time: '08:00 AM',
-    patientName: 'María López',
-    patientAge: 45,
-    patientGender: 'Femenino',
-    service: 'Consulta Cardiológica',
-    status: 'Atendida',
-    reason: 'Control rutinario de hipertensión y dolor torácico leve',
-  },
-  {
-    id: 2,
-    time: '10:00 AM',
-    patientName: 'Carlos Mendoza',
-    patientAge: 52,
-    patientGender: 'Masculino',
-    service: 'Ecocardiograma',
-    status: 'Atendida',
-    reason: 'Evaluación funcional ventricular preoperatoria',
-  },
-  {
-    id: 3,
-    time: '11:30 AM',
-    patientName: 'Jorge Silva',
-    patientAge: 43,
-    patientGender: 'Masculino',
-    service: 'Consulta de Seguimiento',
-    status: 'En sala de espera',
-    reason: 'Revisión de resultados de perfil lipídico y EKG',
-  },
-  {
-    id: 4,
-    time: '02:00 PM',
-    patientName: 'Ana Gómez',
-    patientAge: 38,
-    patientGender: 'Femenino',
-    service: 'Evaluación Preoperatoria',
-    status: 'Confirmada',
-    reason: 'Riesgo quirúrgico cardiovascular para colecistectomía',
-  },
-];
-
-const mockDoctorTasks: DoctorTask[] = [
-  { id: 1, title: 'Firmar receta e indicaciones', patient: 'Carlos Mendoza', completed: true, priority: 'Media' },
-  { id: 2, title: 'Revisar lectura de Holter 24h', patient: 'Lucia Morales', completed: false, priority: 'Alta' },
-  { id: 3, title: 'Validar reporte de hemograma completo', patient: 'Carmen Vargas', completed: false, priority: 'Alta' },
-  { id: 4, title: 'Emitir certificado de aptitud física', patient: 'Pedro Ramírez', completed: false, priority: 'Baja' },
-];
-
 const DoctorInicio: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const doctorName = user?.name || 'Dr. Julian Moore';
+  const doctorName = user?.name || 'Doctor';
 
-  const [tasks, setTasks] = useState<DoctorTask[]>(mockDoctorTasks);
-  const [todayApps] = useState<TodayAppointment[]>(mockTodaySchedule);
+  const [tasks, setTasks] = useState<DoctorTask[]>([]);
+  const [todayApps, setTodayApps] = useState<TodayAppointment[]>([]);
+
+  useEffect(() => {
+    getAppointmentsApi().then((apps) => {
+      if (Array.isArray(apps)) {
+        const mapped: TodayAppointment[] = apps.map((a) => ({
+          id: a.id,
+          time: a.time,
+          patientName: a.patientName,
+          patientAge: a.patientAge,
+          patientGender: a.patientGender,
+          service: a.serviceName,
+          status: a.status === 'Atendida' ? 'Atendida' : 'Confirmada',
+          reason: a.notes || 'Consulta Médica Programada',
+        }));
+        setTodayApps(mapped);
+      }
+    });
+  }, []);
 
   const toggleTask = (id: number) => {
     setTasks((prev) =>

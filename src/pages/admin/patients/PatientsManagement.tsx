@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -15,7 +15,14 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import type { Patient, GenderType } from '../../../types/patient.types';
-import { mockPatients } from '../../../services/patients.service';
+import {
+  mockPatients,
+  getPatientsApi,
+  createPatientApi,
+  updatePatientApi,
+  togglePatientStatusApi,
+  addPatientNoteApi,
+} from '../../../services/patients.service';
 import { useAuth } from '../../../context/AuthContext';
 import './PatientsManagement.css';
 
@@ -38,7 +45,15 @@ const PatientsManagement: React.FC = () => {
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico' || (user?.role as string) === 'profesional';
 
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
-  const [activePatientId, setActivePatientId] = useState<number | null>(1); // Maria Rodriguez open by default
+
+  useEffect(() => {
+    getPatientsApi().then((data) => {
+      if (data && data.length > 0) {
+        setPatients(data);
+      }
+    });
+  }, []);
+  const [activePatientId, setActivePatientId] = useState<string | number | null>(1); // Maria Rodriguez open by default
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [activeTab, setActiveTab] = useState<'Resumen' | 'Historial' | 'Notas'>('Resumen');
@@ -62,8 +77,15 @@ const PatientsManagement: React.FC = () => {
   const [editBloodType, setEditBloodType] = useState('O+');
   const [editAllergies, setEditAllergies] = useState('Ninguna');
 
-  const handleAddNote = (patientId: number) => {
+  const handleAddNote = (patientId: string | number) => {
     if (!newNoteText.trim()) return;
+
+    const notePayload = {
+      author: user?.name || (isDoctor ? 'Dr. Julian Moore' : 'Director Médico'),
+      text: newNoteText.trim(),
+    };
+
+    addPatientNoteApi(patientId, notePayload);
 
     setPatients((prev) =>
       prev.map((p) => {
@@ -71,8 +93,8 @@ const PatientsManagement: React.FC = () => {
           const newNote = {
             id: Date.now(),
             date: 'Hoy',
-            author: user?.name || (isDoctor ? 'Dr. Julian Moore' : 'Director Médico'),
-            text: newNoteText.trim(),
+            author: notePayload.author,
+            text: notePayload.text,
           };
           return {
             ...p,
@@ -108,8 +130,9 @@ const PatientsManagement: React.FC = () => {
     }, 3000);
   };
 
-  const handleDeletePatient = (id: number, e: React.MouseEvent) => {
+  const handleDeletePatient = (id: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
+    togglePatientStatusApi(id, 'active');
     setPatients((prev) =>
       prev.map((patient) =>
         patient.id === id ? { ...patient, status: 'inactive' } : patient
@@ -118,8 +141,9 @@ const PatientsManagement: React.FC = () => {
     showToast('Paciente deshabilitado y movido al archivo');
   };
 
-  const handleReactivatePatient = (id: number, e?: React.MouseEvent) => {
+  const handleReactivatePatient = (id: string | number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    togglePatientStatusApi(id, 'inactive');
     setPatients((prev) =>
       prev.map((patient) =>
         patient.id === id ? { ...patient, status: 'active' } : patient
@@ -157,6 +181,14 @@ const PatientsManagement: React.FC = () => {
       .substring(0, 2)
       .toUpperCase();
 
+    updatePatientApi(editTargetPatient.id, {
+      name: editName,
+      documentType: editDocType,
+      documentNumber: editDocNum,
+      gender: editGender,
+      age: Number(editAge) || 30,
+    });
+
     setPatients((prev) =>
       prev.map((p) => {
         if (p.id === editTargetPatient.id) {
@@ -174,7 +206,6 @@ const PatientsManagement: React.FC = () => {
               address: editAddress,
             },
             medicalData: {
-              ...p.medicalData,
               bloodType: editBloodType,
               allergies: editAllergies ? editAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
             },
@@ -188,7 +219,7 @@ const PatientsManagement: React.FC = () => {
     showToast(`Información de ${editName} actualizada exitosamente`);
   };
 
-  const handleTogglePanel = (patientId: number, e: React.MouseEvent) => {
+  const handleTogglePanel = (patientId: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (activePatientId === patientId) {
       setActivePatientId(null);
@@ -250,7 +281,9 @@ const PatientsManagement: React.FC = () => {
       notes: [],
     };
 
-    setPatients([newPatient, ...patients]);
+    createPatientApi(newPatient);
+
+    setPatients((prev) => [newPatient, ...prev]);
     setActivePatientId(newPatient.id);
     setIsCreateModalOpen(false);
     setNewName('');

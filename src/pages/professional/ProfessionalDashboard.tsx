@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +15,8 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getAppointmentsApi } from '../../services/appointments.service';
+import type { Appointment } from '../../types/appointment.types';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './ProfessionalDashboard.css';
 
@@ -38,120 +40,6 @@ export interface DoctorAppointmentEvent {
   requiresLabs?: boolean;
   labDetails?: string;
 }
-
-const mockWeekEvents: DoctorAppointmentEvent[] = [
-  {
-    id: 1,
-    weekOffset: 0,
-    dayAbrev: 'LUN',
-    dayNum: 10,
-    timeSlot: '08:00',
-    timeDisplay: '08:00 - 09:00',
-    service: 'Consulta Cardiológica',
-    patientName: 'María López',
-    patientDoc: 'CC-98765432',
-    patientAge: 45,
-    patientGender: 'Femenino',
-    reason: 'Dolor torácico ocasional',
-    status: 'Atendido',
-    diagnosis: 'Molestia muscular intercostal sin compromiso coronario',
-    clinicalNotes: 'Paciente refiere molestias al inspirar profundo. EKG normal.',
-    treatmentPlan: 'Analgésicos simples por 5 días.',
-  },
-  {
-    id: 2,
-    weekOffset: 0,
-    dayAbrev: 'LUN',
-    dayNum: 10,
-    timeSlot: '10:00',
-    timeDisplay: '10:00 - 11:00',
-    service: 'Ecocardiograma',
-    patientName: 'Carlos Mendoza',
-    patientDoc: 'CC-12345678',
-    patientAge: 52,
-    patientGender: 'Masculino',
-    reason: 'Evaluación funcional ventricular',
-    status: 'Atendido',
-    diagnosis: 'Fracción de eyección conservada',
-    clinicalNotes: 'Estructura valvular normal.',
-    treatmentPlan: 'Control anual.',
-  },
-  {
-    id: 3,
-    weekOffset: 0,
-    dayAbrev: 'MAR',
-    dayNum: 11,
-    timeSlot: '09:00',
-    timeDisplay: '09:00 - 10:00',
-    service: 'Evaluación Preoperatoria',
-    patientName: 'Ana Gómez',
-    patientDoc: 'CC-55443322',
-    patientAge: 38,
-    patientGender: 'Femenino',
-    reason: 'Riesgo quirúrgico para colecistectomía',
-    status: 'Confirmada',
-  },
-  {
-    id: 4,
-    weekOffset: 0,
-    dayAbrev: 'MIÉ',
-    dayNum: 12,
-    timeSlot: '08:00',
-    timeDisplay: '08:00 - 08:30',
-    service: 'Prueba de Esfuerzo',
-    patientName: 'Pedro Ramírez',
-    patientDoc: 'CE-66778899',
-    patientAge: 50,
-    patientGender: 'Masculino',
-    reason: 'Protocolo ergométrico de control',
-    status: 'Confirmada',
-  },
-  {
-    id: 5,
-    weekOffset: 0,
-    dayAbrev: 'VIE',
-    dayNum: 14,
-    timeSlot: '09:00',
-    timeDisplay: '09:00 - 10:30',
-    service: 'Ecocardiograma Doppler',
-    patientName: 'Carmen Vargas',
-    patientDoc: 'CC-33221144',
-    patientAge: 61,
-    patientGender: 'Femenino',
-    reason: 'Insuficiencia mitral moderada en estudio',
-    status: 'En sala de espera',
-  },
-  {
-    id: 6,
-    weekOffset: 0,
-    dayAbrev: 'MIÉ',
-    dayNum: 12,
-    timeSlot: '11:00',
-    timeDisplay: '11:00 - 11:30',
-    service: 'Consulta de Seguimiento',
-    patientName: 'Jorge Silva',
-    patientDoc: 'CC-77889900',
-    patientAge: 43,
-    patientGender: 'Masculino',
-    reason: 'Control de hipertensión',
-    status: 'En sala de espera',
-  },
-  {
-    id: 7,
-    weekOffset: 0,
-    dayAbrev: 'JUE',
-    dayNum: 13,
-    timeSlot: '10:00',
-    timeDisplay: '10:00 - 11:00',
-    service: 'Holter 24h Lectura',
-    patientName: 'Lucia Morales',
-    patientDoc: 'CC-11224455',
-    patientAge: 29,
-    patientGender: 'Femenino',
-    reason: 'Palpitaciones nocturnas',
-    status: 'Confirmada',
-  },
-];
 
 const MONTH_SHORT = ['ene.', 'feb.', 'mar.', 'abr.', 'may.', 'jun.', 'jul.', 'ago.', 'sep.', 'oct.', 'nov.', 'dic.'];
 const DAY_ABREVS_LIST: ('DOM' | 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB')[] = [
@@ -177,10 +65,72 @@ const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
   const doctorName = user?.name || 'Dr. Julian Moore';
 
-  const [events, setEvents] = useState<DoctorAppointmentEvent[]>(mockWeekEvents);
+  const [events, setEvents] = useState<DoctorAppointmentEvent[]>([]);
+  const [_loading, setLoading] = useState<boolean>(true);
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  useEffect(() => {
+    const fetchDoctorAppointments = async () => {
+      try {
+        setLoading(true);
+        const apps = await getAppointmentsApi();
+        const doctorId = user?.medicoId || user?.id || '';
+        const currentDoctorName = user?.name || '';
+
+        const filtered = apps.filter((app: Appointment) => {
+          if (doctorId && String(app.professionalId) === String(doctorId)) {
+            return true;
+          }
+          if (currentDoctorName) {
+            return app.professionalName.toLowerCase().includes(currentDoctorName.toLowerCase());
+          }
+          return true;
+        });
+
+        const mapped: DoctorAppointmentEvent[] = filtered.map((app: Appointment, index: number) => {
+          let statusMapped: 'Atendido' | 'Confirmada' | 'En sala de espera' | 'Cancelada' = 'Confirmada';
+          if (app.status === 'Atendida') statusMapped = 'Atendido';
+          else if (app.status === 'Cancelada') statusMapped = 'Cancelada';
+          else if (app.status === 'No asistió') statusMapped = 'En sala de espera';
+
+          const appDate = new Date(app.date);
+          const dayIndex = isNaN(appDate.getDay()) ? 1 : appDate.getDay();
+
+          // Formateo de la hora (ej: "08:00 AM" -> "08:00")
+          const timeParts = app.time.split(' ')[0] || '08:00';
+          const timeHour = timeParts.split(':')[0]?.padStart(2, '0') || '08';
+          const timeSlot = `${timeHour}:00`;
+
+          return {
+            id: typeof app.id === 'number' ? app.id : index + 1,
+            weekOffset: 0,
+            dayAbrev: DAY_ABREVS_LIST[dayIndex] || 'LUN',
+            dayNum: isNaN(appDate.getDate()) ? 12 : appDate.getDate(),
+            timeSlot,
+            timeDisplay: app.time,
+            service: app.serviceName || 'Consulta Médica',
+            patientName: app.patientName,
+            patientDoc: app.patientDoc || 'CC-000000',
+            patientAge: app.patientAge || 30,
+            patientGender: app.patientGender || 'Femenino',
+            reason: app.notes || 'Consulta médica agendada',
+            status: statusMapped,
+            clinicalNotes: app.notes,
+          };
+        });
+
+        setEvents(mapped);
+      } catch (error) {
+        console.warn('[ProfessionalDashboard] Error al cargar citas del médico:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorAppointments();
+  }, [user]);
 
   // Calculate dynamic week info
   const { currentDaysHeaderList, currentWeekRangeLabel } = useMemo(() => {

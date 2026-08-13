@@ -37,7 +37,7 @@ export interface PatientNote {
 }
 
 export interface Patient {
-  id: number;
+  id: string | number;
   name: string;
   gender: GenderType;
   age: number;

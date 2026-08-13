@@ -1,5 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Download, Eye, X, FileText, CheckCircle2 } from 'lucide-react';
+import { getAppointmentsApi } from '../../../services/appointments.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import type { Appointment } from '../../../types/appointment.types';
+import type { ProfessionalOption } from '../../../types/appointment.types';
 import './Historial.css';
 
 interface HistorialRecord {
@@ -15,70 +19,12 @@ interface HistorialRecord {
   observaciones?: string;
 }
 
-const mockHistorial: HistorialRecord[] = [
-  {
-    id: 'h1',
-    fecha: '15 Oct 2023',
-    hora: '09:00 AM',
-    pacienteNombre: 'Roberto Gómez',
-    pacienteDni: '45678912',
-    profesionalNombre: 'Dr. Carlos Mendoza',
-    especialidad: 'Cardiología',
-    estado: 'Atendido',
-    motivo: 'Control presión arterial y evaluación cardiovascular de rutina.',
-    observaciones: 'Paciente acudió puntual. Presión dentro de rangos normales.',
-  },
-  {
-    id: 'h2',
-    fecha: '15 Oct 2023',
-    hora: '10:30 AM',
-    pacienteNombre: 'María Fernanda López',
-    pacienteDni: '78912345',
-    profesionalNombre: 'Dra. Ana Silva',
-    especialidad: 'Pediatría',
-    estado: 'Cancelado',
-    motivo: 'Fiebre alta',
-    observaciones: 'Cita cancelada por el paciente vía telefónica con 2 horas de anticipación.',
-  },
-  {
-    id: 'h3',
-    fecha: '14 Oct 2023',
-    hora: '15:00 PM',
-    pacienteNombre: 'Juan Carlos Reyes',
-    pacienteDni: '12345678',
-    profesionalNombre: 'Dr. Luis Medina',
-    especialidad: 'Traumatología',
-    estado: 'No asistió',
-    motivo: 'Dolor rodilla derecha',
-    observaciones: 'El paciente no se presentó a su cita ni registró reprogramación.',
-  },
-  {
-    id: 'h4',
-    fecha: '14 Oct 2023',
-    hora: '11:15 AM',
-    pacienteNombre: 'Lucía Morales',
-    pacienteDni: '32165498',
-    profesionalNombre: 'Dra. Silvia Vega',
-    especialidad: 'Pediatría',
-    estado: 'Atendido',
-    motivo: 'Chequeo anual pediatría',
-    observaciones: 'Desarrollo talla y peso óptimo.',
-  },
-  {
-    id: 'h5',
-    fecha: '13 Oct 2023',
-    hora: '16:30 PM',
-    pacienteNombre: 'Carlos Eduardo Ramírez',
-    pacienteDni: '65498732',
-    profesionalNombre: 'Dr. Julian Moore',
-    especialidad: 'Cardiología',
-    estado: 'Atendido',
-    motivo: 'Electrocardiograma de control',
-    observaciones: 'Informe entregado al paciente.',
-  },
-];
-
 const RecepHistorial: React.FC = () => {
+  // Data States
+  const [records, setRecords] = useState<HistorialRecord[]>([]);
+  const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>([]);
+  const [_loading, setLoading] = useState<boolean>(true);
+
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [profesionalFilter, setProfesionalFilter] = useState('Todos');
@@ -102,6 +48,51 @@ const RecepHistorial: React.FC = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [appsData, profsData] = await Promise.all([
+          getAppointmentsApi(),
+          getProfessionalsApi(),
+        ]);
+
+        if (Array.isArray(profsData)) {
+          setProfessionalsList(profsData);
+        }
+
+        if (Array.isArray(appsData)) {
+          const mapped: HistorialRecord[] = appsData.map((app: Appointment) => {
+            let estadoMapped: 'Atendido' | 'Cancelado' | 'No asistió' = 'Atendido';
+            if (app.status === 'Cancelada') estadoMapped = 'Cancelado';
+            else if (app.status === 'No asistió') estadoMapped = 'No asistió';
+
+            return {
+              id: String(app.id),
+              fecha: app.date,
+              hora: app.time,
+              pacienteNombre: app.patientName,
+              pacienteDni: app.patientDoc || 'N/A',
+              profesionalNombre: app.professionalName,
+              especialidad: app.professionalSpecialty,
+              estado: estadoMapped,
+              motivo: app.notes || 'Consulta médica',
+              observaciones: app.notes,
+            };
+          });
+
+          setRecords(mapped);
+        }
+      } catch (error) {
+        console.warn('[Historial.tsx] Error al cargar historial desde la API:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -119,7 +110,7 @@ const RecepHistorial: React.FC = () => {
   };
 
   const filteredRecords = useMemo(() => {
-    return mockHistorial.filter((rec) => {
+    return records.filter((rec) => {
       // Search term filter (Nombre or DNI)
       if (appliedFilters.search.trim()) {
         const query = appliedFilters.search.toLowerCase();
@@ -136,6 +127,16 @@ const RecepHistorial: React.FC = () => {
         return false;
       }
 
+      // Fecha Inicial filter
+      if (appliedFilters.fechaInicial && rec.fecha < appliedFilters.fechaInicial) {
+        return false;
+      }
+
+      // Fecha Final filter
+      if (appliedFilters.fechaFinal && rec.fecha > appliedFilters.fechaFinal) {
+        return false;
+      }
+
       // Estado filter
       if (
         appliedFilters.estado !== 'Todos' &&
@@ -146,7 +147,7 @@ const RecepHistorial: React.FC = () => {
 
       return true;
     });
-  }, [appliedFilters]);
+  }, [records, appliedFilters]);
 
   const handleExport = () => {
     showToast('Exportando reporte histórico en formato CSV...');
@@ -201,11 +202,11 @@ const RecepHistorial: React.FC = () => {
               onChange={(e) => setProfesionalFilter(e.target.value)}
             >
               <option value="Todos">Todos los profesionales</option>
-              <option value="Dr. Carlos Mendoza">Dr. Carlos Mendoza</option>
-              <option value="Dra. Ana Silva">Dra. Ana Silva</option>
-              <option value="Dr. Luis Medina">Dr. Luis Medina</option>
-              <option value="Dra. Silvia Vega">Dra. Silvia Vega</option>
-              <option value="Dr. Julian Moore">Dr. Julian Moore</option>
+              {professionalsList.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.name} ({p.specialty})
+                </option>
+              ))}
             </select>
           </div>
 

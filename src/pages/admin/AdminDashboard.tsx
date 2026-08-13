@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Users,
@@ -7,10 +7,13 @@ import {
   UserCheck,
 } from 'lucide-react';
 import './AdminDashboard.css';
+import { getAppointmentsApi } from '../../services/appointments.service';
+import { getProfessionalsApi } from '../../services/professionals.service';
+import type { Appointment } from '../../types/appointment.types';
 
-// Interface for appointments
+// ─── Interfaces ───────────────────────────────────────────────────────────
 interface CitaTabla {
-  id: number;
+  id: string | number;
   paciente: string;
   doctor: string;
   hora: string;
@@ -18,7 +21,6 @@ interface CitaTabla {
   estado: 'confirmada' | 'cancelada' | 'pendiente';
 }
 
-// Interface for timeline items
 interface ActividadItem {
   id: number;
   texto: React.ReactNode;
@@ -26,112 +28,151 @@ interface ActividadItem {
   avatarBg: string;
 }
 
-// Interface for daily agenda
 interface AgendaSlot {
   hora: string;
   paciente?: string;
   especialidad?: string;
 }
 
-const citasData: CitaTabla[] = [
-  {
-    id: 1,
-    paciente: 'M. Rodriguez',
-    doctor: 'Dr. Smith (Cardiology)',
-    hora: '09:00 AM',
-    tipo: 'Follow-up',
-    estado: 'confirmada',
-  },
-  {
-    id: 2,
-    paciente: 'James Wilson',
-    doctor: 'Dr. Lee (General)',
-    hora: '08:30 AM',
-    tipo: 'Checkup',
-    estado: 'cancelada',
-  },
-  {
-    id: 3,
-    paciente: 'Ana Garcia',
-    doctor: 'Dr. Smith (Cardiology)',
-    hora: '10:15 AM',
-    tipo: 'Consultation',
-    estado: 'pendiente',
-  },
-  {
-    id: 4,
-    paciente: 'Robert Chen',
-    doctor: 'Dr. Evans (Neurology)',
-    hora: '11:00 AM',
-    tipo: 'Test Results',
-    estado: 'pendiente',
-  },
-];
-
+// ─── Actividad reciente (sin endpoint aún — se mantiene estática) ─────────
 const actividadesData: ActividadItem[] = [
   {
     id: 1,
-    texto: (
-      <>
-        <strong>Dr. Smith updated medical records for</strong> Maria Rodriguez.
-      </>
-    ),
+    texto: (<><strong>Dr. Smith updated medical records for</strong> Maria Rodriguez.</>),
     tiempo: '10 minutes ago',
     avatarBg: '#00A896',
   },
   {
     id: 2,
-    texto: (
-      <>
-        <strong>New patient Sarah Jenkins registered</strong> via online portal.
-      </>
-    ),
+    texto: (<><strong>New patient Sarah Jenkins registered</strong> via online portal.</>),
     tiempo: '45 minutes ago',
     avatarBg: '#6366F1',
   },
   {
     id: 3,
-    texto: (
-      <>
-        <strong>Appointment cancelled by Tom Harris</strong> for tomorrow.
-      </>
-    ),
+    texto: (<><strong>Appointment cancelled by Tom Harris</strong> for tomorrow.</>),
     tiempo: '1 hour ago',
     avatarBg: '#EC4899',
   },
 ];
 
-const agendaData: AgendaSlot[] = [
-  { hora: '08:00' },
-  { hora: '09:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
-  { hora: '09:30', paciente: 'James Wilson', especialidad: 'Cardio' },
-  { hora: '10:00', paciente: 'James Wilson', especialidad: 'Cardio' },
-  { hora: '11:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
-  { hora: '12:00', paciente: 'James Wilson', especialidad: 'Cardio' },
-  { hora: '13:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
-  { hora: '14:00', paciente: 'James Wilson', especialidad: 'Cardio' },
-  { hora: '16:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
-  { hora: '16:00', paciente: 'James Wilson', especialidad: 'Cardio' },
-  { hora: '17:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
-  { hora: '18:00', paciente: 'M. Rodriguez', especialidad: 'Cardio' },
+// ─── Helpers ──────────────────────────────────────────────────────────────
+const todayISO = (): string => new Date().toISOString().split('T')[0];
+
+const todayLabel = (): string =>
+  new Date().toLocaleDateString('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+/** Convierte "02:30 PM" → "14:30" para ordenar como string */
+const timeToSortable = (slot: string): string => {
+  const parts = slot.trim().split(' ');
+  if (parts.length < 2) return slot; // ya viene en HH:mm
+  const [time, period] = parts;
+  const [h, m] = time.split(':').map(Number);
+  let hour = h;
+  if (period === 'PM' && h !== 12) hour += 12;
+  if (period === 'AM' && h === 12) hour = 0;
+  return `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+const mapToAgendaSlot = (app: Appointment): AgendaSlot => ({
+  hora: timeToSortable(app.time),
+  paciente: app.patientName,
+  especialidad: app.professionalSpecialty || app.serviceName,
+});
+
+// Horas fijas del día para mostrar aunque no haya citas
+const HORAS_DIA = [
+  '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
 ];
 
+// ─── Componente ───────────────────────────────────────────────────────────
 const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [citasData, setCitasData] = useState<CitaTabla[]>([]);
+  const [agendaSlots, setAgendaSlots] = useState<AgendaSlot[]>(
+    HORAS_DIA.map(h => ({ hora: h }))
+  );
+  const [loading, setLoading] = useState(true);
+  const [todayCitasCount, setTodayCitasCount] = useState(0);
+  const [totalProfessionals, setTotalProfessionals] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [appointments, professionals] = await Promise.all([
+          getAppointmentsApi(),
+          getProfessionalsApi(),
+        ]);
+
+        const today = todayISO();
+
+        // ── Tabla: todas las citas ──────────────────────────────────────
+        const mappedCitas: CitaTabla[] = appointments.map((app, index) => {
+          let estado: 'confirmada' | 'cancelada' | 'pendiente' = 'pendiente';
+          if (app.status === 'Atendida')  estado = 'confirmada';
+          if (app.status === 'Cancelada') estado = 'cancelada';
+          return {
+            id: app.id ?? index,
+            paciente: app.patientName,
+            doctor: app.professionalName,
+            hora: app.time,
+            tipo: app.serviceName,
+            estado,
+          };
+        });
+        setCitasData(mappedCitas);
+
+        // ── Agenda del Día: citas de HOY no canceladas, ordenadas ──────
+        const todayApps = appointments
+          .filter(a => a.date === today && a.status !== 'Cancelada')
+          .sort((a, b) => timeToSortable(a.time).localeCompare(timeToSortable(b.time)));
+
+        // Construir mapa de horas → slot con cita (si existe)
+        const slotsMap = new Map<string, AgendaSlot>(
+          HORAS_DIA.map(h => [h, { hora: h }])
+        );
+        todayApps.forEach(app => {
+          const sortable = timeToSortable(app.time);
+          slotsMap.set(sortable, mapToAgendaSlot(app));
+        });
+
+        setAgendaSlots(Array.from(slotsMap.values()));
+        setTodayCitasCount(todayApps.length);
+        setTotalProfessionals(professionals.length);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <div style={{ padding: '2rem', color: '#94A3B8' }}>Cargando...</div>;
+  }
 
   return (
     <div className="admin-dashboard">
-      {/* Main Content Layout Grid (Left 2-Columns / Right 1-Column Agenda) */}
       <div className="admin-dashboard__grid">
-        {/* Left Section (Header, KPIs, Table, Activity) */}
+
+        {/* ── Left Section ─────────────────────────────────────────────── */}
         <div className="admin-dashboard__left-col">
-          {/* Top Title & Search Row */}
+
+          {/* Header */}
           <div className="admin-dashboard__header-row">
             <div className="admin-dashboard__title-group">
               <h1 className="admin-dashboard__title">Inicio</h1>
-              <p className="admin-dashboard__subtitle">Martes, Nov 12, 2023</p>
+              <p className="admin-dashboard__subtitle">{todayLabel()}</p>
             </div>
-
             <div className="admin-dashboard__search-wrapper">
               <Search size={18} className="admin-dashboard__search-icon" />
               <input
@@ -143,132 +184,101 @@ const AdminDashboard: React.FC = () => {
               />
             </div>
           </div>
-          {/* Row 1: KPI Cards */}
+
+          {/* KPI Cards */}
           <div className="admin-dashboard__kpi-row">
-            {/* KPI Card 1: Citas de hoy */}
             <div className="card kpi-card">
               <div className="kpi-card__header">
                 <span className="kpi-card__title">Citas de hoy</span>
                 <Calendar size={18} className="kpi-card__icon" />
               </div>
               <div className="kpi-card__body">
-                <span className="kpi-card__value">28</span>
+                <span className="kpi-card__value">{todayCitasCount}</span>
                 <span className="kpi-card__trend kpi-card__trend--up">
                   <TrendingUp size={14} />
-                  <span>+12%</span>
+                  <span>Hoy</span>
                 </span>
               </div>
             </div>
 
-            {/* KPI Card 2: Nuevos Pacientes */}
             <div className="card kpi-card">
               <div className="kpi-card__header">
-                <span className="kpi-card__title">Nuevos Pacientes</span>
+                <span className="kpi-card__title">Profesionales Activos</span>
                 <Users size={18} className="kpi-card__icon" />
               </div>
               <div className="kpi-card__body">
-                <span className="kpi-card__value">15</span>
+                <span className="kpi-card__value">{totalProfessionals}</span>
                 <span className="kpi-card__trend kpi-card__trend--up">
                   <TrendingUp size={14} />
-                  <span>+8%</span>
+                  <span>Total</span>
                 </span>
               </div>
             </div>
 
-            {/* KPI Card 3: Pacientes por Profesional (Donut Chart) */}
             <div className="card kpi-card kpi-card--chart">
               <div className="kpi-card__header">
                 <span className="kpi-card__title">Pacientes por Profesional</span>
               </div>
               <div className="kpi-card__chart-wrapper">
                 <svg className="donut-chart" viewBox="0 0 100 100">
-                  {/* Segment 1: Teal */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="35"
-                    fill="transparent"
-                    stroke="#00A896"
-                    strokeWidth="16"
-                    strokeDasharray="95 125"
-                    strokeDashoffset="0"
-                  />
-                  {/* Segment 2: Cyan */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="35"
-                    fill="transparent"
-                    stroke="#0EA5E9"
-                    strokeWidth="16"
-                    strokeDasharray="60 160"
-                    strokeDashoffset="-95"
-                  />
-                  {/* Segment 3: Slate */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="35"
-                    fill="transparent"
-                    stroke="#64748B"
-                    strokeWidth="16"
-                    strokeDasharray="45 175"
-                    strokeDashoffset="-155"
-                  />
+                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#00A896" strokeWidth="16" strokeDasharray="95 125" strokeDashoffset="0" />
+                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#0EA5E9" strokeWidth="16" strokeDasharray="60 160" strokeDashoffset="-95" />
+                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#64748B" strokeWidth="16" strokeDasharray="45 175" strokeDashoffset="-155" />
                 </svg>
               </div>
             </div>
           </div>
 
-          {/* Row 2: Próximas Citas Table */}
+          {/* Tabla de Citas */}
           <div className="card table-card">
             <div className="table-card__header">
               <h2 className="table-card__title">Próximas Citas</h2>
-              <button type="button" className="table-card__link">
-                Ver todas
-              </button>
+              <button type="button" className="table-card__link">Ver todas</button>
             </div>
             <div className="table-card__wrapper">
-              <table className="citas-table">
-                <thead>
-                  <tr>
-                    <th>PACIENTE</th>
-                    <th>DOCTOR</th>
-                    <th>HORA</th>
-                    <th>TIPO</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {citasData.map((cita) => (
-                    <tr key={cita.id}>
-                      <td className="citas-table__paciente">{cita.paciente}</td>
-                      <td className="citas-table__doctor">{cita.doctor}</td>
-                      <td className="citas-table__hora">{cita.hora}</td>
-                      <td className="citas-table__tipo">{cita.tipo}</td>
-                      <td>
-                        <span
-                          className={`status-dot status-dot--${cita.estado}`}
-                          title={cita.estado}
-                        />
-                      </td>
+              {citasData.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                  No hay citas disponibles
+                </div>
+              ) : (
+                <table className="citas-table">
+                  <thead>
+                    <tr>
+                      <th>PACIENTE</th>
+                      <th>DOCTOR</th>
+                      <th>HORA</th>
+                      <th>TIPO</th>
+                      <th>ESTADO</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {citasData.map((cita) => (
+                      <tr key={cita.id}>
+                        <td className="citas-table__paciente">{cita.paciente}</td>
+                        <td className="citas-table__doctor">{cita.doctor}</td>
+                        <td className="citas-table__hora">{cita.hora}</td>
+                        <td className="citas-table__tipo">{cita.tipo}</td>
+                        <td>
+                          <span
+                            className={`status-dot status-dot--${cita.estado}`}
+                            title={cita.estado}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
-          {/* Row 3: Actividad Reciente Timeline */}
+          {/* Actividad Reciente */}
           <div className="card activity-card">
             <h2 className="activity-card__title">Actividad Reciente</h2>
             <div className="activity-list">
               {actividadesData.map((act) => (
                 <div key={act.id} className="activity-item">
-                  <div
-                    className="activity-item__avatar"
-                    style={{ backgroundColor: act.avatarBg }}
-                  >
+                  <div className="activity-item__avatar" style={{ backgroundColor: act.avatarBg }}>
                     <UserCheck size={16} />
                   </div>
                   <div className="activity-item__details">
@@ -281,12 +291,12 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Section: Agenda del Día Panel */}
+        {/* ── Right Section: Agenda del Día ────────────────────────────── */}
         <div className="admin-dashboard__right-col">
           <div className="card agenda-panel">
             <h2 className="agenda-panel__title">Agenda del Día</h2>
             <div className="agenda-panel__list">
-              {agendaData.map((slot, idx) => (
+              {agendaSlots.map((slot, idx) => (
                 <div key={idx} className="agenda-slot">
                   <span className="agenda-slot__time">{slot.hora}</span>
                   <div className="agenda-slot__divider" />
@@ -303,6 +313,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

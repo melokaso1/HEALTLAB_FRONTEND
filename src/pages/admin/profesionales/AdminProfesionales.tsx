@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   UserCheck,
   Search,
@@ -63,9 +63,44 @@ const HOURLY_SLOTS = [
   '20:00',
 ];
 
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import type { ProfessionalOption } from '../../../types/appointment.types';
+
+const mapBackendProfToLocal = (p: ProfessionalOption): Professional => {
+  // Parse "Dr. Nombre Apellido" → split parts
+  const nameParts = p.name.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim().split(' ');
+  const nombre = nameParts[0] ?? '';
+  const apellido = nameParts.slice(1).join(' ') || '';
+  const tituloPrefix = p.name.match(/^(Dra\.)/i) ? 'Dra.' : 'Dr.';
+
+  return {
+    id: p.id,
+    nombre,
+    apellido,
+    tituloPrefix,
+    especialidad: p.specialty,
+    registroProfesional: '',
+    consultorio: '',
+    estado: 'Activo',
+    citasHoy: 0,
+    disponibleHoy: true,
+    foto: '',
+    disponibilidad: [],
+    citas: [],
+  };
+};
+
 const AdminProfesionales: React.FC = () => {
   // State
   const [profesionales, setProfesionales] = useState<Professional[]>(initialProfesionales);
+
+  useEffect(() => {
+    getProfessionalsApi().then((profs) => {
+      if (Array.isArray(profs) && profs.length > 0) {
+        setProfesionales(profs.map(mapBackendProfToLocal));
+      }
+    });
+  }, []);
   const [selectedId, setSelectedId] = useState<string>(initialProfesionales[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeSpecialty, setActiveSpecialty] = useState<string>('Todos');

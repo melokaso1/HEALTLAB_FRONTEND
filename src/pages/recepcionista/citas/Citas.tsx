@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,6 +10,11 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import './Citas.css';
+import { getAppointmentsApi } from '../../../services/appointments.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import type { Appointment } from '../../../types/appointment.types';
+import type { ProfessionalOption } from '../../../types/appointment.types';
+
 
 interface CalendarEventBlock {
   id: string;
@@ -30,73 +35,25 @@ interface CitaHoy {
   estado: 'Atendida' | 'Cancelada' | 'Agendada';
 }
 
-const mockAgendaEvents: CalendarEventBlock[] = [
-  {
-    id: 'ev1',
-    dayIndex: 1, // Mar 17
-    hour: '08:00',
-    paciente: 'Carlos Mendoza',
-    servicio: 'Consulta General',
-    horaLabel: '08:15 - 09:00',
-    color: 'teal',
-  },
-  {
-    id: 'ev2',
-    dayIndex: 0, // Lun 16
-    hour: '09:00',
-    paciente: 'Ana Silva',
-    servicio: 'Revisión',
-    horaLabel: '09:00 - 09:45',
-    color: 'blue',
-  },
-  {
-    id: 'ev3',
-    dayIndex: 1, // Mar 17
-    hour: '10:00',
-    paciente: 'Miguel Torres',
-    servicio: 'Cancelada',
-    horaLabel: '10:15 - 11:00',
-    color: 'red',
-  },
-];
-
-const mockCitasHoy: CitaHoy[] = [
-  {
-    id: 'ch1',
-    hora: '08:15',
-    paciente: 'Carlos Mendoza',
-    profesional: 'Dr. J. Moore',
-    servicio: 'Consulta General',
-    estado: 'Atendida',
-  },
-  {
-    id: 'ch2',
-    hora: '10:15',
-    paciente: 'Miguel Torres',
-    profesional: 'Dra. S. Vega',
-    servicio: 'Limpieza Dental',
-    estado: 'Cancelada',
-  },
-  {
-    id: 'ch3',
-    hora: '11:30',
-    paciente: 'Lucia Ramos',
-    profesional: 'Dr. J. Moore',
-    servicio: 'Cardiología',
-    estado: 'Agendada',
-  },
-];
-
 const RecepCitas: React.FC = () => {
   // Navigation Pills
   const [viewPill, setViewPill] = useState<'Semana' | 'Dia'>('Semana');
-  const [citasHoyList, setCitasHoyList] = useState<CitaHoy[]>(mockCitasHoy);
+  
+  // API States
+  const [_appointments, setAppointments] = useState<Appointment[]>([]);
+  const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [citasHoyList, setCitasHoyList] = useState<CitaHoy[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<CalendarEventBlock[]>([]);
 
   // Form State for Nueva Cita
   const [pacienteQuery, setPacienteQuery] = useState('');
   const [profesionalSelect, setProfesionalSelect] = useState('');
   const [servicioSelect, setServicioSelect] = useState('');
-  const [fechaInput, setFechaInput] = useState('2023-10-17');
+  
+  const nowStr = new Date().toISOString().split('T')[0];
+  const [fechaInput, setFechaInput] = useState(nowStr);
   const [horaInput, setHoraInput] = useState('09:00');
   const [notasInput, setNotasInput] = useState('');
 
@@ -108,11 +65,78 @@ const RecepCitas: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3200);
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [apps, profs] = await Promise.all([
+          getAppointmentsApi(),
+          getProfessionalsApi()
+        ]);
+        
+        setAppointments(apps);
+        setProfessionals(profs);
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const hoyMapped = apps
+          .filter(a => a.date === todayStr)
+          .map(app => {
+            let estado: 'Agendada' | 'Atendida' | 'Cancelada' = 'Agendada';
+            if (app.status === 'Atendida') estado = 'Atendida';
+            else if (app.status === 'Cancelada') estado = 'Cancelada';
+            
+            return {
+              id: app.id.toString(),
+              hora: app.time,
+              paciente: app.patientName,
+              profesional: app.professionalName,
+              servicio: app.serviceName,
+              estado
+            };
+          });
+          
+        setAppointments(apps);
+        setCitasHoyList(hoyMapped);
+        
+        // Map to agenda
+        const agendaMapped: CalendarEventBlock[] = apps.map((app) => {
+          const d = new Date(app.date);
+          const dayIndex = (d.getDay() + 6) % 7; // Monday = 0
+          
+          let color: 'teal' | 'blue' | 'red' = 'teal';
+          if (app.status === 'Cancelada') color = 'red';
+          else if (app.status === 'Atendida') color = 'blue';
+
+          const hourPart = app.time.split(':')[0] || '08';
+          
+          return {
+            id: app.id.toString(),
+            dayIndex,
+            hour: `${hourPart.padStart(2, '0')}:00`,
+            paciente: app.patientName,
+            servicio: app.serviceName,
+            horaLabel: app.time,
+            color
+          };
+        });
+        
+        setAgendaEvents(agendaMapped);
+        
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const handleClearForm = () => {
     setPacienteQuery('');
     setProfesionalSelect('');
     setServicioSelect('');
-    setFechaInput('2023-10-17');
+    setFechaInput(new Date().toISOString().split('T')[0]);
     setHoraInput('');
     setNotasInput('');
   };
@@ -124,11 +148,12 @@ const RecepCitas: React.FC = () => {
       return;
     }
 
+    // TODO: need pacienteId and tipoCitaId guids instead of local creation
     const newCita: CitaHoy = {
       id: `ch-${Date.now()}`,
       hora: horaInput || '12:00',
       paciente: pacienteQuery,
-      profesional: profesionalSelect || 'Dr. Julian Moore',
+      profesional: professionals.find(p => p.id.toString() === profesionalSelect)?.name || 'Médico no asignado',
       servicio: servicioSelect || 'Consulta Medicina General',
       estado: 'Agendada',
     };
@@ -138,17 +163,31 @@ const RecepCitas: React.FC = () => {
     showToast(`Cita agendada para ${newCita.paciente} con éxito.`);
   };
 
-  const daysHeader = [
-    { name: 'Lun', num: 16, isToday: false },
-    { name: 'Mar', num: 17, isToday: true },
-    { name: 'Mie', num: 18, isToday: false },
-    { name: 'Jue', num: 19, isToday: false },
-    { name: 'Vie', num: 20, isToday: false },
-    { name: 'Sab', num: 21, isToday: false },
-    { name: 'Dom', num: 22, isToday: false },
-  ];
+  // Generate current week dates
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  const monday = new Date(today.setDate(diff));
+  
+  const daysHeader = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const names = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    const isTodayStr = new Date().toDateString() === d.toDateString();
+    return { name: names[i], num: d.getDate(), isToday: isTodayStr };
+  });
 
-  const hoursList = ['08:00', '09:00', '10:00', '11:00', '12:00'];
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const startMonth = monthNames[monday.getMonth()];
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const endMonth = monthNames[sunday.getMonth()];
+  const dateRangeStr = `${startMonth} ${monday.getDate()} - ${sunday.getDate()} ${endMonth === startMonth ? '' : endMonth}, ${sunday.getFullYear()}`;
+
+  const currentDay = new Date().getDate();
+  const currentMonthStr = monthNames[new Date().getMonth()].substring(0, 3);
+  
+  const hoursList = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
   return (
     <div className="recep-citas-page">
@@ -196,7 +235,7 @@ const RecepCitas: React.FC = () => {
                 <button className="nav-arrow-btn" type="button" title="Semana anterior">
                   <ChevronLeft size={18} />
                 </button>
-                <span className="current-date-range">Octubre 16 - 22, 2023</span>
+                <span className="current-date-range">{dateRangeStr}</span>
                 <button className="nav-arrow-btn" type="button" title="Semana siguiente">
                   <ChevronRight size={18} />
                 </button>
@@ -226,91 +265,101 @@ const RecepCitas: React.FC = () => {
 
               {/* Body Hours Grid */}
               <div className="calendar-body-grid">
-                {hoursList.map((hour) => (
-                  <div key={hour} className="time-row">
-                    <div className="time-label-cell">{hour}</div>
-                    {daysHeader.map((d, colIndex) => {
-                      const matchingEvent = mockAgendaEvents.find(
-                        (ev) => ev.dayIndex === colIndex && ev.hour === hour
-                      );
+                {isLoading ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>Cargando...</div>
+                ) : (
+                  hoursList.map((hour) => (
+                    <div key={hour} className="time-row">
+                      <div className="time-label-cell">{hour}</div>
+                      {daysHeader.map((d, colIndex) => {
+                        const matchingEvent = agendaEvents.find(
+                          (ev) => ev.dayIndex === colIndex && ev.hour === hour
+                        );
 
-                      return (
-                        <div key={d.num} className="slot-cell">
-                          {matchingEvent && (
-                            <div
-                              className={`agenda-block ${matchingEvent.color}`}
-                              onClick={() =>
-                                showToast(`Evento: ${matchingEvent.paciente} (${matchingEvent.servicio})`)
-                              }
-                            >
-                              <span className="block-patient">{matchingEvent.paciente}</span>
-                              <span className="block-desc">{matchingEvent.servicio}</span>
-                              <span className="block-time">{matchingEvent.horaLabel}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                        return (
+                          <div key={d.num} className="slot-cell">
+                            {matchingEvent && (
+                              <div
+                                className={`agenda-block ${matchingEvent.color}`}
+                                onClick={() =>
+                                  showToast(`Evento: ${matchingEvent.paciente} (${matchingEvent.servicio})`)
+                                }
+                              >
+                                <span className="block-patient">{matchingEvent.paciente}</span>
+                                <span className="block-desc">{matchingEvent.servicio}</span>
+                                <span className="block-time">{matchingEvent.horaLabel}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
 
-          {/* Bottom Card: Citas de Hoy (17 Oct) */}
+          {/* Bottom Card: Citas de Hoy */}
           <div className="citas-hoy-card">
             <div className="citas-hoy-header">
-              <h2 className="citas-hoy-title">Citas de Hoy (17 Oct)</h2>
-              <span className="count-badge">{citasHoyList.length} Totales</span>
+              <h2 className="citas-hoy-title">Citas de Hoy ({currentDay} {currentMonthStr})</h2>
+              {!isLoading && <span className="count-badge">{citasHoyList.length} Totales</span>}
             </div>
 
             <div className="citas-hoy-table-wrapper">
-              <table className="citas-hoy-table">
-                <thead>
-                  <tr>
-                    <th>HORA</th>
-                    <th>PACIENTE</th>
-                    <th>PROFESIONAL</th>
-                    <th>SERVICIO</th>
-                    <th>ESTADO</th>
-                    <th style={{ textAlign: 'right' }}>ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {citasHoyList.map((c) => (
-                    <tr key={c.id}>
-                      <td style={{ fontWeight: 700 }}>{c.hora}</td>
-                      <td style={{ fontWeight: 600 }}>{c.paciente}</td>
-                      <td>{c.profesional}</td>
-                      <td>{c.servicio}</td>
-                      <td>
-                        <span
-                          className={`status-bullet-badge ${
-                            c.estado === 'Atendida'
-                              ? 'atendida'
-                              : c.estado === 'Cancelada'
-                              ? 'cancelada'
-                              : 'agendada'
-                          }`}
-                        >
-                          • {c.estado}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          <button
-                            className="btn-icon"
-                            title="Ver / Editar cita"
-                            onClick={() => showToast(`Cita de ${c.paciente} seleccionada`)}
-                          >
-                            {c.estado === 'Cancelada' ? <Eye size={15} /> : <Edit size={15} />}
-                          </button>
-                        </div>
-                      </td>
+              {isLoading ? (
+                <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>
+              ) : citasHoyList.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center' }}>No hay citas para hoy</div>
+              ) : (
+                <table className="citas-hoy-table">
+                  <thead>
+                    <tr>
+                      <th>HORA</th>
+                      <th>PACIENTE</th>
+                      <th>PROFESIONAL</th>
+                      <th>SERVICIO</th>
+                      <th>ESTADO</th>
+                      <th style={{ textAlign: 'right' }}>ACCIONES</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {citasHoyList.map((c) => (
+                      <tr key={c.id}>
+                        <td style={{ fontWeight: 700 }}>{c.hora}</td>
+                        <td style={{ fontWeight: 600 }}>{c.paciente}</td>
+                        <td>{c.profesional}</td>
+                        <td>{c.servicio}</td>
+                        <td>
+                          <span
+                            className={`status-bullet-badge ${
+                              c.estado === 'Atendida'
+                                ? 'atendida'
+                                : c.estado === 'Cancelada'
+                                ? 'cancelada'
+                                : 'agendada'
+                            }`}
+                          >
+                            • {c.estado}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            <button
+                              className="btn-icon"
+                              title="Ver / Editar cita"
+                              onClick={() => showToast(`Cita de ${c.paciente} seleccionada`)}
+                            >
+                              {c.estado === 'Cancelada' ? <Eye size={15} /> : <Edit size={15} />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
@@ -349,9 +398,9 @@ const RecepCitas: React.FC = () => {
                 onChange={(e) => setProfesionalSelect(e.target.value)}
               >
                 <option value="">Seleccione médico</option>
-                <option value="Dr. Julian Moore">Dr. Julian Moore (Cardiología)</option>
-                <option value="Dra. Silvia Vega">Dra. Silvia Vega (Pediatría)</option>
-                <option value="Dr. Mario Rios">Dr. Mario Rios (Medicina General)</option>
+                {professionals.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} - {p.specialty}</option>
+                ))}
               </select>
             </div>
 

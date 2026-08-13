@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Filter,
@@ -10,6 +10,7 @@ import {
   Check,
   UserCheck,
 } from 'lucide-react';
+import { getPatientsApi } from '../../../services/patients.service';
 import './Pacientes.css';
 
 interface PatientRecord {
@@ -25,74 +26,75 @@ interface PatientRecord {
   estado: 'Activo' | 'Inactivo';
 }
 
-const mockPatients: PatientRecord[] = [
-  {
-    id: 'p1',
-    documento: '1029384756',
-    nombre: 'María Carmen Silva',
-    iniciales: 'MC',
-    avatarBg: 'mint',
-    genero: 'F',
-    edad: 45,
-    telefono: '+34 612 345 678',
-    email: 'maria.silva@email.com',
-    estado: 'Activo',
-  },
-  {
-    id: 'p2',
-    documento: '0987654321',
-    nombre: 'Juan López Pineda',
-    iniciales: 'JL',
-    avatarBg: 'purple',
-    genero: 'M',
-    edad: 62,
-    telefono: '+34 698 765 432',
-    email: 'jlopez@domain.com',
-    estado: 'Activo',
-  },
-  {
-    id: 'p3',
-    documento: '1122334455',
-    nombre: 'Ana Rodríguez',
-    iniciales: 'AR',
-    avatarBg: 'gray',
-    genero: 'F',
-    edad: 28,
-    telefono: '+34 655 443 322',
-    email: 'ana.rod@email.com',
-    estado: 'Inactivo',
-  },
-  {
-    id: 'p4',
-    documento: '4589201763',
-    nombre: 'Carlos Eduardo Gómez',
-    iniciales: 'CG',
-    avatarBg: 'mint',
-    genero: 'M',
-    edad: 51,
-    telefono: '+34 611 223 344',
-    email: 'carlos.gomez@email.com',
-    estado: 'Activo',
-  },
-  {
-    id: 'p5',
-    documento: '7891234560',
-    nombre: 'Lucía Mendoza Paz',
-    iniciales: 'LM',
-    avatarBg: 'purple',
-    genero: 'F',
-    edad: 36,
-    telefono: '+34 677 889 900',
-    email: 'lucia.mendoza@email.com',
-    estado: 'Activo',
-  },
-];
-
 const RecepPacientes: React.FC = () => {
-  const [patients, setPatients] = useState<PatientRecord[]>(mockPatients);
+  const [patients, setPatients] = useState<PatientRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<'Todos' | 'Activo' | 'Inactivo'>('Todos');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await getPatientsApi();
+        const colors: Array<'mint' | 'purple' | 'gray'> = ['mint', 'purple', 'gray'];
+        const mapped: PatientRecord[] = (response as unknown as Array<{
+          id: string;
+          activo: boolean;
+          persona?: {
+            nombre?: string;
+            apellido?: string;
+            numeroDocumento?: string;
+            fechaNacimiento?: string;
+            sexo?: { nombre?: string };
+            telefonos?: Array<{ numero?: string; principal?: boolean }>;
+          };
+        }>).map((raw, index) => {
+          const doc = raw.persona?.numeroDocumento ?? '';
+          const nombreStr = `${raw.persona?.nombre ?? ''} ${raw.persona?.apellido ?? ''}`.trim();
+          const nInitial = (raw.persona?.nombre ?? '').charAt(0).toUpperCase();
+          const aInitial = (raw.persona?.apellido ?? '').charAt(0).toUpperCase();
+          const bg = colors[index % 3];
+          const sexoStr = (raw.persona?.sexo?.nombre ?? '').toLowerCase();
+          const genero: 'F' | 'M' = (sexoStr.includes('fem') || sexoStr === 'f') ? 'F' : 'M';
+          let edad = 0;
+          if (raw.persona?.fechaNacimiento) {
+            const birthDate = new Date(raw.persona.fechaNacimiento);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+            edad = age;
+          }
+          const telefonoPrincipal =
+            raw.persona?.telefonos?.find(t => t.principal)?.numero ??
+            raw.persona?.telefonos?.[0]?.numero ?? '';
+          return {
+            id: raw.id,
+            documento: doc,
+            nombre: nombreStr,
+            iniciales: nInitial + aInitial,
+            avatarBg: bg,
+            genero,
+            edad,
+            telefono: telefonoPrincipal,
+            email: '',
+            estado: raw.activo ? 'Activo' : 'Inactivo',
+          } satisfies PatientRecord;
+        });
+        setPatients(mapped);
+      } catch {
+        setError('Error de conexión al cargar pacientes');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPatients();
+  }, []);
+
 
   // Modal States
   const [isNewPatientOpen, setIsNewPatientOpen] = useState(false);
@@ -124,6 +126,7 @@ const RecepPacientes: React.FC = () => {
   };
 
   const handleCreatePatient = (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
+    // TODO: Call createPatientApi here once we have personaId. For now, keep local creation.
     const initials = newP.nombre
       .split(' ')
       .map((n) => n[0])
@@ -248,7 +251,19 @@ const RecepPacientes: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPatients.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#64748B' }}>
+                    Cargando pacientes...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#EF4444' }}>
+                    {error}
+                  </td>
+                </tr>
+              ) : filteredPatients.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#64748B' }}>
                     No se encontraron pacientes registrados con los filtros seleccionados.
@@ -322,7 +337,7 @@ const RecepPacientes: React.FC = () => {
         {/* Footer Pagination */}
         <div className="recep-pacientes-footer">
           <span className="pacientes-count-text">
-            Mostrando 1-3 de 142 pacientes
+            Mostrando {filteredPatients.length} de {patients.length} pacientes
           </span>
 
           <div className="pagination-controls">

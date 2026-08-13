@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Plus,
@@ -26,6 +26,9 @@ import {
   mockServices,
   AVAILABLE_TIME_SLOTS,
   checkScheduleConflict,
+  getAppointmentsApi,
+  updateAppointmentStatusApi,
+  rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
 import { mockProfessionals } from '../../../services/professionals.service';
 import { mockPatients } from '../../../services/patients.service';
@@ -38,7 +41,16 @@ const AppointmentsManagement: React.FC = () => {
 
   // Main Data States
   const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
-  const [selectedAppId, setSelectedAppId] = useState<number | null>(1); // Default to first appointment
+
+  useEffect(() => {
+    getAppointmentsApi().then((data) => {
+      if (data && data.length > 0) {
+        setPatientsAppointments(data);
+      }
+    });
+  }, []);
+
+  const [selectedAppId, setSelectedAppId] = useState<string | number | null>(1); // Default to first appointment
   const [selectedDate, setSelectedDate] = useState<string>('2026-10-28'); // Current active date view
 
   // Dynamic Calendar Month Navigation State
@@ -130,10 +142,10 @@ const AppointmentsManagement: React.FC = () => {
   // Selected Appointment for detail & reschedule
   const selectedAppointment = useMemo(() => {
     if (selectedAppId === null) return null;
-    return appointments.find((a) => a.id === selectedAppId) || null;
+    return appointments.find((a) => String(a.id) === String(selectedAppId)) || null;
   }, [appointments, selectedAppId]);
 
-  const handleTogglePanel = (appId: number, e: React.MouseEvent) => {
+  const handleTogglePanel = (appId: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (selectedAppId === appId) {
       setSelectedAppId(null);
@@ -167,7 +179,7 @@ const AppointmentsManagement: React.FC = () => {
   }, [selectedAppointment]);
 
   // New Appointment Form State
-  const [newPatientId, setNewPatientId] = useState<number>(mockPatients[0]?.id || 1);
+  const [newPatientId, setNewPatientId] = useState<string | number>(mockPatients[0]?.id || 1);
   const [newProfId, setNewProfId] = useState<string>('prof-1');
   const [newServiceId, setNewServiceId] = useState<string>('srv-1');
   const [newDate, setNewDate] = useState<string>('2026-10-28');
@@ -205,11 +217,12 @@ const AppointmentsManagement: React.FC = () => {
   }, [appointments, newProfId, newDate, newTime, isCreateModalOpen]);
 
   // Handler: Change Status Quickly
-  const handleStatusChange = (appId: number, newStatus: AppointmentStatus) => {
+  const handleStatusChange = (appId: string | number, newStatus: AppointmentStatus) => {
+    updateAppointmentStatusApi(appId, newStatus);
     setPatientsAppointments((prev) =>
       prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
     );
-    showToast(`Estado de la cita actualizado a "${newStatus}"`);
+    showToast(`Estado de cita cambiado a ${newStatus}`);
   };
 
   // Handler: Reschedule Appointment
@@ -217,13 +230,10 @@ const AppointmentsManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedAppointment) return;
 
-    if (rescheduleConflict) {
-      showToast('No se puede reprogramar: existe un conflicto de horario con el profesional.');
-      return;
-    }
-
     const targetProf = mockProfessionals.find((p) => p.id === rescheduleProfId);
     const targetService = mockServices.find((s) => s.id === rescheduleServiceId);
+
+    rescheduleAppointmentApi(selectedAppointment.id, rescheduleDate, rescheduleTime);
 
     setPatientsAppointments((prev) =>
       prev.map((app) => {
@@ -247,7 +257,7 @@ const AppointmentsManagement: React.FC = () => {
   };
 
   // Handler: Cancel Appointment
-  const handleCancelAppointment = (appId: number) => {
+  const handleCancelAppointment = (appId: string | number) => {
     setPatientsAppointments((prev) =>
       prev.map((app) => (app.id === appId ? { ...app, status: 'Cancelada' } : app))
     );
@@ -263,26 +273,26 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
-    const patientObj = mockPatients.find((p) => p.id === Number(newPatientId)) || mockPatients[0];
-    const profObj = mockProfessionals.find((p) => p.id === newProfId) || mockProfessionals[0];
-    const serviceObj = mockServices.find((s) => s.id === newServiceId) || mockServices[0];
+    const patientObj = mockPatients.find((p) => String(p.id) === String(newPatientId)) || mockPatients[0];
+    const profObj = mockProfessionals.find((p) => String(p.id) === String(newProfId)) || mockProfessionals[0];
+    const serviceObj = mockServices.find((s) => String(s.id) === String(newServiceId)) || mockServices[0];
 
     const created: Appointment = {
       id: Date.now(),
-      patientId: patientObj.id,
-      patientName: patientObj.name,
-      patientAge: patientObj.age,
-      patientGender: patientObj.gender,
-      patientDoc: `${patientObj.documentType}-${patientObj.documentNumber}`,
-      patientPhone: patientObj.contact.phone,
-      patientEmail: patientObj.contact.email,
-      patientAvatarBg: patientObj.avatarBg || '#0A9396',
-      patientInitials: patientObj.initials,
-      professionalId: profObj.id,
-      professionalName: profObj.name,
-      professionalSpecialty: profObj.specialty,
-      serviceId: serviceObj.id,
-      serviceName: serviceObj.name,
+      patientId: patientObj?.id ?? (Number(newPatientId) || 1),
+      patientName: patientObj?.name ?? 'Paciente Seleccionado',
+      patientAge: patientObj?.age ?? 30,
+      patientGender: patientObj?.gender ?? 'Femenino',
+      patientDoc: patientObj ? `${patientObj.documentType}-${patientObj.documentNumber}` : 'CC-00000',
+      patientPhone: patientObj?.contact?.phone ?? '',
+      patientEmail: patientObj?.contact?.email ?? '',
+      patientAvatarBg: patientObj?.avatarBg || '#0A9396',
+      patientInitials: patientObj?.initials ?? 'PP',
+      professionalId: profObj?.id ?? newProfId,
+      professionalName: profObj?.name ?? 'Médico Seleccionado',
+      professionalSpecialty: profObj?.specialty ?? 'Medicina General',
+      serviceId: serviceObj?.id ?? newServiceId,
+      serviceName: serviceObj?.name ?? 'Consulta Médica',
       date: newDate,
       time: newTime,
       status: 'Agendada',

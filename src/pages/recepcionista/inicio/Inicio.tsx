@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Inicio.css';
+import { getAppointmentsApi } from '../../../services/appointments.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
 
 interface ProximaCita {
   id: string;
@@ -32,77 +34,71 @@ interface DoctorShift {
   estado: 'Disponible' | 'Ausente';
 }
 
-const mockProximasCitas: ProximaCita[] = [
-  {
-    id: 'c1',
-    hora: '09:00 AM',
-    pacienteNombre: 'Carlos Gómez',
-    pacienteIniciales: 'CO',
-    doctorNombre: 'Dr. J. Moore',
-    estado: 'En sala',
-  },
-  {
-    id: 'c2',
-    hora: '09:30 AM',
-    pacienteNombre: 'Lucía Mendoza',
-    pacienteIniciales: 'LM',
-    doctorNombre: 'Dra. S. Vega',
-    estado: 'Esperando',
-  },
-  {
-    id: 'c3',
-    hora: '10:00 AM',
-    pacienteNombre: 'Roberto Paz',
-    pacienteIniciales: 'RP',
-    doctorNombre: 'Dr. J. Moore',
-    estado: 'Confirmado',
-  },
-  {
-    id: 'c4',
-    hora: '10:30 AM',
-    pacienteNombre: 'Elena Suárez',
-    pacienteIniciales: 'ES',
-    doctorNombre: 'Dra. S. Vega',
-    estado: 'Cancelada',
-  },
-];
-
-const mockDoctorsShift: DoctorShift[] = [
-  {
-    id: 'd1',
-    nombre: 'Dr. Julian Moore',
-    especialidad: 'Cardiología',
-    consultorio: 'Consultorio 1',
-    citasCount: 12,
-    foto: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&auto=format&fit=crop&q=80',
-    estado: 'Disponible',
-  },
-  {
-    id: 'd2',
-    nombre: 'Dra. Silvia Vega',
-    especialidad: 'Pediatría',
-    consultorio: 'Consultorio 3',
-    citasCount: 18,
-    foto: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&auto=format&fit=crop&q=80',
-    estado: 'Disponible',
-  },
-  {
-    id: 'd3',
-    nombre: 'Dr. Mario Rios',
-    especialidad: 'Medicina General',
-    consultorio: 'Consultorio 2',
-    citasCount: 0,
-    estado: 'Ausente',
-  },
-];
-
 const RecepInicio: React.FC = () => {
   const navigate = useNavigate();
-  const [citasList, setCitasList] = useState<ProximaCita[]>(mockProximasCitas);
+  const [citasList, setCitasList] = useState<ProximaCita[]>([]);
+  const [doctorsShiftList, setDoctorsShiftList] = useState<DoctorShift[]>([]);
   const [isRegisterPatientOpen, setIsRegisterPatientOpen] = useState(false);
   const [isScheduleAppointmentOpen, setIsScheduleAppointmentOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [appointmentsRes, professionalsRes] = await Promise.all([
+          getAppointmentsApi(),
+          getProfessionalsApi()
+        ]);
+        
+        const allAppointments = Array.isArray(appointmentsRes) ? appointmentsRes : ((appointmentsRes as any)?.data || []);
+        const professionals = Array.isArray(professionalsRes) ? professionalsRes : ((professionalsRes as any)?.data || []);
+        
+        // Filter for today's appointments
+        const today = new Date().toISOString().split('T')[0];
+        const todaysAppointments = allAppointments.filter((app: any) => app.date === today);
+
+        const mappedCitas: ProximaCita[] = todaysAppointments.map((app: any) => {
+          let estado: 'En sala' | 'Esperando' | 'Confirmado' | 'Cancelada' = 'Confirmado';
+          if (app.status === 'Agendada') estado = 'Esperando';
+          if (app.status === 'Atendida') estado = 'En sala';
+          if (app.status === 'Cancelada') estado = 'Cancelada';
+
+          return {
+            id: app.id ? app.id.toString() : Math.random().toString(),
+            hora: app.time,
+            pacienteNombre: app.patientName,
+            pacienteIniciales: app.patientName ? app.patientName.substring(0, 2).toUpperCase() : '??',
+            doctorNombre: app.professionalName,
+            estado: estado,
+          };
+        });
+
+        const mappedDoctors: DoctorShift[] = professionals.map((p: any) => {
+          const docAppointments = todaysAppointments.filter((app: any) => app.professionalId === p.id);
+          return {
+            id: p.id ? p.id.toString() : Math.random().toString(),
+            nombre: p.name,
+            especialidad: p.specialty,
+            consultorio: 'Consultorio',
+            citasCount: docAppointments.length,
+            estado: 'Disponible',
+          };
+        });
+
+        setCitasList(mappedCitas);
+        setDoctorsShiftList(mappedDoctors);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleImageError = (id: string) => {
     setImgErrors((prev) => ({ ...prev, [id]: true }));
@@ -133,6 +129,10 @@ const RecepInicio: React.FC = () => {
     setIsScheduleAppointmentOpen(false);
     showToast(`Cita agendada para ${paciente} a las ${hora}.`);
   };
+
+  if (loading) {
+    return <div style={{ padding: '2rem' }}>Cargando...</div>;
+  }
 
   return (
     <div className="recep-inicio-page">
@@ -179,7 +179,7 @@ const RecepInicio: React.FC = () => {
           <div className="recep-stat-info">
             <span className="recep-stat-label">Citas del Día</span>
             <div className="recep-stat-number-group">
-              <span className="recep-stat-number">42</span>
+              <span className="recep-stat-number">{citasList.length}</span>
               <span className="recep-stat-badge success">
                 <TrendingUp size={12} />
                 +4 de ayer
@@ -238,60 +238,64 @@ const RecepInicio: React.FC = () => {
           </div>
 
           <div className="recep-table-wrapper">
-            <table className="recep-table">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Paciente</th>
-                  <th>Doctor</th>
-                  <th>Estado</th>
-                  <th style={{ textAlign: 'right' }}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {citasList.map((cita) => (
-                  <tr key={cita.id}>
-                    <td className={`hora-cell ${cita.estado === 'Cancelada' ? 'is-cancelada' : ''}`}>
-                      {cita.hora}
-                    </td>
-                    <td>
-                      <div className="patient-cell">
-                        <span className="patient-initials-badge">
-                          {cita.pacienteIniciales}
-                        </span>
-                        <span>{cita.pacienteNombre}</span>
-                      </div>
-                    </td>
-                    <td>{cita.doctorNombre}</td>
-                    <td>
-                      <span
-                        className={`status-tag ${
-                          cita.estado === 'En sala'
-                            ? 'en-sala'
-                            : cita.estado === 'Esperando'
-                            ? 'esperando'
-                            : cita.estado === 'Confirmado'
-                            ? 'confirmado'
-                            : 'cancelada'
-                        }`}
-                      >
-                        {cita.estado}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        className="btn-icon"
-                        style={{ width: '28px', height: '28px' }}
-                        title="Ver acciones de cita"
-                        onClick={() => showToast(`Cita de ${cita.pacienteNombre} seleccionada`)}
-                      >
-                        <MoreVertical size={15} />
-                      </button>
-                    </td>
+            {citasList.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center' }}>No hay citas para hoy</div>
+            ) : (
+              <table className="recep-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Paciente</th>
+                    <th>Doctor</th>
+                    <th>Estado</th>
+                    <th style={{ textAlign: 'right' }}>Acción</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {citasList.map((cita) => (
+                    <tr key={cita.id}>
+                      <td className={`hora-cell ${cita.estado === 'Cancelada' ? 'is-cancelada' : ''}`}>
+                        {cita.hora}
+                      </td>
+                      <td>
+                        <div className="patient-cell">
+                          <span className="patient-initials-badge">
+                            {cita.pacienteIniciales}
+                          </span>
+                          <span>{cita.pacienteNombre}</span>
+                        </div>
+                      </td>
+                      <td>{cita.doctorNombre}</td>
+                      <td>
+                        <span
+                          className={`status-tag ${
+                            cita.estado === 'En sala'
+                              ? 'en-sala'
+                              : cita.estado === 'Esperando'
+                              ? 'esperando'
+                              : cita.estado === 'Confirmado'
+                              ? 'confirmado'
+                              : 'cancelada'
+                          }`}
+                        >
+                          {cita.estado}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          className="btn-icon"
+                          style={{ width: '28px', height: '28px' }}
+                          title="Ver acciones de cita"
+                          onClick={() => showToast(`Cita de ${cita.pacienteNombre} seleccionada`)}
+                        >
+                          <MoreVertical size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -302,7 +306,7 @@ const RecepInicio: React.FC = () => {
           </div>
 
           <div className="doctors-shift-list">
-            {mockDoctorsShift.map((doc) => (
+            {doctorsShiftList.map((doc) => (
               <div key={doc.id} className="doctor-shift-item">
                 <div className="doctor-shift-left">
                   <div className="doctor-shift-avatar-wrapper">

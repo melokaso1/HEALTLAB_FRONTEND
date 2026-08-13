@@ -17,8 +17,8 @@ export interface ProfessionalOption {
 }
 
 export interface Appointment {
-  id: number;
-  patientId: number;
+  id: string | number;
+  patientId: string | number;
   patientName: string;
   patientAge: number;
   patientGender: string;
@@ -44,7 +44,7 @@ export interface Appointment {
 }
 
 export interface CreateAppointmentDTO {
-  patientId: number;
+  patientId: string | number;
   professionalId: string;
   serviceId: string;
   date: string;

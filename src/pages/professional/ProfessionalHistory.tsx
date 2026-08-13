@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Download,
@@ -9,9 +9,10 @@ import {
   ChevronRight,
   FileText,
   X,
-  Stethoscope,
   User,
+  Stethoscope,
 } from 'lucide-react';
+import { getAppointmentsApi } from '../../services/appointments.service';
 import './ProfessionalHistory.css';
 
 export interface ConsultationRecord {
@@ -29,117 +30,29 @@ export interface ConsultationRecord {
   prescription?: string;
 }
 
-const mockConsultationHistory: ConsultationRecord[] = [
-  {
-    id: 101,
-    date: '15 Oct 2026',
-    patientName: 'Carlos Mendoza',
-    patientDoc: 'CC-98765432',
-    service: 'Consulta General',
-    diagnosis: 'Hipertensión arterial estadio 1',
-    observations: 'Paciente estable, presión 130/85. Sin síntomas agudos.',
-    result: 'Continuar dieta hiposódica',
-    resultBadgeType: 'normal',
-    status: 'Completado',
-    doctorNotes: 'Responde bien a esquema actual. Control en 3 meses.',
-    prescription: 'Enalapril 10mg cada 12 horas por 90 días.',
-  },
-  {
-    id: 102,
-    date: '14 Oct 2026',
-    patientName: 'Ana Rojas',
-    patientDoc: 'CC-44556677',
-    service: 'Control Anual',
-    diagnosis: 'Paciente Sano',
-    observations: 'Sin novedades reportadas en examen físico ni laboratorios.',
-    result: 'Próximo control 1 año',
-    resultBadgeType: 'normal',
-    status: 'Completado',
-    doctorNotes: 'Exámenes preventivos dentro de rangos normales.',
-  },
-  {
-    id: 103,
-    date: '12 Oct 2026',
-    patientName: 'Luis Gómez',
-    patientDoc: 'CE-11223344',
-    service: 'Cardiología',
-    diagnosis: 'Arritmia leve',
-    observations: 'Monitoreo holter 24h completado. Extrasístoles supraventriculares aisladas.',
-    result: 'Ajuste medicación',
-    resultBadgeType: 'blue',
-    status: 'En seguimiento',
-    doctorNotes: 'Se ajusta dosis de beta-bloqueador.',
-    prescription: 'Bisoprolol 2.5mg cada 24 horas.',
-  },
-  {
-    id: 104,
-    date: '10 Oct 2026',
-    patientName: 'María Soto',
-    patientDoc: 'CC-88776655',
-    service: 'Dermatología',
-    diagnosis: 'Dermatitis de contacto',
-    observations: 'Mejora visible en extremidades superiores tras 5 días de tratamiento.',
-    result: 'Crema tópica x7 días',
-    resultBadgeType: 'normal',
-    status: 'Completado',
-    doctorNotes: 'Evitar contacto con detergentes concentrados.',
-    prescription: 'Hidrocortisona crema 1% aplicar 2 veces al día.',
-  },
-  {
-    id: 105,
-    date: '08 Oct 2026',
-    patientName: 'Jorge Pinto',
-    patientDoc: 'CC-33445566',
-    service: 'Consulta General',
-    diagnosis: 'Infección respiratoria alta',
-    observations: 'Fiebre controlada. Odinofagia persistente leve.',
-    result: 'Antibiótico 5 días',
-    resultBadgeType: 'normal',
-    status: 'Completado',
-    prescription: 'Amoxicilina 500mg cada 8 horas.',
-  },
-  {
-    id: 106,
-    date: '05 Oct 2026',
-    patientName: 'Elena Vásquez',
-    patientDoc: 'CC-55667788',
-    service: 'Traumatología',
-    diagnosis: 'Esguince tobillo grado 2',
-    observations: 'Dolor persistente al apoyo, inflamación articular moderada.',
-    result: 'Derivar Kinesio',
-    resultBadgeType: 'red',
-    status: 'En seguimiento',
-    doctorNotes: 'Se indica bota inmovilizadora e inicio de fisioterapia.',
-  },
-  {
-    id: 107,
-    date: '02 Oct 2026',
-    patientName: 'Roberto Chen',
-    patientDoc: 'CC-33221144',
-    service: 'Cardiología',
-    diagnosis: 'Control de hipertensión',
-    observations: 'Monitoreo de presión arterial dentro de parámetros esperados.',
-    result: 'Mantener tratamiento',
-    resultBadgeType: 'normal',
-    status: 'Completado',
-  },
-  {
-    id: 108,
-    date: '28 Sep 2026',
-    patientName: 'Camila Morales',
-    patientDoc: 'CC-99001122',
-    service: 'Medicina General',
-    diagnosis: 'Gastritis aguda',
-    observations: 'Dolor epigástrico postprandial.',
-    result: 'Dieta + Inhibidor de bomba',
-    resultBadgeType: 'blue',
-    status: 'Completado',
-    prescription: 'Omeprazol 20mg en ayunas por 30 días.',
-  },
-];
-
 const ProfessionalHistory: React.FC = () => {
-  const [history] = useState<ConsultationRecord[]>(mockConsultationHistory);
+  const [history, setHistory] = useState<ConsultationRecord[]>([]);
+
+  useEffect(() => {
+    getAppointmentsApi().then((apps: any[]) => {
+      if (Array.isArray(apps)) {
+        const mapped: ConsultationRecord[] = apps.map((a: any) => ({
+          id: a.id,
+          date: a.date,
+          patientName: a.patientName,
+          patientDoc: a.patientDoc,
+          service: a.serviceName,
+          diagnosis: a.notes || 'Atención Médica Finalizada',
+          observations: a.notes || 'Sin observaciones adicionales.',
+          result: 'Atención Completada',
+          resultBadgeType: 'normal',
+          status: a.status === 'Atendida' ? 'Completado' : 'En seguimiento',
+        }));
+        setHistory(mapped);
+      }
+    });
+  }, []);
+
   const [searchPatient, setSearchPatient] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
