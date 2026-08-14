@@ -654,18 +654,6 @@ const AdminProfesionales: React.FC = () => {
 
                   <div className="calendar-toolbar__right">
                     <button
-                      className="btn-outline"
-                      style={{ padding: '5px 10px', fontSize: '12px' }}
-                      onClick={() => {
-                        setNewAppointmentSlot({ dayAbrev: 'MIÉ', timeStr: '09:00' });
-                        setIsNewAppointmentOpen(true);
-                      }}
-                    >
-                      <Plus size={14} />
-                      <span>Agendar Cita</span>
-                    </button>
-
-                    <button
                       className="btn-primary"
                       style={{ padding: '5px 12px', fontSize: '12px' }}
                       title="Configurar disponibilidad"

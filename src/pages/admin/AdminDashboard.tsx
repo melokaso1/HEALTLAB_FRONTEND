@@ -3,7 +3,6 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  Search,
   UserCheck,
 } from 'lucide-react';
 import './AdminDashboard.css';
@@ -11,7 +10,6 @@ import Loading from '../../components/common/Loading';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
 import { useSignalR } from '../../context/SignalRContext';
-import type { Appointment } from '../../types/appointment.types';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────
 interface CitaTabla {
@@ -26,6 +24,7 @@ interface CitaTabla {
 
 interface AgendaSlot {
   hora: string;
+  sortKey: string;
   paciente?: string;
   especialidad?: string;
 }
@@ -53,26 +52,11 @@ const timeToSortable = (slot: string): string => {
   return `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
-const mapToAgendaSlot = (app: Appointment): AgendaSlot => ({
-  hora: timeToSortable(app.time),
-  paciente: app.patientName,
-  especialidad: app.professionalSpecialty || app.serviceName,
-});
-
-// Horas fijas del día para mostrar aunque no haya citas
-const HORAS_DIA = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
-];
-
 // ─── Componente ───────────────────────────────────────────────────────────
 const AdminDashboard: React.FC = () => {
   const { recentActivities } = useSignalR();
-  const [searchTerm, setSearchTerm] = useState('');
   const [citasData, setCitasData] = useState<CitaTabla[]>([]);
-  const [agendaSlots, setAgendaSlots] = useState<AgendaSlot[]>(
-    HORAS_DIA.map(h => ({ hora: h }))
-  );
+  const [agendaSlots, setAgendaSlots] = useState<AgendaSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [todayCitasCount, setTodayCitasCount] = useState(0);
   const [totalProfessionals, setTotalProfessionals] = useState(0);
@@ -90,8 +74,7 @@ const AdminDashboard: React.FC = () => {
 
         // ── Tabla: todas las citas ──────────────────────────────────────
         const mappedCitas: CitaTabla[] = appointments.map((app, index) => {
-          let estado: 'confirmada' | 'cancelada' | 'pendiente' = 'pendiente';
-          if (app.status === 'Atendida')  estado = 'confirmada';
+          let estado: 'confirmada' | 'cancelada' | 'pendiente' = 'confirmada';
           if (app.status === 'Cancelada') estado = 'cancelada';
           return {
             id: app.id ?? index,
@@ -104,21 +87,22 @@ const AdminDashboard: React.FC = () => {
         });
         setCitasData(mappedCitas);
 
-        // ── Agenda del Día: citas de HOY no canceladas, ordenadas ──────
         const todayApps = appointments
-          .filter(a => a.date === today && a.status !== 'Cancelada')
+          .filter((a) => {
+            if (a.status === 'Cancelada') return false;
+            if (!a.date) return true;
+            return a.date.slice(0, 10) === today;
+          })
           .sort((a, b) => timeToSortable(a.time).localeCompare(timeToSortable(b.time)));
 
-        // Construir mapa de horas → slot con cita (si existe)
-        const slotsMap = new Map<string, AgendaSlot>(
-          HORAS_DIA.map(h => [h, { hora: h }])
-        );
-        todayApps.forEach(app => {
-          const sortable = timeToSortable(app.time);
-          slotsMap.set(sortable, mapToAgendaSlot(app));
-        });
+        const activeSlots: AgendaSlot[] = todayApps.map((app) => ({
+          hora: app.time,
+          sortKey: timeToSortable(app.time),
+          paciente: app.patientName,
+          especialidad: app.serviceName || app.professionalSpecialty || 'Consulta',
+        }));
 
-        setAgendaSlots(Array.from(slotsMap.values()));
+        setAgendaSlots(activeSlots);
         setTodayCitasCount(todayApps.length);
         setTotalProfessionals(professionals.length);
       } catch (error) {
@@ -147,16 +131,6 @@ const AdminDashboard: React.FC = () => {
             <div className="admin-dashboard__title-group">
               <h1 className="admin-dashboard__title">Inicio</h1>
               <p className="admin-dashboard__subtitle">{todayLabel()}</p>
-            </div>
-            <div className="admin-dashboard__search-wrapper">
-              <Search size={18} className="admin-dashboard__search-icon" />
-              <input
-                type="text"
-                className="admin-dashboard__search-input"
-                placeholder="Buscar..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
             </div>
           </div>
 
@@ -223,7 +197,7 @@ const AdminDashboard: React.FC = () => {
                       <th>DOCTOR</th>
                       <th>HORA</th>
                       <th>TIPO</th>
-                      <th>ESTADO</th>
+                      <th style={{ textAlign: 'center' }}>ESTADO</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -233,11 +207,19 @@ const AdminDashboard: React.FC = () => {
                         <td className="citas-table__doctor">{cita.doctor}</td>
                         <td className="citas-table__hora">{cita.hora}</td>
                         <td className="citas-table__tipo">{cita.tipo}</td>
-                        <td>
-                          <span
-                            className={`status-dot status-dot--${cita.estado}`}
-                            title={cita.estado}
-                          />
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="status-badge-container">
+                            <span
+                              className={`status-badge-bullet ${
+                                cita.estado === 'cancelada'
+                                  ? 'status-badge--inactive'
+                                  : 'status-badge--active'
+                              }`}
+                            >
+                              <span className="bullet-dot" />
+                              <span>{cita.estado === 'cancelada' ? 'Inactivo' : 'Activo'}</span>
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -271,22 +253,34 @@ const AdminDashboard: React.FC = () => {
         {/* ── Right Section: Agenda del Día ────────────────────────────── */}
         <div className="admin-dashboard__right-col">
           <div className="card agenda-panel">
-            <h2 className="agenda-panel__title">Agenda del Día</h2>
+            <div className="agenda-panel__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h2 className="agenda-panel__title">Agenda del Día</h2>
+              <span className="count-badge" style={{ backgroundColor: 'rgba(0, 168, 150, 0.12)', color: '#00A896', fontSize: '11.5px', fontWeight: 700, padding: '3px 9px', borderRadius: '12px' }}>
+                {agendaSlots.length} {agendaSlots.length === 1 ? 'Cita' : 'Citas'}
+              </span>
+            </div>
             <div className="agenda-panel__list">
-              {agendaSlots.map((slot, idx) => (
-                <div key={idx} className="agenda-slot">
-                  <span className="agenda-slot__time">{slot.hora}</span>
-                  <div className="agenda-slot__divider" />
-                  <div className="agenda-slot__content">
-                    {slot.paciente && (
+              {agendaSlots.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                  No hay citas programadas para hoy.
+                </div>
+              ) : (
+                agendaSlots.map((slot, idx) => (
+                  <div
+                    key={idx}
+                    className="agenda-slot agenda-slot--has-appointment"
+                  >
+                    <span className="agenda-slot__time">{slot.hora}</span>
+                    <div className="agenda-slot__divider" />
+                    <div className="agenda-slot__content">
                       <div className="agenda-slot__card">
                         <span className="agenda-slot__name">{slot.paciente}</span>
                         <span className="agenda-slot__spec">{slot.especialidad}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
