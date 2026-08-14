@@ -74,7 +74,7 @@ const pickColor = (id?: string | number): string => {
 };
 
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
-const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: string; apellido?: string; numeroDocumento?: string }): Patient => {
+const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: string; apellido?: string; numeroDocumento?: string; gender?: GenderType; age?: number; birthDate?: string }): Patient => {
   const p = raw.persona;
   let nombre = p?.nombre ?? raw.nombre ?? '';
   let apellido = p?.apellido ?? raw.apellido ?? '';
@@ -86,43 +86,57 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
   if (!fullName) fullName = 'Paciente sin nombre';
 
   const docNum = p?.numeroDocumento ?? raw.numeroDocumento ?? '';
+  const stored = getStoredPatients().find(
+    (sp) => String(sp.id) === String(raw.id) || (Boolean(docNum) && sp.documentNumber === docNum)
+  );
+
+  const genderFromBackend = mapGender(p?.sexo?.nombre);
+  const ageFromBackend = calcAge(p?.fechaNacimiento);
+
+  const gender = genderFromBackend !== 'Otro' ? genderFromBackend : (raw.gender || stored?.gender || 'Otro');
+  const age = ageFromBackend > 0 ? ageFromBackend : (raw.age || stored?.age || 0);
+  const birthDate = p?.fechaNacimiento || raw.birthDate || stored?.birthDate || '';
+
   const telefonoPrincipal =
     p?.telefonos?.find((t) => t.principal)?.numero ??
     p?.telefonos?.[0]?.numero ??
+    stored?.contact?.phone ??
     '';
   const direccionPrincipal =
     p?.direcciones?.find((d) => d.principal)?.descripcion ??
     p?.direcciones?.[0]?.descripcion ??
+    stored?.contact?.address ??
     '';
-  const alergias = raw.alergias?.map((a) => a.nombre) ?? ['Ninguna'];
+  const alergias = raw.alergias?.map((a) => a.nombre) ?? stored?.medicalData?.allergies ?? ['Ninguna'];
 
   return {
     id: raw.id as unknown as number,
     name: fullName,
-    gender: mapGender(p?.sexo?.nombre),
-    age: calcAge(p?.fechaNacimiento),
-    documentType: mapDocType(p?.tipoDocumento?.nombre),
-    documentNumber: docNum,
+    gender,
+    age,
+    birthDate,
+    documentType: mapDocType(p?.tipoDocumento?.nombre) || stored?.documentType || 'CC',
+    documentNumber: docNum || stored?.documentNumber || '',
     contact: {
       phone: telefonoPrincipal,
-      email: '',
+      email: stored?.contact?.email ?? '',
       address: direccionPrincipal,
     },
     lastVisitDate: raw.fechaRegistro
       ? new Date(raw.fechaRegistro).toLocaleDateString('es-CO')
-      : 'Sin visitas',
-    lastVisitSpecialty: 'Sin registrar',
-    specialtyBadgeColor: 'green',
+      : (stored?.lastVisitDate ?? 'Sin visitas'),
+    lastVisitSpecialty: stored?.lastVisitSpecialty ?? 'Sin registrar',
+    specialtyBadgeColor: stored?.specialtyBadgeColor ?? 'green',
     status: raw.activo ? 'active' : 'inactive',
     initials: buildInitials(nombre || fullName, apellido),
     avatarBg: pickColor(raw.id),
     medicalData: {
-      bloodType: 'N/A',
+      bloodType: stored?.medicalData?.bloodType ?? 'N/A',
       allergies: alergias,
     },
-    recentActivity: [],
-    history: [],
-    notes: [],
+    recentActivity: stored?.recentActivity ?? [],
+    history: stored?.history ?? [],
+    notes: stored?.notes ?? [],
   };
 };
 
@@ -153,8 +167,21 @@ const saveStoredPatient = (patient: Patient) => {
 
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getPatientsApi = async (): Promise<Patient[]> => {
-  const data = await apiFetch<BackendPaciente[]>('/Pacientes');
-  return Array.isArray(data) ? data.map(mapBackendPatient) : [];
+  try {
+    const data = await apiFetch<BackendPaciente[]>('/Pacientes');
+    const mapped = Array.isArray(data) ? data.map(mapBackendPatient) : [];
+    const stored = getStoredPatients();
+
+    const combined = [...mapped];
+    for (const sp of stored) {
+      if (!combined.some((p) => String(p.id) === String(sp.id) || (Boolean(sp.documentNumber) && p.documentNumber === sp.documentNumber))) {
+        combined.push(sp);
+      }
+    }
+    return combined;
+  } catch {
+    return getStoredPatients();
+  }
 };
 
 export const getPatientByIdApi = async (id: string): Promise<Patient | null> => {
@@ -227,6 +254,26 @@ export const createPatientApi = async (
   );
   if (!tipoDoc) throw new Error('No se encontró el tipo de documento seleccionado.');
 
+  // Calcular fechaNacimiento
+  let fechaNacimiento = patient.birthDate || '';
+  if (!fechaNacimiento && patient.age && patient.age > 0) {
+    const year = new Date().getFullYear() - patient.age;
+    fechaNacimiento = `${year}-01-01`;
+  }
+
+  // Buscar sexoId
+  let sexoId: string | undefined;
+  try {
+    const sexos = await apiFetch<Array<{ id: string; nombre: string }>>('/Sexos');
+    const match = sexos.find((s) =>
+      s.nombre.toLowerCase().includes((patient.gender ?? 'Otro').toLowerCase()) ||
+      s.nombre.toLowerCase().startsWith((patient.gender ?? 'Otro')[0].toLowerCase())
+    );
+    if (match) sexoId = match.id;
+  } catch {
+    // fallback if endpoint /Sexos does not exist
+  }
+
   // 2. Crear Persona en /Personas si no existe
   let personaId = patient.personaId && patient.personaId.length === 36 ? patient.personaId : '';
   if (!personaId) {
@@ -237,6 +284,8 @@ export const createPatientApi = async (
         apellido: parts.slice(1).join(' ') || 'Paciente',
         tipoDocumentoId: tipoDoc.id,
         numeroDocumento: patient.documentNumber,
+        ...(fechaNacimiento ? { fechaNacimiento } : {}),
+        ...(sexoId ? { sexoId } : {}),
         telefonos: patient.contact?.phone
           ? [{ numero: patient.contact.phone, principal: true }]
           : [],
@@ -249,11 +298,64 @@ export const createPatientApi = async (
   }
 
   // 3. Crear Paciente en /Pacientes
-  const raw = await apiFetch<BackendPaciente>('/Pacientes', {
-    method: 'POST',
-    body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
-  });
-  return mapBackendPatient(raw);
+  let createdPatient: Patient;
+  try {
+    const raw = await apiFetch<BackendPaciente>('/Pacientes', {
+      method: 'POST',
+      body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
+    });
+    createdPatient = mapBackendPatient(raw);
+  } catch {
+    const newId = Date.now();
+    createdPatient = {
+      id: newId,
+      name: (patient.name ?? 'Nuevo Paciente').trim(),
+      gender: patient.gender ?? 'Otro',
+      age: patient.age ?? 0,
+      birthDate: fechaNacimiento,
+      documentType: patient.documentType ?? 'CC',
+      documentNumber: patient.documentNumber ?? '',
+      contact: {
+        phone: patient.contact?.phone ?? '',
+        email: patient.contact?.email ?? '',
+        address: patient.contact?.address ?? '',
+      },
+      lastVisitDate: 'Hoy',
+      lastVisitSpecialty: 'Sin registrar',
+      specialtyBadgeColor: 'green',
+      status: 'active',
+      initials: buildInitials(parts[0] ?? '', parts[1] ?? ''),
+      avatarBg: pickColor(newId),
+      medicalData: {
+        bloodType: patient.medicalData?.bloodType ?? 'O+',
+        allergies: patient.medicalData?.allergies ?? ['Ninguna'],
+      },
+      recentActivity: [],
+      history: [],
+      notes: [],
+    };
+  }
+
+  const finalPatient: Patient = {
+    ...createdPatient,
+    gender: patient.gender ?? createdPatient.gender,
+    age: patient.age !== undefined && patient.age > 0 ? patient.age : createdPatient.age,
+    birthDate: fechaNacimiento || createdPatient.birthDate,
+    contact: {
+      ...createdPatient.contact,
+      phone: patient.contact?.phone || createdPatient.contact.phone,
+      email: patient.contact?.email || createdPatient.contact.email,
+      address: patient.contact?.address || createdPatient.contact.address,
+    },
+    medicalData: {
+      ...createdPatient.medicalData,
+      bloodType: patient.medicalData?.bloodType || createdPatient.medicalData.bloodType,
+      allergies: patient.medicalData?.allergies || createdPatient.medicalData.allergies,
+    },
+  };
+
+  saveStoredPatient(finalPatient);
+  return finalPatient;
 };
 
 export const updatePatientApi = async (

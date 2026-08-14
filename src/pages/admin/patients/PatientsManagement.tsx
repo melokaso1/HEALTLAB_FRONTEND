@@ -93,6 +93,17 @@ const PatientsManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Helper to calculate age from birth date string YYYY-MM-DD
+  const calcAgeFromBirthDate = (dateStr: string): number => {
+    if (!dateStr) return 0;
+    const birth = new Date(dateStr);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age >= 0 ? age : 0;
+  };
+
   // Edit Patient State
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editTargetPatient, setEditTargetPatient] = useState<Patient | null>(null);
@@ -100,6 +111,7 @@ const PatientsManagement: React.FC = () => {
   const [editDocType, setEditDocType] = useState<'CC' | 'CE' | 'TI' | 'PAS'>('CC');
   const [editDocNum, setEditDocNum] = useState('');
   const [editGender, setEditGender] = useState<GenderType>('Femenino');
+  const [editBirthDate, setEditBirthDate] = useState('');
   const [editAge, setEditAge] = useState<number | ''>(30);
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -144,14 +156,13 @@ const PatientsManagement: React.FC = () => {
   const [newDocType, setNewDocType] = useState<'CC' | 'CE' | 'TI' | 'PAS'>('CC');
   const [newDocNum, setNewDocNum] = useState('');
   const [newGender, setNewGender] = useState<GenderType>('Femenino');
+  const [newBirthDate, setNewBirthDate] = useState('');
   const [newAge, setNewAge] = useState<number | ''>(30);
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newBloodType, setNewBloodType] = useState('O+');
   const [newAllergies, setNewAllergies] = useState('Ninguna');
-
-
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -211,6 +222,7 @@ const PatientsManagement: React.FC = () => {
     setEditDocType(patient.documentType);
     setEditDocNum(patient.documentNumber);
     setEditGender(patient.gender);
+    setEditBirthDate(patient.birthDate || '');
     setEditAge(patient.age);
     setEditPhone(patient.contact.phone);
     setEditEmail(patient.contact.email);
@@ -225,12 +237,14 @@ const PatientsManagement: React.FC = () => {
     if (!editTargetPatient) return;
 
     try {
+      const computedAge = Number(editAge) || (editBirthDate ? calcAgeFromBirthDate(editBirthDate) : 0);
       const updated = await updatePatientApi(editTargetPatient.id, {
         name: editName,
         documentType: editDocType,
         documentNumber: editDocNum,
         gender: editGender,
-        age: Number(editAge) || 0,
+        birthDate: editBirthDate,
+        age: computedAge,
         contact: {
           phone: editPhone,
           email: editEmail,
@@ -263,8 +277,6 @@ const PatientsManagement: React.FC = () => {
     }
   };
 
-
-
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newDocNum.trim()) {
@@ -273,10 +285,12 @@ const PatientsManagement: React.FC = () => {
     }
 
     try {
+      const computedAge = Number(newAge) || (newBirthDate ? calcAgeFromBirthDate(newBirthDate) : 30);
       const created = await createPatientApi({
         name: newName,
         gender: newGender,
-        age: Number(newAge) || 30,
+        birthDate: newBirthDate,
+        age: computedAge,
         documentType: newDocType,
         documentNumber: newDocNum,
         contact: {
@@ -867,7 +881,7 @@ const PatientsManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Sexo</label>
                     <select
@@ -880,6 +894,21 @@ const PatientsManagement: React.FC = () => {
                       <option value="Masculino">Masculino</option>
                       <option value="Otro">Otro</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Fecha Nacimiento</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={newBirthDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewBirthDate(val);
+                        if (val) {
+                          setNewAge(calcAgeFromBirthDate(val));
+                        }
+                      }}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Edad</label>
@@ -1031,7 +1060,7 @@ const PatientsManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Sexo</label>
                     <select
@@ -1044,6 +1073,21 @@ const PatientsManagement: React.FC = () => {
                       <option value="Masculino">Masculino</option>
                       <option value="Otro">Otro</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Fecha Nacimiento</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={editBirthDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditBirthDate(val);
+                        if (val) {
+                          setEditAge(calcAgeFromBirthDate(val));
+                        }
+                      }}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Edad</label>

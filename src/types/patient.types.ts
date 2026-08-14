@@ -41,6 +41,7 @@ export interface Patient {
   name: string;
   gender: GenderType;
   age: number;
+  birthDate?: string;
   documentType: 'CC' | 'CE' | 'TI' | 'PAS';
   documentNumber: string;
   contact: ContactInfo;
