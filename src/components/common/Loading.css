@@ -1,0 +1,330 @@
+/* ==========================================
+   HEALTLAB LOADING COMPONENT STYLES
+   Primary Turquoise: #00A896
+   ========================================== */
+
+.hl-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Fullscreen Overlay Mode */
+.hl-loading--fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+  padding: 0;
+}
+
+/* Container Overlay Mode */
+.hl-loading--overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: inherit;
+}
+
+/* Content Layout */
+.hl-loading__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+/* Sizes */
+.hl-loading--sm .hl-loading__content {
+  gap: 8px;
+}
+.hl-loading--sm .hl-loading__ring-wrapper {
+  width: 28px;
+  height: 28px;
+}
+.hl-loading--sm .hl-loading__spinner-icon {
+  width: 16px;
+  height: 16px;
+}
+.hl-loading--sm .hl-loading__pulse-wrapper {
+  width: 32px;
+  height: 32px;
+}
+.hl-loading--sm .hl-loading__pulse-icon {
+  width: 16px;
+  height: 16px;
+}
+.hl-loading--sm .hl-loading__text {
+  font-size: 0.8rem;
+}
+
+.hl-loading--md .hl-loading__ring-wrapper {
+  width: 44px;
+  height: 44px;
+}
+.hl-loading--md .hl-loading__spinner-icon {
+  width: 24px;
+  height: 24px;
+}
+.hl-loading--md .hl-loading__pulse-wrapper {
+  width: 48px;
+  height: 48px;
+}
+.hl-loading--md .hl-loading__pulse-icon {
+  width: 22px;
+  height: 22px;
+}
+.hl-loading--md .hl-loading__text {
+  font-size: 0.925rem;
+}
+
+.hl-loading--lg .hl-loading__ring-wrapper {
+  width: 60px;
+  height: 60px;
+}
+.hl-loading--lg .hl-loading__spinner-icon {
+  width: 32px;
+  height: 32px;
+}
+.hl-loading--lg .hl-loading__pulse-wrapper {
+  width: 64px;
+  height: 64px;
+}
+.hl-loading--lg .hl-loading__pulse-icon {
+  width: 30px;
+  height: 30px;
+}
+.hl-loading--lg .hl-loading__text {
+  font-size: 1.05rem;
+}
+
+.hl-loading--xl .hl-loading__ring-wrapper {
+  width: 76px;
+  height: 76px;
+}
+.hl-loading--xl .hl-loading__spinner-icon {
+  width: 40px;
+  height: 40px;
+}
+.hl-loading--xl .hl-loading__pulse-wrapper {
+  width: 80px;
+  height: 80px;
+}
+.hl-loading--xl .hl-loading__pulse-icon {
+  width: 38px;
+  height: 38px;
+}
+.hl-loading--xl .hl-loading__text {
+  font-size: 1.2rem;
+}
+
+/* ------------------------------------------
+   Variant 1: Ring Spinner (Dual Ring + Icon)
+   ------------------------------------------ */
+.hl-loading__ring-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hl-loading__ring-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: #00A896;
+  border-right-color: #99F6E4;
+  animation: hlSpin 1.2s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+  box-shadow: 0 0 12px rgba(0, 168, 150, 0.25);
+}
+
+.hl-loading__ring-inner {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: #008E7F;
+  animation: hlSpinReverse 0.9s linear infinite;
+  opacity: 0.75;
+}
+
+.hl-loading__spinner-icon {
+  color: #00A896;
+  animation: hlSpin 2s linear infinite;
+  z-index: 2;
+}
+
+/* ------------------------------------------
+   Variant 2: Pulse (Medical Activity Ping)
+   ------------------------------------------ */
+.hl-loading__pulse-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hl-loading__pulse-ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #00A896;
+  opacity: 0.4;
+  animation: hlPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.hl-loading__pulse-core {
+  position: relative;
+  z-index: 2;
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  background: #F0FDFA;
+  border: 2px solid #00A896;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 168, 150, 0.2);
+}
+
+.hl-loading__pulse-icon {
+  color: #00A896;
+  animation: hlHeartbeat 1.5s ease-in-out infinite;
+}
+
+/* ------------------------------------------
+   Variant 3: Dots
+   ------------------------------------------ */
+.hl-loading__dots-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.hl-loading__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #00A896;
+  display: inline-block;
+  animation: hlDotBounce 1.4s infinite ease-in-out both;
+}
+
+.hl-loading__dot--1 {
+  animation-delay: -0.32s;
+}
+
+.hl-loading__dot--2 {
+  animation-delay: -0.16s;
+}
+
+.hl-loading__dot--3 {
+  animation-delay: 0s;
+}
+
+/* ------------------------------------------
+   Typography Text
+   ------------------------------------------ */
+.hl-loading__text {
+  margin: 0;
+  font-weight: 600;
+  color: #0F172A;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ------------------------------------------
+   Keyframe Animations
+   ------------------------------------------ */
+@keyframes hlSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hlSpinReverse {
+  0% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes hlPing {
+  75%, 100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes hlHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.18);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.12);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+@keyframes hlDotBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------
+   Dark Mode Support
+   ------------------------------------------ */
+.dark-mode .hl-loading--fullscreen {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.dark-mode .hl-loading--overlay {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.dark-mode .hl-loading__text {
+  color: #F8FAFC;
+}
+
+.dark-mode .hl-loading__pulse-core {
+  background: #0F172A;
+  border-color: #00A896;
+}

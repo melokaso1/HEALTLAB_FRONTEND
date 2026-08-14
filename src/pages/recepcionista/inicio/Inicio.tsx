@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Inicio.css';
+import Loading from '../../../components/common/Loading';
 import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 
@@ -133,7 +134,7 @@ const RecepInicio: React.FC = () => {
   };
 
   if (loading) {
-    return <div style={{ padding: '2rem' }}>Cargando...</div>;
+    return <Loading text="Cargando..." size="lg" />;
   }
 
   return (

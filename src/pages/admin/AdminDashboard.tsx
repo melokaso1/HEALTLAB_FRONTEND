@@ -7,6 +7,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import './AdminDashboard.css';
+import Loading from '../../components/common/Loading';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
 import type { Appointment } from '../../types/appointment.types';
@@ -157,7 +158,7 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <div style={{ padding: '2rem', color: '#94A3B8' }}>Cargando...</div>;
+    return <Loading text="Cargando panel de administración..." size="lg" />;
   }
 
   return (
