@@ -116,14 +116,13 @@ const RecepPacientes: React.FC = () => {
     );
   };
 
-  const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
-    if (isCreatingPatient) return;
   const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'> & {
     direccion?: string;
     tipoSangre?: string;
     alergias?: string;
     fechaNacimiento?: string;
   }) => {
+    if (isCreatingPatient) return;
     if (!isValidDocument(newPatientDocType, newP.documento)) {
       showToast(newPatientDocType === 'PAS'
         ? 'El pasaporte debe ser alfanumérico y tener máximo 30 caracteres.'
@@ -459,11 +458,7 @@ const RecepPacientes: React.FC = () => {
                   calculatedEdad = Math.max(0, age);
                 }
 
-<<<<<<< HEAD
                 await handleCreatePatient({
-=======
-                handleCreatePatient({
->>>>>>> b3379ee185f9021621db48263e58f6ebae4ab1e2
                   documento: docNum,
                   nombre: nom,
                   genero: gen,
