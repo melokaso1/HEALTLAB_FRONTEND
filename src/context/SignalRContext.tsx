@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../services/api';

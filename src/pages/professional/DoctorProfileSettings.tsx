@@ -77,9 +77,9 @@ const DoctorProfileSettings: React.FC = () => {
       setNewPassword('');
       setConfirmPassword('');
       showToast('Contraseña actualizada exitosamente en el servidor.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[DoctorProfileSettings] Error al actualizar clave:', error);
-      showToast(error.message || 'Error al actualizar la contraseña en el servidor.');
+      showToast(error instanceof Error ? error.message : 'Error al actualizar la contraseña en el servidor.');
     }
   };
 

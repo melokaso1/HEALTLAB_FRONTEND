@@ -32,7 +32,8 @@ import {
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
-import { getSchedulableProfessionalsApi } from '../../../services/professionals.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import { getHorariosByMedicoApi } from '../../../services/catalogs.service';
 import {
   findPatientByCedula,
   createAppointmentFromInput,
@@ -43,6 +44,9 @@ import { useSignalR } from '../../../context/SignalRContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import Pagination from '../../../components/common/Pagination';
 import './AppointmentsManagement.css';
+
+const NO_SCHEDULE_MSG =
+  'El profesional seleccionado no tiene jornada configurada. Configure su horario en Profesionales antes de agendar.';
 
 const toLocalDateInput = (date = new Date()): string => {
   const year = date.getFullYear();
@@ -68,48 +72,6 @@ const AppointmentsManagement: React.FC = () => {
 
   // Dynamic Calendar Month Navigation State
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => new Date());
-
-  useEffect(() => {
-    getAppointmentsApi().then((data) => {
-      if (data && data.length > 0) {
-        setPatientsAppointments(data);
-        const parts = data[0].date?.split('-') ?? [];
-        if (parts.length === 3) {
-          const yr = parseInt(parts[0], 10);
-          const mo = parseInt(parts[1], 10) - 1;
-          if (!isNaN(yr) && !isNaN(mo)) {
-            setCalendarViewDate(new Date(yr, mo, 1));
-          }
-        }
-      }
-    });
-    getSchedulableProfessionalsApi().then((data) => {
-      if (data && data.length > 0) {
-        setProfessionalsList(data);
-      }
-    });
-    getServicesApi().then((data) => {
-      if (data && data.length > 0) {
-        setServicesList(data);
-        if (data[0]?.id) {
-          setNewServiceId(data[0].id);
-        }
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    const state = location.state as { patient?: Patient; searchCedula?: string } | undefined;
-    if (state?.patient || state?.searchCedula) {
-      if (state.patient) {
-        setSelectedPatient(state.patient);
-        setCedulaQuery(state.patient.documentNumber);
-      } else if (state.searchCedula) {
-        setCedulaQuery(state.searchCedula);
-      }
-      setIsCreateModalOpen(true);
-    }
-  }, [location.state]);
 
   const handlePrevMonth = () => {
     setCalendarViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -226,6 +188,7 @@ const AppointmentsManagement: React.FC = () => {
   // Update reschedule form state whenever selected appointment changes
   React.useEffect(() => {
     if (selectedAppointment) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- form fields must follow the selected appointment.
       setRescheduleProfId(selectedAppointment.professionalId || (professionalsList[0]?.id ? String(professionalsList[0].id) : 'prof-1'));
       
       const matchedService = servicesList.find(
@@ -248,16 +211,83 @@ const AppointmentsManagement: React.FC = () => {
   const [newDate, setNewDate] = useState<string>(() => toLocalDateInput());
   const [newTime, setNewTime] = useState<string>('10:00 AM');
   const [newNotes, setNewNotes] = useState<string>('');
+  /** null = checking; true/false = selected professional has at least one horario */
+  const [newProfHasSchedule, setNewProfHasSchedule] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getAppointmentsApi().then((data) => {
+      if (data && data.length > 0) {
+        setPatientsAppointments(data);
+        const parts = data[0].date?.split('-') ?? [];
+        if (parts.length === 3) {
+          const yr = parseInt(parts[0], 10);
+          const mo = parseInt(parts[1], 10) - 1;
+          if (!isNaN(yr) && !isNaN(mo)) {
+            setCalendarViewDate(new Date(yr, mo, 1));
+          }
+        }
+      }
+    });
+    getProfessionalsApi().then((data) => {
+      if (data && data.length > 0) {
+        setProfessionalsList(data);
+      }
+    });
+    getServicesApi().then((data) => {
+      if (data && data.length > 0) {
+        setServicesList(data);
+        if (data[0]?.id) {
+          setNewServiceId(data[0].id);
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const state = location.state as { patient?: Patient; searchCedula?: string } | undefined;
+    if (state?.patient || state?.searchCedula) {
+      if (state.patient) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- navigation state initializes the create form.
+        setSelectedPatient(state.patient);
+        setCedulaQuery(state.patient.documentNumber);
+      } else if (state.searchCedula) {
+        setCedulaQuery(state.searchCedula);
+      }
+      setIsCreateModalOpen(true);
+    }
+  }, [location.state]);
 
   // Default professional when list loads / modal opens
   useEffect(() => {
     if (professionalsList.length > 0 && !newProfId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- select defaults after its async catalog loads.
       setNewProfId(String(professionalsList[0].id));
     }
   }, [professionalsList, newProfId]);
 
   useEffect(() => {
+    if (!isCreateModalOpen || !newProfId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear schedule flag when no professional is selected.
+      setNewProfHasSchedule(null);
+      return;
+    }
+    let cancelled = false;
+    setNewProfHasSchedule(null);
+    void getHorariosByMedicoApi(newProfId)
+      .then((horarios) => {
+        if (!cancelled) setNewProfHasSchedule(Array.isArray(horarios) && horarios.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setNewProfHasSchedule(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [newProfId, isCreateModalOpen]);
+
+  useEffect(() => {
     if (isCreateModalOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the form uses the currently selected calendar date.
       setNewDate(selectedDate || toLocalDateInput());
     }
   }, [isCreateModalOpen, selectedDate]);
@@ -430,6 +460,11 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
+    if (newProfHasSchedule === false) {
+      showToast(NO_SCHEDULE_MSG);
+      return;
+    }
+
     let targetPatient = selectedPatient;
 
     if (!targetPatient && cedulaQuery.trim()) {
@@ -515,10 +550,6 @@ const AppointmentsManagement: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, profFilter]);
 
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage) || 1;
   const paginatedAppointments = useMemo(() => {
@@ -674,7 +705,10 @@ const AppointmentsManagement: React.FC = () => {
                   <CustomSelect
                     style={{ width: '100%' }}
                     value={profFilter}
-                    onChange={(val) => setProfFilter(val)}
+                    onChange={(val) => {
+                      setProfFilter(val);
+                      setCurrentPage(1);
+                    }}
                     options={[
                       { value: 'all', label: 'Todos los Médicos' },
                       ...professionalsList.map((p) => ({ value: p.id, label: p.name })),
@@ -770,7 +804,10 @@ const AppointmentsManagement: React.FC = () => {
                   className="citas-search-input"
                   placeholder="Buscar profesional o paciente..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
                 />
               </div>
 
@@ -778,7 +815,10 @@ const AppointmentsManagement: React.FC = () => {
               <div className="citas-filter-select-wrapper">
                 <CustomSelect
                   value={statusFilter}
-                  onChange={(val) => setStatusFilter(val)}
+                  onChange={(val) => {
+                    setStatusFilter(val);
+                    setCurrentPage(1);
+                  }}
                   options={[
                     { value: 'all', label: 'Estado: Todos' },
                     { value: 'Agendada', label: 'Estado: Agendada' },
@@ -1189,6 +1229,17 @@ const AppointmentsManagement: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                  {newProfId && newProfHasSchedule === false && (
+                    <div className="conflict-alert" role="alert" style={{ marginTop: 8 }}>
+                      <AlertTriangle size={18} className="conflict-alert__icon" />
+                      <div className="conflict-alert__text">
+                        <strong>Sin jornada configurada</strong>
+                        <span>
+                          Este profesional no tiene horario. Configúrelo en Profesionales antes de agendar.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Service Selection */}
@@ -1263,7 +1314,11 @@ const AppointmentsManagement: React.FC = () => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={Boolean(newAppointmentConflict) || !selectedPatient}
+                  disabled={
+                    Boolean(newAppointmentConflict) ||
+                    !selectedPatient ||
+                    newProfHasSchedule === false
+                  }
                 >
                   Agendar Cita
                 </button>

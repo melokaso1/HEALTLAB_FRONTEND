@@ -64,14 +64,14 @@ const RecepInicio: React.FC = () => {
           getProfessionalsApi()
         ]);
         
-        const allAppointments = Array.isArray(appointmentsRes) ? appointmentsRes : ((appointmentsRes as any)?.data || []);
-        const professionals = Array.isArray(professionalsRes) ? professionalsRes : ((professionalsRes as any)?.data || []);
+        const allAppointments = appointmentsRes;
+        const professionals = professionalsRes;
         
         // Filter for today's appointments
         const today = todayIsoLocal();
-        const todaysAppointments = allAppointments.filter((app: any) => app.date === today);
+        const todaysAppointments = allAppointments.filter((app) => app.date === today);
 
-        const mappedCitas: ProximaCita[] = todaysAppointments.map((app: any) => {
+        const mappedCitas: ProximaCita[] = todaysAppointments.map((app) => {
           let estado: 'En sala' | 'Esperando' | 'Confirmado' | 'Cancelada' = 'Confirmado';
           if (app.status === 'Agendada') estado = 'Esperando';
           if (app.status === 'Atendida') estado = 'En sala';
@@ -87,8 +87,8 @@ const RecepInicio: React.FC = () => {
           };
         });
 
-        const mappedDoctors: DoctorShift[] = professionals.map((p: any) => {
-          const docAppointments = todaysAppointments.filter((app: any) => app.professionalId === p.id);
+        const mappedDoctors: DoctorShift[] = professionals.map((p) => {
+          const docAppointments = todaysAppointments.filter((app) => app.professionalId === p.id);
           return {
             id: p.id ? p.id.toString() : Math.random().toString(),
             nombre: p.name,

@@ -1,5 +1,6 @@
 import type { ProfessionalOption } from '../types/appointment.types';
 import { apiFetch } from './api';
+import { resolveOrCreateEspecialidad } from './catalogs.service';
 
 // ─── Tipo del backend (MedicoEntity con relaciones) ───────────────────────
 interface BackendMedico {
@@ -171,10 +172,9 @@ export const createProfessionalApi = async (
   }
 
   // The transactional endpoint creates Persona, Empleado, Usuario, and Médico together.
-  const [tiposDoc, roles, especialidades] = await Promise.all([
+  const [tiposDoc, roles] = await Promise.all([
     apiFetch<Array<{ id: string; codigo?: string; nombre?: string }>>('/TiposDocumento'),
     apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles'),
-    apiFetch<Array<{ id: string; nombre?: string }>>('/Especialidades'),
   ]);
   const tipoDoc = Array.isArray(tiposDoc)
     ? tiposDoc.find((tipo) => tipo.codigo?.toUpperCase() === (p.tipoDocumento || 'CC').toUpperCase()) || tiposDoc[0]
@@ -182,9 +182,7 @@ export const createProfessionalApi = async (
   const profesionalRole = Array.isArray(roles)
     ? roles.find((role) => role.nombreRol === 'Profesional')
     : undefined;
-  const especialidad = Array.isArray(especialidades)
-    ? especialidades.find((item) => item.nombre?.trim().toLowerCase() === p.especialidad?.trim().toLowerCase()) || especialidades[0]
-    : undefined;
+  const especialidad = await resolveOrCreateEspecialidad(p.especialidad);
   if (!tipoDoc?.id || !profesionalRole?.id || !especialidad?.id) {
     throw new Error('No se encontraron los catálogos requeridos para registrar el profesional.');
   }

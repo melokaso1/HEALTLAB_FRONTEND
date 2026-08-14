@@ -12,7 +12,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useSignalR } from '../../context/SignalRContext';
+import { useSignalR, type NotificationItem } from '../../context/SignalRContext';
 import ThemeToggle from '../common/ThemeToggle';
 import healtlabIcon from '../../assets/icons/HEALTLAB_sintitulo.png';
 import healtlabTitle from '../../assets/icons/HEALTLAB_Titulo.png';
@@ -155,7 +155,7 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
                     </p>
                   </div>
                 ) : (
-                  notifications.map((n: any) => (
+                  notifications.map((n: NotificationItem) => (
                     <div key={n.id} className={`notif-item ${!n.read ? 'notif-item--unread' : ''}`}>
                       <div className="notif-item__icon">
                         {n.type === 'success' ? (

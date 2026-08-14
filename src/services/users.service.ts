@@ -1,6 +1,7 @@
 import type { ManagedUser, PermissionGroup, UserRoleType } from '../types/user.types';
 import { apiFetch, type ApiError } from './api';
 import { BACKEND_ROLE_MAP, FRONTEND_ROLE_MAP } from '../types/auth';
+import { resolveOrCreateEspecialidad } from './catalogs.service';
 
 // ─── Tipo del backend (UsuarioDto) ─────────────────────────────────────────
 interface BackendUsuario {
@@ -196,10 +197,9 @@ export const createUserApi = async (
   if (!payload.numeroDocumento.trim() || payload.numeroDocumento.trim().length > 30) {
     throw new Error('El documento del usuario es requerido y debe tener máximo 30 caracteres.');
   }
-  const [tiposDoc, roles, especialidades] = await Promise.all([
+  const [tiposDoc, roles] = await Promise.all([
     apiFetch<Array<{ id: string }>>('/TiposDocumento'),
     apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles'),
-    apiFetch<Array<{ id: string; nombre?: string }>>('/Especialidades'),
   ]);
   const roleType = payload.roleType ?? 'receptionist';
   const roleName = roleType === 'admin'
@@ -207,10 +207,10 @@ export const createUserApi = async (
     : roleType === 'professional' ? 'Profesional' : 'Recepcionista';
   const rolId = roles.find((role) => role.nombreRol === roleName)?.id;
   const tipoDocumentoId = tiposDoc[0]?.id;
-  const especialidadId = roleType === 'professional'
-    ? especialidades.find((item) => item.nombre?.trim().toLowerCase() === payload.especialidad?.trim().toLowerCase())?.id
-      ?? especialidades[0]?.id
+  const especialidad = roleType === 'professional'
+    ? await resolveOrCreateEspecialidad(payload.especialidad)
     : undefined;
+  const especialidadId = especialidad?.id;
   if (!rolId || !tipoDocumentoId || (roleType === 'professional' && !especialidadId)) {
     throw new Error('No se encontraron los catálogos requeridos para registrar el personal.');
   }

@@ -30,8 +30,13 @@ import {
   rescheduleAppointmentApi,
   toApiTime,
 } from '../../../services/appointments.service';
-import { getSchedulableProfessionalsApi } from '../../../services/professionals.service';
-import { getHorariosByMedicoApi, getTiposCitaApi, type CatalogOption } from '../../../services/catalogs.service';
+import { getProfessionalsApi } from '../../../services/professionals.service';
+import {
+  getHorariosByMedicoApi,
+  getTiposCitaApi,
+  type CatalogOption,
+  type HorarioApi,
+} from '../../../services/catalogs.service';
 import {
   findPatientByCedula,
   createAppointmentFromInput,
@@ -40,6 +45,27 @@ import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
 import type { Patient } from '../../../types/patient.types';
 import { useAuth } from '../../../context/AuthContext';
+
+const appointmentStartsFromHorario = (horario: HorarioApi): string[] => {
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = value.slice(0, 5).split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+  const toTime = (value: number) =>
+    `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+  const ranges = [
+    [toMinutes(horario.horaEntrada), toMinutes(horario.salidaAlmuerzo)],
+    [toMinutes(horario.retornoActividades), toMinutes(horario.horaSalida)],
+  ];
+
+  return ranges.flatMap(([start, end]) => {
+    const slots: string[] = [];
+    for (let current = start; current + 30 <= end; current += 30) {
+      slots.push(toTime(current));
+    }
+    return slots;
+  });
+};
 
 export interface CalendarEventBlock {
   id: string;
@@ -70,7 +96,7 @@ interface CitaHoy {
 const RecepCitas: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const [monday, _setMonday] = useState<Date>(() => {
+  const [monday] = useState<Date>(() => {
     const d = new Date();
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -78,11 +104,16 @@ const RecepCitas: React.FC = () => {
   });
 
   // API States
-  const [_appointments, setAppointments] = useState<Appointment[]>([]);
+  const [, setAppointments] = useState<Appointment[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
   const [tiposCita, setTiposCita] = useState<CatalogOption[]>([]);
   const [availableHours, setAvailableHours] = useState<string[]>([]);
+  /** null = checking / no professional; true/false after horarios load */
+  const [selectedProfHasSchedule, setSelectedProfHasSchedule] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const NO_SCHEDULE_MSG =
+    'El profesional seleccionado no tiene jornada configurada. Configure su horario en Profesionales antes de agendar.';
 
   const [citasHoyList, setCitasHoyList] = useState<CitaHoy[]>([]);
   const [agendaEvents, setAgendaEvents] = useState<CalendarEventBlock[]>([]);
@@ -115,6 +146,7 @@ const RecepCitas: React.FC = () => {
     const state = location.state as { patient?: Patient; searchCedula?: string } | undefined;
     if (state?.patient || state?.searchCedula) {
       if (state.patient) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- navigation state initializes the appointment form.
         setSelectedPatient(state.patient);
         setCedulaQuery(state.patient.documentNumber);
       } else if (state.searchCedula) {
@@ -129,7 +161,7 @@ const RecepCitas: React.FC = () => {
     try {
       const [apps, profs, tipos] = await Promise.all([
         getAppointmentsApi(),
-        getSchedulableProfessionalsApi(),
+        getProfessionalsApi(),
         getTiposCitaApi(),
       ]);
       setAppointments(apps);
@@ -188,23 +220,36 @@ const RecepCitas: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- asynchronous loader owns the data state.
     void loadData();
   }, [loadData]);
 
   useEffect(() => {
-    if (!profesionalSelect) {
+    if (!isNuevaCitaOpen || !profesionalSelect) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear dependent hours when no professional is selected.
       setAvailableHours([]);
+      setSelectedProfHasSchedule(null);
       return;
     }
+    let cancelled = false;
+    setSelectedProfHasSchedule(null);
     void getHorariosByMedicoApi(profesionalSelect)
-      .then((horarios) => setAvailableHours(
-        horarios
-          .map((horario) => (horario as CatalogOption & { horaInicio?: string }).horaInicio ?? horario.nombre)
-          .map((hora) => (hora || '').slice(0, 5))
-          .filter(Boolean),
-      ))
-      .catch((error) => showToast(error instanceof Error ? error.message : 'No se pudieron cargar los horarios.'));
-  }, [profesionalSelect]);
+      .then((horarios) => {
+        if (cancelled) return;
+        const hours = horarios.flatMap(appointmentStartsFromHorario);
+        setAvailableHours(hours);
+        setSelectedProfHasSchedule(horarios.length > 0);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setAvailableHours([]);
+        setSelectedProfHasSchedule(false);
+        showToast(error instanceof Error ? error.message : 'No se pudieron cargar los horarios.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profesionalSelect, isNuevaCitaOpen]);
 
   const handleClearForm = () => {
     setSelectedCita(null);
@@ -277,6 +322,16 @@ const RecepCitas: React.FC = () => {
 
       if (!selectedPatient) {
         showToast('Busque y seleccione un paciente por cédula antes de agendar.');
+        return;
+      }
+
+      if (!profesionalSelect) {
+        showToast('Seleccione un profesional médico.');
+        return;
+      }
+
+      if (selectedProfHasSchedule === false) {
+        showToast(NO_SCHEDULE_MSG);
         return;
       }
 
@@ -652,7 +707,13 @@ const RecepCitas: React.FC = () => {
                         </select>
                         {professionals.length === 0 && (
                           <small style={{ color: '#B42318' }}>
-                            No hay médicos con jornada configurada para agendar.
+                            No hay médicos activos para agendar.
+                          </small>
+                        )}
+                        {profesionalSelect && selectedProfHasSchedule === false && (
+                          <small style={{ color: '#B42318', display: 'block', marginTop: 6 }}>
+                            Este profesional no tiene jornada configurada. Configure su horario en
+                            Profesionales antes de agendar.
                           </small>
                         )}
                       </div>
@@ -746,7 +807,11 @@ const RecepCitas: React.FC = () => {
                             >
                               Limpiar
                             </button>
-                            <button type="submit" className="btn-agendar-main" disabled={isSubmitting}>
+                            <button
+                              type="submit"
+                              className="btn-agendar-main"
+                              disabled={isSubmitting || selectedProfHasSchedule === false}
+                            >
                               {isSubmitting ? 'Guardando...' : 'Agendar Cita'}
                             </button>
                           </>

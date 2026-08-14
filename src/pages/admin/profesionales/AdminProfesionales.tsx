@@ -26,6 +26,14 @@ import type {
   ScheduleSlot,
 } from './profesional.types';
 import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
+import {
+  getEspecialidadesApi,
+  getHorariosByMedicoApi,
+  saveHorarioMedicoApi,
+  type CatalogOption,
+  type HorarioApi,
+  type HorarioPayload,
+} from '../../../services/catalogs.service';
 import { getAppointmentsApi, getServicesApi } from '../../../services/appointments.service';
 import { createAppointmentFromInput } from '../../../services/createAppointment.logic';
 import { getPatientByDocumentApi } from '../../../services/patients.service';
@@ -70,6 +78,132 @@ const HOURLY_SLOTS = [
 
 import type { ProfessionalOption } from '../../../types/appointment.types';
 
+const SCHEDULE_DAYS: Array<{ dia: DiaSemana; nombre: string }> = [
+  { dia: 'DOM', nombre: 'Domingo' },
+  { dia: 'LUN', nombre: 'Lunes' },
+  { dia: 'MAR', nombre: 'Martes' },
+  { dia: 'MIÉ', nombre: 'Miércoles' },
+  { dia: 'JUE', nombre: 'Jueves' },
+  { dia: 'VIE', nombre: 'Viernes' },
+  { dia: 'SÁB', nombre: 'Sábado' },
+];
+
+const isWeekdayDia = (dia: DiaSemana): boolean => dia !== 'DOM' && dia !== 'SÁB';
+
+const scheduleFromHorario = (horario?: HorarioApi): ScheduleSlot[] =>
+  SCHEDULE_DAYS.flatMap(({ dia, nombre }) => {
+    const weekday = isWeekdayDia(dia);
+    return [
+      {
+        dia,
+        diaNombre: nombre,
+        jornada: 'Mañana' as const,
+        horaInicio: horario?.horaEntrada?.slice(0, 5) || '08:00',
+        horaFin: horario?.salidaAlmuerzo?.slice(0, 5) || '12:00',
+        activo: Boolean(horario && weekday),
+      },
+      {
+        dia,
+        diaNombre: nombre,
+        jornada: 'Tarde' as const,
+        horaInicio: horario?.retornoActividades?.slice(0, 5) || '13:00',
+        horaFin: horario?.horaSalida?.slice(0, 5) || '18:00',
+        activo: Boolean(horario && weekday),
+      },
+    ];
+  });
+
+const timeToMinutes = (value: string): number => {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (value: number): string =>
+  `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+
+type QuickScheduleConfig = {
+  targetDay: string;
+  targetJornada: Jornada | 'AMBAS';
+  horaInicio: string;
+  horaFin: string;
+  activo: boolean;
+};
+
+/** Applies the modal "configuración rápida" onto weekly slots (pure). */
+const applyQuickConfigToSchedule = (
+  schedule: ScheduleSlot[],
+  config: QuickScheduleConfig,
+): ScheduleSlot[] =>
+  schedule.map((slot) => {
+    const matchesDay = config.targetDay === 'TODOS' || slot.dia === config.targetDay;
+    if (!matchesDay) return slot;
+
+    if (config.targetJornada === 'AMBAS') {
+      const morningStart = config.horaInicio || '08:00';
+      const afternoonEnd = config.horaFin || '18:00';
+      return {
+        ...slot,
+        horaInicio: slot.jornada === 'Mañana' ? morningStart : '13:00',
+        horaFin: slot.jornada === 'Mañana' ? '12:00' : afternoonEnd,
+        activo: config.activo,
+      };
+    }
+
+    if (slot.jornada === config.targetJornada) {
+      return {
+        ...slot,
+        horaInicio: config.horaInicio || slot.horaInicio,
+        horaFin: config.horaFin || slot.horaFin,
+        activo: true,
+      };
+    }
+
+    return { ...slot, activo: false };
+  });
+
+/**
+ * Horarios currently stores one daily jornada per médico. The weekly editor is
+ * folded into that jornada; weekends remain blocked by the scheduling rules.
+ */
+const horarioPayloadFromSchedule = (schedule: ScheduleSlot[]): HorarioPayload | null => {
+  const active = schedule.filter((slot) => slot.activo);
+  if (active.length === 0) return null;
+
+  const starts = active.map((slot) => timeToMinutes(slot.horaInicio));
+  const ends = active.map((slot) => timeToMinutes(slot.horaFin));
+  const horaEntrada = Math.min(...starts);
+  const horaSalida = Math.max(...ends);
+  if (horaSalida - horaEntrada < 4) {
+    throw new Error('La jornada debe tener al menos cuatro minutos de duración.');
+  }
+
+  const morningEnds = active
+    .filter((slot) => slot.jornada === 'Mañana')
+    .map((slot) => timeToMinutes(slot.horaFin));
+  const afternoonStarts = active
+    .filter((slot) => slot.jornada === 'Tarde')
+    .map((slot) => timeToMinutes(slot.horaInicio));
+
+  let salidaAlmuerzo = morningEnds.length > 0 ? Math.max(...morningEnds) : 0;
+  let retornoActividades = afternoonStarts.length > 0 ? Math.min(...afternoonStarts) : 0;
+  if (
+    salidaAlmuerzo <= horaEntrada ||
+    retornoActividades >= horaSalida ||
+    salidaAlmuerzo >= retornoActividades
+  ) {
+    const midpoint = Math.floor((horaEntrada + horaSalida) / 2);
+    salidaAlmuerzo = midpoint;
+    retornoActividades = midpoint + 1;
+  }
+
+  return {
+    horaEntrada: minutesToTime(horaEntrada),
+    horaSalida: minutesToTime(horaSalida),
+    salidaAlmuerzo: minutesToTime(salidaAlmuerzo),
+    retornoActividades: minutesToTime(retornoActividades),
+  };
+};
+
 const mapBackendProfToLocal = (p: ProfessionalOption): Professional => {
   // Parse "Dr. Nombre Apellido" → split parts
   const nameParts = p.name.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim().split(' ');
@@ -98,11 +232,23 @@ const AdminProfesionales: React.FC = () => {
   const { user } = useAuth();
   // State
   const [profesionales, setProfesionales] = useState<Professional[]>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
 
   useEffect(() => {
-    Promise.all([getProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
+    Promise.all([getProfessionalsApi(), getAppointmentsApi()]).then(async ([profs, apps]) => {
       if (Array.isArray(profs)) {
         const localProfs = profs.map(mapBackendProfToLocal);
+        const horariosByProfessional = await Promise.all(
+          localProfs.map(async (prof) => {
+            try {
+              const horarios = await getHorariosByMedicoApi(prof.id);
+              return [prof.id, horarios[0]] as const;
+            } catch {
+              return [prof.id, undefined] as const;
+            }
+          }),
+        );
+        const horarioMap = new Map(horariosByProfessional);
 
         const abrevMap: Record<number, DiaSemana> = {
           0: 'DOM', 1: 'LUN', 2: 'MAR', 3: 'MIÉ', 4: 'JUE', 5: 'VIE', 6: 'SÁB',
@@ -136,7 +282,12 @@ const AdminProfesionales: React.FC = () => {
               motivoConsulta: a.notes || a.serviceName,
             };
           });
-          return { ...prof, citas: mappedCitas, citasHoy: mappedCitas.length };
+          return {
+            ...prof,
+            disponibilidad: scheduleFromHorario(horarioMap.get(prof.id)),
+            citas: mappedCitas,
+            citasHoy: mappedCitas.length,
+          };
         });
 
         setProfesionales(updatedProfs);
@@ -144,7 +295,6 @@ const AdminProfesionales: React.FC = () => {
       }
     });
   }, []);
-  const [selectedId, setSelectedId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeSpecialty, setActiveSpecialty] = useState<string>('Todos');
 
@@ -204,9 +354,10 @@ const AdminProfesionales: React.FC = () => {
 
   useEffect(() => {
     if (selectedProf && !infoCardProf) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the detail card follows the selected professional.
       setInfoCardProf(selectedProf);
     }
-  }, [selectedProf]);
+  }, [selectedProf, infoCardProf]);
 
   // Dynamic Specialties list for chips
   const specialtyOptions = useMemo(() => {
@@ -326,19 +477,32 @@ const AdminProfesionales: React.FC = () => {
     showToast(`Perfil de ${selectedProf.tituloPrefix} ${selectedProf.nombre} ${selectedProf.apellido} actualizado.`);
   };
 
-  // Handler: Save Schedule Configuration
-  const handleSaveSchedule = (updatedSchedule: ScheduleSlot[]) => {
+  // Handler: Save Schedule Configuration (persists to POST/PUT /Horarios)
+  const handleSaveSchedule = async (updatedSchedule: ScheduleSlot[]) => {
     if (!selectedProf) return;
-    setProfesionales((prev) =>
-      prev.map((p) => {
-        if (p.id === selectedProf.id) {
-          return { ...p, disponibilidad: updatedSchedule };
-        }
-        return p;
-      })
-    );
-    setIsConfigureScheduleOpen(false);
-    showToast('Disponibilidad semanal configurada correctamente.');
+    try {
+      const payload = horarioPayloadFromSchedule(updatedSchedule);
+      if (!payload) {
+        throw new Error(
+          'Active al menos un bloque de atención (o use "Aplicar a la selección") antes de guardar.',
+        );
+      }
+      const saved = await saveHorarioMedicoApi(selectedProf.id, payload);
+      if (!saved) {
+        throw new Error('El servidor no confirmó la jornada. Intente de nuevo.');
+      }
+      const persistedSchedule = scheduleFromHorario(saved);
+      setProfesionales((prev) =>
+        prev.map((p) =>
+          p.id === selectedProf.id ? { ...p, disponibilidad: persistedSchedule } : p
+        )
+      );
+      setIsConfigureScheduleOpen(false);
+      showToast('Jornada guardada correctamente en el servidor.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo guardar la jornada.');
+      throw error;
+    }
   };
   // Handler: Add New Professional
   const handleAddNewDoctor = async (newDoctor: Omit<Professional, 'id'>) => {
@@ -356,6 +520,17 @@ const AdminProfesionales: React.FC = () => {
         consultorio: newDoctor.consultorio,
       });
 
+      let disponibilidad = newDoctor.disponibilidad || [];
+      try {
+        const payload = horarioPayloadFromSchedule(disponibilidad);
+        if (payload) {
+          const saved = await saveHorarioMedicoApi(createdOpt.id, payload);
+          disponibilidad = scheduleFromHorario(saved ?? undefined);
+        }
+      } catch (horarioError) {
+        console.warn('[AdminProfesionales] Médico creado pero sin jornada persistida:', horarioError);
+      }
+
       const mappedProf = mapBackendProfToLocal(createdOpt);
       const fullProf: Professional = {
         ...newDoctor,
@@ -364,7 +539,7 @@ const AdminProfesionales: React.FC = () => {
         nombre: newDoctor.nombre || mappedProf.nombre,
         apellido: newDoctor.apellido || mappedProf.apellido,
         especialidad: newDoctor.especialidad || mappedProf.especialidad,
-        disponibilidad: newDoctor.disponibilidad || mappedProf.disponibilidad || [],
+        disponibilidad,
       };
 
       setProfesionales((prev) => [fullProf, ...prev.filter((p) => String(p.id) !== String(fullProf.id))]);
@@ -443,9 +618,9 @@ const AdminProfesionales: React.FC = () => {
       setIsNewAppointmentOpen(false);
       setNewAppointmentSlot(null);
       showToast(`Cita médica agendada exitosamente en la base de datos para ${newApp.pacienteNombre}.`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[AdminProfesionales] Error al agendar cita en backend:', error);
-      showToast(error.message || 'Error al guardar la cita en la base de datos.');
+      showToast(error instanceof Error ? error.message : 'Error al guardar la cita en la base de datos.');
     }
   };
 
@@ -1154,7 +1329,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
 interface ConfigureScheduleModalProps {
   currentSchedule: ScheduleSlot[];
   onClose: () => void;
-  onSave: (newSchedule: ScheduleSlot[]) => void;
+  onSave: (newSchedule: ScheduleSlot[]) => Promise<void>;
 }
 
 const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
@@ -1422,7 +1597,7 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
           <button
             type="button"
             className="btn-primary"
-            onClick={() => onSave(schedule)}
+            onClick={() => void onSave(schedule)}
           >
             <Check size={16} />
             Guardar Disponibilidad
@@ -1448,7 +1623,8 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [tituloPrefix, setTituloPrefix] = useState('Dra.');
-  const [especialidad, setEspecialidad] = useState('');
+  const [especialidad, setEspecialidad] = useState('Medicina General');
+  const [especialidades, setEspecialidades] = useState<CatalogOption[]>([]);
   const [registroProfesional, setRegistroProfesional] = useState('');
   const [numeroDocumento, setNumeroDocumento] = useState('');
   const [consultorio, setConsultorio] = useState('');
@@ -1457,6 +1633,26 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadEspecialidades = async () => {
+      try {
+        const data = await getEspecialidadesApi();
+        const items = Array.isArray(data) ? data : [];
+        setEspecialidades(items);
+        if (items.length > 0) {
+          const medicinaGeneral = items.find(
+            (item) => item.nombre?.trim().toLowerCase() === 'medicina general',
+          );
+          setEspecialidad(medicinaGeneral?.nombre || items[0].nombre);
+        }
+      } catch (error) {
+        console.error('[AddProfessionalModal] Error al cargar especialidades:', error);
+        setEspecialidades([]);
+      }
+    };
+    void loadEspecialidades();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1609,14 +1805,22 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
               </div>
               <div className="form-group">
                 <label className="form-label">Especialidad Médica</label>
-                <input
-                  type="text"
-                  className="form-input"
+                <select
+                  className="form-select"
                   required
-                  placeholder="Ej. Cardiología Intervencionista"
                   value={especialidad}
                   onChange={(e) => setEspecialidad(e.target.value)}
-                />
+                >
+                  {especialidades.length === 0 ? (
+                    <option value="Medicina General">Medicina General</option>
+                  ) : (
+                    especialidades.map((item) => (
+                      <option key={item.id} value={item.nombre}>
+                        {item.nombre}
+                      </option>
+                    ))
+                  )}
+                </select>
               </div>
             </div>
 

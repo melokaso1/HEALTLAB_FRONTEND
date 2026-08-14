@@ -118,10 +118,6 @@ const PatientsManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 6;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
-
   const [activeTab, setActiveTab] = useState<'Resumen' | 'Historial' | 'Notas'>('Resumen');
   const [newNoteText, setNewNoteText] = useState('');
 
@@ -480,14 +476,20 @@ const PatientsManagement: React.FC = () => {
               className="patients-mgmt__search-input"
               placeholder="Buscar paciente por nombre o ID..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
           {/* Status Filter Dropdown */}
           <CustomSelect
             value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
+            onChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
             options={[
               { value: 'active', label: 'Estado: Activos' },
               { value: 'inactive', label: 'Estado: Inactivos / Eliminados' },

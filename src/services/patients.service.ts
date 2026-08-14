@@ -402,15 +402,11 @@ export const togglePatientStatusApi = async (
   currentStatus: 'active' | 'inactive',
 ): Promise<'active' | 'inactive'> => {
   const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-  try {
-    await apiFetch(`/Pacientes/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ activo: newStatus === 'active' }),
-    });
-    return newStatus;
-  } catch (error) {
-    throw error;
-  }
+  await apiFetch(`/Pacientes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ activo: newStatus === 'active' }),
+  });
+  return newStatus;
 };
 
 export const addPatientNoteApi = async (

@@ -310,10 +310,11 @@ export const createAppointmentApi = async (
   payload: CreateCitaPayload | Appointment | Partial<Appointment>,
 ): Promise<Appointment> => {
   const appObj = payload as Partial<Appointment>;
-  const pacienteId = String((payload as any).pacienteId || appObj.patientId || '').trim();
-  const medicoId = String((payload as any).medicoId || appObj.professionalId || '').trim();
-  const tipoCitaId = String((payload as any).tipoCitaId || appObj.serviceId || '').trim();
-  const usuarioCreacionId = String((payload as any).usuarioCreacionId || '').trim();
+  const citaPayload = payload as Partial<CreateCitaPayload>;
+  const pacienteId = String(citaPayload.pacienteId || appObj.patientId || '').trim();
+  const medicoId = String(citaPayload.medicoId || appObj.professionalId || '').trim();
+  const tipoCitaId = String(citaPayload.tipoCitaId || appObj.serviceId || '').trim();
+  const usuarioCreacionId = String(citaPayload.usuarioCreacionId || '').trim();
 
   const requiredIds: Array<[string, string]> = [
     ['paciente', pacienteId],
@@ -327,20 +328,20 @@ export const createAppointmentApi = async (
   }
 
   // The API accepts HH:mm only—never AM/PM or seconds. Ventana máx. 30 min.
-  const normStart = toApiTime((payload as any).horaInicio || appObj.time || '09:00');
+  const normStart = toApiTime(citaPayload.horaInicio || appObj.time || '09:00');
   const normEnd = normalizeAppointmentEnd(
     normStart,
-    (payload as any).horaFin || undefined,
+    citaPayload.horaFin || undefined,
   );
   const finalPayload: CreateCitaPayload = {
     pacienteId,
     medicoId,
     tipoCitaId,
-    fecha: (payload as any).fecha || appObj.date || localDateISO(),
+    fecha: citaPayload.fecha || appObj.date || localDateISO(),
     horaInicio: normStart,
     horaFin: normEnd,
-    motivoConsulta: (payload as any).motivoConsulta || appObj.notes || appObj.serviceName || 'Consulta Médica Especializada',
-    observaciones: (payload as any).observaciones || appObj.notes || 'Registrado desde interfaz web.',
+    motivoConsulta: citaPayload.motivoConsulta || appObj.notes || appObj.serviceName || 'Consulta Médica Especializada',
+    observaciones: citaPayload.observaciones || appObj.notes || 'Registrado desde interfaz web.',
     usuarioCreacionId,
   };
 

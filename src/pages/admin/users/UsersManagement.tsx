@@ -23,6 +23,7 @@ import {
   toggleUserStatusApi,
   canDeactivateOrDemoteAdmin,
 } from '../../../services/users.service';
+import { getEspecialidadesApi, type CatalogOption } from '../../../services/catalogs.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './UsersManagement.css';
@@ -141,10 +142,6 @@ const UsersManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 5;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, roleFilter, statusFilter]);
-
   // Modals & Side Panel state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState<boolean>(false);
@@ -162,9 +159,30 @@ const UsersManagement: React.FC = () => {
   const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
   const [newProfTitle, setNewProfTitle] = useState('Dr.');
   const [newProfSpecialty, setNewProfSpecialty] = useState('Medicina General');
+  const [especialidades, setEspecialidades] = useState<CatalogOption[]>([]);
   const [newProfRegister, setNewProfRegister] = useState('');
   const [newProfOffice, setNewProfOffice] = useState('Consultorio Principal');
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+
+  useEffect(() => {
+    const loadEspecialidades = async () => {
+      try {
+        const data = await getEspecialidadesApi();
+        const items = Array.isArray(data) ? data : [];
+        setEspecialidades(items);
+        if (items.length > 0) {
+          const medicinaGeneral = items.find(
+            (item) => item.nombre?.trim().toLowerCase() === 'medicina general',
+          );
+          setNewProfSpecialty(medicinaGeneral?.nombre || items[0].nombre);
+        }
+      } catch (error) {
+        console.error('[UsersManagement] Error al cargar especialidades:', error);
+        setEspecialidades([]);
+      }
+    };
+    void loadEspecialidades();
+  }, []);
 
   // Edit role form state
   const [editTargetUser, setEditTargetUser] = useState<ManagedUser | null>(null);
@@ -218,9 +236,9 @@ const UsersManagement: React.FC = () => {
         setActivePanelUserId(null);
       }
       showToast('Usuario deshabilitado en la base de datos PostgreSQL.');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[UsersManagement] Error al deshabilitar usuario:', err);
-      showToast(err.message || 'Error al deshabilitar usuario en el servidor.');
+      showToast(err instanceof Error ? err.message : 'Error al deshabilitar usuario en el servidor.');
     }
   };
 
@@ -237,9 +255,9 @@ const UsersManagement: React.FC = () => {
       setNewUserName('');
       setNewUserEmail('');
       showToast('Usuario reactivado exitosamente en PostgreSQL.');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[UsersManagement] Error al reactivar usuario:', err);
-      showToast(err.message || 'Error al reactivar usuario en el servidor.');
+      showToast(err instanceof Error ? err.message : 'Error al reactivar usuario en el servidor.');
     }
   };
 
@@ -331,9 +349,9 @@ const UsersManagement: React.FC = () => {
       setNewUserAddress('');
       setIsCreateModalOpen(false);
       showToast(`Usuario ${newUser.name} creado exitosamente`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[UsersManagement] Error al crear usuario:', error);
-      showToast(error.message || 'Error al registrar usuario en el servidor.');
+      showToast(error instanceof Error ? error.message : 'Error al registrar usuario en el servidor.');
     } finally {
       setIsSubmittingUser(false);
     }
@@ -388,6 +406,7 @@ const UsersManagement: React.FC = () => {
 
   useEffect(() => {
     if (!panelUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear permissions when its backing user is removed.
       setPanelPermissions([]);
       return;
     }
@@ -504,14 +523,20 @@ const UsersManagement: React.FC = () => {
               className="users-mgmt__search-input"
               placeholder="Buscar usuario..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
           {/* Filtro por Rol */}
           <CustomSelect
             value={roleFilter}
-            onChange={(val) => setRoleFilter(val)}
+            onChange={(val) => {
+              setRoleFilter(val);
+              setCurrentPage(1);
+            }}
             options={[
               { value: 'all', label: 'Todos los Roles' },
               { value: 'admin', label: 'Administrador' },
@@ -523,7 +548,10 @@ const UsersManagement: React.FC = () => {
           {/* Filtro por Estado */}
           <CustomSelect
             value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
+            onChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
             options={[
               { value: 'active', label: 'Estado: Activos' },
               { value: 'inactive', label: 'Estado: Inactivos / Eliminados' },
@@ -917,14 +945,23 @@ const UsersManagement: React.FC = () => {
 
                       <div className="form-group">
                         <label className="form-label">Especialidad Médica</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Ej. Cardiología"
+                        <select
+                          className="users-mgmt__select"
+                          style={{ width: '100%' }}
                           value={newProfSpecialty}
                           onChange={(e) => setNewProfSpecialty(e.target.value)}
                           required={newUserRole === 'professional'}
-                        />
+                        >
+                          {especialidades.length === 0 ? (
+                            <option value="Medicina General">Medicina General</option>
+                          ) : (
+                            especialidades.map((item) => (
+                              <option key={item.id} value={item.nombre}>
+                                {item.nombre}
+                              </option>
+                            ))
+                          )}
+                        </select>
                       </div>
                     </div>
 

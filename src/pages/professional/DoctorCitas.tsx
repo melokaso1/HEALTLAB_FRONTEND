@@ -182,14 +182,6 @@ const DoctorCitas: React.FC = () => {
     return activeAppointments[0] || null;
   }, [appointments, activeAppointments, selectedAppId]);
 
-  // If the selected cita becomes Cancelada / No asistió, move to next active or clear.
-  useEffect(() => {
-    if (!selectedAppId) return;
-    const current = appointments.find((a) => String(a.id) === String(selectedAppId));
-    if (current && isActiveConsultSlot(current.status)) return;
-    setSelectedAppId(activeAppointments[0]?.id ?? null);
-  }, [appointments, activeAppointments, selectedAppId]);
-
   // Determine if Form is Locked (when status is 'Atendida')
   const isFormLocked = selectedAppointment?.status === 'Atendida';
 
@@ -231,7 +223,7 @@ const DoctorCitas: React.FC = () => {
       if (completedAppointment) saveAppointmentNote(completedAppointment);
 
       showToast(`Consulta clínica guardada y bloqueada de forma oficial.`);
-    } catch (err) {
+    } catch {
       showToast('Error al guardar la consulta médica.');
     }
   };
