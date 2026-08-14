@@ -14,11 +14,11 @@
   position: fixed;
   top: 24px;
   right: 24px;
-  background: #0A9396;
+  background: #00A896;
   color: #FFFFFF;
   padding: 12px 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(10, 147, 150, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 168, 150, 0.35);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -135,8 +135,8 @@
   height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid #0A9396;
-  box-shadow: 0 4px 10px rgba(10, 147, 150, 0.2);
+  border: 3px solid #00A896;
+  box-shadow: 0 4px 10px rgba(0, 168, 150, 0.2);
   flex-shrink: 0;
 }
 
@@ -223,8 +223,8 @@
 
 .profile-input-wrapper:focus-within {
   background: #FFFFFF;
-  border-color: #0A9396;
-  box-shadow: 0 0 0 3px rgba(10, 147, 150, 0.12);
+  border-color: #00A896;
+  box-shadow: 0 0 0 3px rgba(0, 168, 150, 0.12);
 }
 
 .profile-input-icon {
@@ -258,7 +258,7 @@
 }
 
 .profile-eye-btn:hover {
-  color: #0A9396;
+  color: #00A896;
 }
 
 /* Card Footer & Action Buttons */
@@ -283,14 +283,15 @@
 }
 
 .profile-btn--primary {
-  background: linear-gradient(135deg, #0A9396, #005F73);
+  background: #00A896;
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(10, 147, 150, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 168, 150, 0.25);
 }
 
 .profile-btn--primary:hover {
+  background: #008E7F;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(10, 147, 150, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 168, 150, 0.35);
 }
 
 .profile-btn--danger {
@@ -334,7 +335,7 @@
 }
 
 .profile-pref-icon {
-  color: #0A9396;
+  color: #00A896;
 }
 
 /* Switch Toggle Styling */
@@ -378,7 +379,7 @@
 }
 
 input:checked + .switch-slider {
-  background-color: #0A9396;
+  background-color: #00A896;
 }
 
 input:checked + .switch-slider:before {

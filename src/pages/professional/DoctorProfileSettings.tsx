@@ -10,7 +10,6 @@ import {
   Globe,
   Bell,
   KeyRound,
-  LogOut,
   X,
   CheckCircle2,
   Lock,
@@ -22,7 +21,7 @@ import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './DoctorProfileSettings.css';
 
 const DoctorProfileSettings: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
 
   // Toast State
@@ -218,15 +217,6 @@ const DoctorProfileSettings: React.FC = () => {
             >
               <KeyRound size={15} />
               <span>Cambiar contraseña</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-sec-action btn-sec-action--logout"
-              onClick={logout}
-            >
-              <LogOut size={15} />
-              <span>Cerrar sesión</span>
             </button>
           </div>
         </div>

@@ -537,7 +537,7 @@
   min-width: 64px;
   min-height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--hl-primary), var(--hl-secondary-blue));
+  background: var(--hl-primary);
   color: #FFFFFF;
   font-size: 22px;
   font-weight: 700;

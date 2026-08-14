@@ -7,7 +7,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  LogOut,
   CheckCircle2,
   Upload,
   ShieldCheck,
@@ -21,7 +20,7 @@ import medicoAvatar from '../../../assets/images/medico1.jpeg';
 import './ProfileSettings.css';
 
 const ProfileSettings: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   // Personal Info Form State
   const [fullName, setFullName] = useState<string>(user?.name || 'Dr. María García');
@@ -287,24 +286,8 @@ const ProfileSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Sesión & Seguridad */}
+        {/* Right Column: Seguridad */}
         <div className="profile-settings__col">
-          {/* Card 3: Sesión (Red Danger Box) */}
-          <div className="profile-card profile-card--danger">
-            <h2 className="profile-card__title profile-card__title--danger">Sesión</h2>
-            <p className="profile-card__desc">
-              Cerrar sesión de forma segura en todos los dispositivos.
-            </p>
-            <button
-              type="button"
-              className="profile-btn profile-btn--danger"
-              onClick={logout}
-            >
-              <LogOut size={15} />
-              <span>Cerrar sesión</span>
-            </button>
-          </div>
-
           {/* Card 4: Seguridad */}
           <div className="profile-card">
             <h2 className="profile-card__title">Seguridad</h2>
