@@ -98,10 +98,6 @@ const RecepPacientes: React.FC = () => {
     return filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   }, [filteredPatients, currentPage]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [estadoFilter]);
-
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedIds(filteredPatients.map((p) => p.id));
@@ -270,9 +266,10 @@ const RecepPacientes: React.FC = () => {
               <select
                 className="toolbar-select"
                 value={estadoFilter}
-                onChange={(e) =>
-                  setEstadoFilter(e.target.value as 'Todos' | 'Activo' | 'Inactivo')
-                }
+                onChange={(e) => {
+                  setEstadoFilter(e.target.value as 'Todos' | 'Activo' | 'Inactivo');
+                  setCurrentPage(1);
+                }}
               >
                 <option value="Todos">Todos los estados</option>
                 <option value="Activo">Solo Activos</option>

@@ -770,7 +770,7 @@
 .calendar-grid-body {
   display: flex;
   flex-direction: column;
-  max-height: 520px;
+  max-height: 720px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none; /* Firefox */
@@ -788,7 +788,11 @@
   display: grid;
   grid-template-columns: 72px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--hl-border);
-  min-height: 76px;
+  min-height: 58px;
+}
+
+.calendar-hour-row:last-child {
+  border-bottom: none;
 }
 
 .time-axis-cell {
