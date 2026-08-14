@@ -34,7 +34,7 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
   userRole = 'Director Médico',
 }) => {
   const { logout, user } = useAuth();
-  const { notifications, unreadCount, markAllNotificationsAsRead, clearNotifications, isConnected } = useSignalR();
+  const { notifications, unreadCount, markAllNotificationsAsRead, clearNotifications } = useSignalR();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -147,9 +147,6 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
                     <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
                       No tienes notificaciones pendientes.
                     </p>
-                    <span style={{ fontSize: '11px', color: isConnected ? '#00A896' : '#EE9B00', marginTop: '6px', display: 'block' }}>
-                      {isConnected ? '● SignalR Conectado' : '○ Modo Local'}
-                    </span>
                   </div>
                 ) : (
                   notifications.map((n: any) => (
