@@ -118,6 +118,12 @@ const RecepPacientes: React.FC = () => {
 
   const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
     if (isCreatingPatient) return;
+  const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'> & {
+    direccion?: string;
+    tipoSangre?: string;
+    alergias?: string;
+    fechaNacimiento?: string;
+  }) => {
     if (!isValidDocument(newPatientDocType, newP.documento)) {
       showToast(newPatientDocType === 'PAS'
         ? 'El pasaporte debe ser alfanumérico y tener máximo 30 caracteres.'
@@ -129,13 +135,18 @@ const RecepPacientes: React.FC = () => {
       const created = await createPatientApi({
         name: newP.nombre,
         gender: newP.genero === 'F' ? 'Femenino' : 'Masculino',
+        birthDate: newP.fechaNacimiento,
         age: newP.edad,
         documentType: newPatientDocType as 'CC' | 'TI' | 'CE' | 'PAS',
         documentNumber: newP.documento,
         contact: {
           phone: newP.telefono,
           email: newP.email,
-          address: 'Dirección no registrada',
+          address: newP.direccion || 'Dirección no registrada',
+        },
+        medicalData: {
+          bloodType: newP.tipoSangre || 'O+',
+          allergies: newP.alergias ? newP.alergias.split(',').map((a) => a.trim()) : ['Ninguna'],
         },
       });
 
@@ -434,21 +445,35 @@ const RecepPacientes: React.FC = () => {
                 const phoneType = newPatientPhoneType;
                 const telNum = (form.elements.namedItem('telefono') as HTMLInputElement).value;
                 const em = (form.elements.namedItem('email') as HTMLInputElement).value;
+                const dir = (form.elements.namedItem('direccion') as HTMLInputElement)?.value || '';
+                const sangre = (form.elements.namedItem('tipoSangre') as HTMLSelectElement)?.value || 'O+';
+                const alg = (form.elements.namedItem('alergias') as HTMLInputElement)?.value || '';
 
                 let calculatedEdad = 30;
                 if (fechaNac) {
-                  const birthYear = new Date(fechaNac).getFullYear();
-                  const currentYear = new Date().getFullYear();
-                  calculatedEdad = Math.max(0, currentYear - birthYear);
+                  const birthDateObj = new Date(fechaNac);
+                  const today = new Date();
+                  let age = today.getFullYear() - birthDateObj.getFullYear();
+                  const m = today.getMonth() - birthDateObj.getMonth();
+                  if (m < 0 || (m === 0 && today.getDate() < birthDateObj.getDate())) age--;
+                  calculatedEdad = Math.max(0, age);
                 }
 
+<<<<<<< HEAD
                 await handleCreatePatient({
+=======
+                handleCreatePatient({
+>>>>>>> b3379ee185f9021621db48263e58f6ebae4ab1e2
                   documento: docNum,
                   nombre: nom,
                   genero: gen,
                   edad: calculatedEdad,
                   telefono: `${phoneType}: ${telNum}`,
                   email: em,
+                  direccion: dir,
+                  tipoSangre: sangre,
+                  alergias: alg,
+                  fechaNacimiento: fechaNac,
                   estado: 'Activo',
                 });
               }}
@@ -547,6 +572,42 @@ const RecepPacientes: React.FC = () => {
                     className="form-input"
                     placeholder="maria.silva@email.com"
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Dirección</label>
+                  <input
+                    type="text"
+                    name="direccion"
+                    className="form-input"
+                    placeholder="Ej. Calle 123 #45-67"
+                  />
+                </div>
+
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Tipo de Sangre</label>
+                    <select name="tipoSangre" className="form-select" defaultValue="O+">
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Alergias</label>
+                    <input
+                      type="text"
+                      name="alergias"
+                      className="form-input"
+                      placeholder="Ej. Penicilina, Sulfa"
+                    />
+                  </div>
                 </div>
               </div>
 
