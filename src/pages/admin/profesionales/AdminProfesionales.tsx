@@ -200,6 +200,15 @@ const AdminProfesionales: React.FC = () => {
     return profesionales.find((p) => p.id === selectedId) || (profesionales.length > 0 ? profesionales[0] : null);
   }, [profesionales, selectedId]);
 
+  // Information card state (right click or selection)
+  const [infoCardProf, setInfoCardProf] = useState<Professional | null>(null);
+
+  useEffect(() => {
+    if (selectedProf && !infoCardProf) {
+      setInfoCardProf(selectedProf);
+    }
+  }, [selectedProf]);
+
   // Dynamic Specialties list for chips
   const specialtyOptions = useMemo(() => {
     const setSpecs = new Set<string>();
@@ -484,16 +493,6 @@ const AdminProfesionales: React.FC = () => {
             Directorio médico, agenda semanal de citas y configuración de disponibilidad
           </p>
         </div>
-
-        <div className="profesionales-header__actions">
-          <button
-            className="btn-primary"
-            onClick={() => setIsAddDoctorOpen(true)}
-          >
-            <UserPlus size={18} />
-            <span>Nuevo Profesional</span>
-          </button>
-        </div>
       </div>
 
       {/* Main 2-Column Layout */}
@@ -510,13 +509,6 @@ const AdminProfesionales: React.FC = () => {
                 {filteredProfesionales.length}
               </span>
             </div>
-            <button
-              className="btn-icon"
-              title="Registrar nuevo profesional"
-              onClick={() => setIsAddDoctorOpen(true)}
-            >
-              <UserPlus size={16} />
-            </button>
           </div>
 
           {/* Controls: Search + Specialty Filter Chips */}
@@ -580,12 +572,21 @@ const AdminProfesionales: React.FC = () => {
                   <div
                     key={prof.id}
                     className={`doctor-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setSelectedId(prof.id)}
+                    onClick={() => {
+                      setSelectedId(prof.id);
+                      setInfoCardProf(prof);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setSelectedId(prof.id);
+                      setInfoCardProf(prof);
+                      showToast(`Mostrando información detallada de ${fullName}`);
+                    }}
                     onDoubleClick={() => {
                       setSelectedId(prof.id);
                       setIsEditProfileOpen(true);
                     }}
-                    title={`Doble clic para ver/editar perfil completo de ${fullName}`}
+                    title={`Clic derecho para ver información. Doble clic para editar a ${fullName}`}
                   >
                     {/* Doctor Avatar */}
                     <div className="doctor-avatar-wrapper">
@@ -828,6 +829,93 @@ const AdminProfesionales: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* CARD DE INFORMACIÓN DETALLADA DEL PROFESIONAL MÉDICO */}
+              {infoCardProf && (
+                <div className="hl-card prof-info-detail-card" style={{ marginTop: '16px' }}>
+                  <div className="prof-info-card__header">
+                    <div className="prof-info-card__identity">
+                      <div className="prof-info-card__avatar">
+                        {infoCardProf.foto && !imageErrors[infoCardProf.id] ? (
+                          <img src={infoCardProf.foto} alt={infoCardProf.nombre} />
+                        ) : (
+                          <span>{infoCardProf.nombre[0]}{infoCardProf.apellido[0]}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="prof-info-card__name">
+                          {infoCardProf.tituloPrefix} {infoCardProf.nombre} {infoCardProf.apellido}
+                        </h3>
+                        <p className="prof-info-card__spec">{infoCardProf.especialidad}</p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          backgroundColor: infoCardProf.disponibleHoy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: infoCardProf.disponibleHoy ? '#10B981' : '#EF4444',
+                        }}
+                      >
+                        ● {infoCardProf.disponibleHoy ? 'Activo' : 'Inactivo'}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        title="Cerrar información del profesional"
+                        onClick={() => setInfoCardProf(null)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--hl-text-sub)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="prof-info-card__grid">
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Documento</span>
+                      <span className="prof-info-val">{infoCardProf.numeroDocumento || 'CC - 1098765432'}</span>
+                    </div>
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Registro Profesional</span>
+                      <span className="prof-info-val">{infoCardProf.registroProfesional || 'CMP-45892'}</span>
+                    </div>
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Consultorio</span>
+                      <span className="prof-info-val">{infoCardProf.consultorio || 'Consultorio 302'}</span>
+                    </div>
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Correo Electrónico</span>
+                      <span className="prof-info-val">{infoCardProf.email || `${infoCardProf.nombre.toLowerCase()}@healtlab.com`}</span>
+                    </div>
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Teléfono</span>
+                      <span className="prof-info-val">{infoCardProf.telefono || '+57 300 123 4567'}</span>
+                    </div>
+                    <div className="prof-info-item">
+                      <span className="prof-info-label">Citas de Hoy</span>
+                      <span className="prof-info-val">{infoCardProf.citasHoy} citas</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="hl-card empty-selection-state">
