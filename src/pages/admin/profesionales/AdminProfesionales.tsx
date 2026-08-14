@@ -925,7 +925,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [registroProfesional, setRegistroProfesional] = useState(professional.registroProfesional);
   const [consultorio, setConsultorio] = useState(professional.consultorio);
   const [estado, setEstado] = useState(professional.estado);
-  const [foto, setFoto] = useState(professional.foto);
+  const foto = professional.foto;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1039,17 +1039,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <option value="Activo">Activo</option>
                 <option value="Inactivo">Inactivo</option>
               </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">URL de Foto / Avatar</label>
-              <input
-                type="text"
-                className="form-input"
-                value={foto}
-                onChange={(e) => setFoto(e.target.value)}
-                placeholder="https://..."
-              />
             </div>
           </div>
 

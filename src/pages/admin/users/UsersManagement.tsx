@@ -160,6 +160,10 @@ const UsersManagement: React.FC = () => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserDocument, setNewUserDocument] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
+  const [newProfTitle, setNewProfTitle] = useState('Dr.');
+  const [newProfSpecialty, setNewProfSpecialty] = useState('Medicina General');
+  const [newProfRegister, setNewProfRegister] = useState('');
+  const [newProfOffice, setNewProfOffice] = useState('Consultorio Principal');
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
 
   // Edit role form state
@@ -199,7 +203,7 @@ const UsersManagement: React.FC = () => {
     if (target) {
       const guard = canDeactivateOrDemoteAdmin(users, target);
       if (!guard.ok) {
-        showToast(guard.error);
+        showToast(guard.error ?? 'No se puede desactivar el administrador.');
         return;
       }
     }
@@ -253,7 +257,7 @@ const UsersManagement: React.FC = () => {
     if (editTargetUser.role === 'admin' && targetRole !== 'admin') {
       const guard = canDeactivateOrDemoteAdmin(users, editTargetUser);
       if (!guard.ok) {
-        showToast(guard.error);
+        showToast(guard.error ?? 'No se puede cambiar el rol del administrador.');
         return;
       }
     }
@@ -319,11 +323,12 @@ const UsersManagement: React.FC = () => {
           const apellido = parts.slice(1).join(' ') || '';
 
           await createProfessionalApi({
-            nombre,
+            nombre: `${newProfTitle ? `${newProfTitle} ` : ''}${nombre}`.trim(),
             apellido,
-            especialidad: 'Medicina General',
-            registroProfesional: `REG-${Date.now().toString().slice(-6)}`,
-            consultorio: 'Consultorio Principal',
+            numeroDocumento: newUserDocument,
+            especialidad: newProfSpecialty.trim() || 'Medicina General',
+            registroProfesional: newProfRegister.trim() || `REG-${Date.now().toString().slice(-6)}`,
+            consultorio: newProfOffice.trim() || 'Consultorio Principal',
           });
         } catch (profErr) {
           console.warn('[UsersManagement] Registro de profesional en agenda:', profErr);
@@ -867,6 +872,85 @@ const UsersManagement: React.FC = () => {
                     <option value="admin">Administrador</option>
                   </select>
                 </div>
+
+                {newUserRole === 'professional' && (
+                  <div
+                    style={{
+                      marginTop: '16px',
+                      paddingTop: '14px',
+                      borderTop: '1px solid var(--hl-border, rgba(255,255,255,0.1))',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#00A896',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'block',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      Datos del Perfil Profesional
+                    </span>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div className="form-group">
+                        <label className="form-label">Prefijo Título</label>
+                        <select
+                          className="users-mgmt__select"
+                          style={{ width: '100%' }}
+                          value={newProfTitle}
+                          onChange={(e) => setNewProfTitle(e.target.value)}
+                        >
+                          <option value="Dr.">Dr.</option>
+                          <option value="Dra.">Dra.</option>
+                          <option value="Lic.">Lic.</option>
+                          <option value="Mg.">Mg.</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Especialidad Médica</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Ej. Cardiología"
+                          value={newProfSpecialty}
+                          onChange={(e) => setNewProfSpecialty(e.target.value)}
+                          required={newUserRole === 'professional'}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                      <div className="form-group">
+                        <label className="form-label">Licencia / Reg. Profesional</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Ej. CMP-45892"
+                          value={newProfRegister}
+                          onChange={(e) => setNewProfRegister(e.target.value)}
+                          required={newUserRole === 'professional'}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Consultorio / Ubicación</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Ej. Consultorio 301"
+                          value={newProfOffice}
+                          onChange={(e) => setNewProfOffice(e.target.value)}
+                          required={newUserRole === 'professional'}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button

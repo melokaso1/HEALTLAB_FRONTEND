@@ -144,7 +144,7 @@ export function countActiveAdmins(users: ManagedUser[]): number {
 export function canDeactivateOrDemoteAdmin(
   users: ManagedUser[],
   target: ManagedUser,
-): { ok: true } | { ok: false; error: string } {
+): { ok: true; error?: undefined } | { ok: false; error: string } {
   if (target.role !== 'admin' || target.status !== 'active') return { ok: true };
   if (countActiveAdmins(users) >= 2) return { ok: true };
   return {

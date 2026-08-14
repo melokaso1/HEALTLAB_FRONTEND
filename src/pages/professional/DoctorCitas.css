@@ -653,3 +653,24 @@
   background: #253049;
   color: #F8FAFC;
 }
+
+.doc-empty-title {
+  margin: 8px 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.doc-empty-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.dark-mode .doc-empty-title {
+  color: #F8FAFC;
+}
+
+.dark-mode .doc-empty-subtitle {
+  color: #94A3B8;
+}
