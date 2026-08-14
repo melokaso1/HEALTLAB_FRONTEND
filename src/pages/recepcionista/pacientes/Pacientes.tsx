@@ -115,22 +115,18 @@ const RecepPacientes: React.FC = () => {
     );
   };
 
-<<<<<<< Updated upstream
-  const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
-    if (!isValidDocument(newPatientDocType, newP.documento)) {
-      showToast(newPatientDocType === 'PAS'
-        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
-        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
-      return;
-    }
-=======
   const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'> & {
     direccion?: string;
     tipoSangre?: string;
     alergias?: string;
     fechaNacimiento?: string;
   }) => {
->>>>>>> Stashed changes
+    if (!isValidDocument(newPatientDocType, newP.documento)) {
+      showToast(newPatientDocType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
+      return;
+    }
     try {
       const created = await createPatientApi({
         name: newP.nombre,
