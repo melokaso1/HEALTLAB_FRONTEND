@@ -10,6 +10,7 @@ import './AdminDashboard.css';
 import Loading from '../../components/common/Loading';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
+import { useSignalR } from '../../context/SignalRContext';
 import type { Appointment } from '../../types/appointment.types';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────
@@ -22,40 +23,12 @@ interface CitaTabla {
   estado: 'confirmada' | 'cancelada' | 'pendiente';
 }
 
-interface ActividadItem {
-  id: number;
-  texto: React.ReactNode;
-  tiempo: string;
-  avatarBg: string;
-}
 
 interface AgendaSlot {
   hora: string;
   paciente?: string;
   especialidad?: string;
 }
-
-// ─── Actividad reciente (sin endpoint aún — se mantiene estática) ─────────
-const actividadesData: ActividadItem[] = [
-  {
-    id: 1,
-    texto: (<><strong>Dr. Smith updated medical records for</strong> Maria Rodriguez.</>),
-    tiempo: '10 minutes ago',
-    avatarBg: '#00A896',
-  },
-  {
-    id: 2,
-    texto: (<><strong>New patient Sarah Jenkins registered</strong> via online portal.</>),
-    tiempo: '45 minutes ago',
-    avatarBg: '#6366F1',
-  },
-  {
-    id: 3,
-    texto: (<><strong>Appointment cancelled by Tom Harris</strong> for tomorrow.</>),
-    tiempo: '1 hour ago',
-    avatarBg: '#EC4899',
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const todayISO = (): string => new Date().toISOString().split('T')[0];
@@ -94,6 +67,7 @@ const HORAS_DIA = [
 
 // ─── Componente ───────────────────────────────────────────────────────────
 const AdminDashboard: React.FC = () => {
+  const { recentActivities } = useSignalR();
   const [searchTerm, setSearchTerm] = useState('');
   const [citasData, setCitasData] = useState<CitaTabla[]>([]);
   const [agendaSlots, setAgendaSlots] = useState<AgendaSlot[]>(
@@ -277,14 +251,16 @@ const AdminDashboard: React.FC = () => {
           <div className="card activity-card">
             <h2 className="activity-card__title">Actividad Reciente</h2>
             <div className="activity-list">
-              {actividadesData.map((act) => (
+              {recentActivities.map((act) => (
                 <div key={act.id} className="activity-item">
-                  <div className="activity-item__avatar" style={{ backgroundColor: act.avatarBg }}>
+                  <div className="activity-item__avatar" style={{ backgroundColor: act.avatarBg || '#00A896' }}>
                     <UserCheck size={16} />
                   </div>
                   <div className="activity-item__details">
-                    <p className="activity-item__text">{act.texto}</p>
-                    <span className="activity-item__time">{act.tiempo}</span>
+                    <p className="activity-item__text">
+                      <strong>{act.user}</strong> {act.action} <strong>{act.target}</strong>.
+                    </p>
+                    <span className="activity-item__time">{act.timeAgo}</span>
                   </div>
                 </div>
               ))}

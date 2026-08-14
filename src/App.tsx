@@ -1,6 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SignalRProvider } from './context/SignalRContext';
 import AppRoutes from './routes/AppRoutes';
 
 function App() {
@@ -8,7 +9,9 @@ function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <SignalRProvider>
+            <AppRoutes />
+          </SignalRProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

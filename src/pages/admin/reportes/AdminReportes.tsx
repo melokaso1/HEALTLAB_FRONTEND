@@ -75,7 +75,19 @@ const AdminReportes: React.FC = () => {
     });
   }, [appointments, appliedFilters]);
 
-  const repTotalPages = useMemo(() => Math.ceil(filteredAppointments.length / itemsPerPage) || 1, [filteredAppointments.length, itemsPerPage]);
+  const attendedAppointments = useMemo(() => {
+    return filteredAppointments.filter((app) => app.status === 'Atendida');
+  }, [filteredAppointments]);
+
+  const repTotalPages = useMemo(
+    () => Math.ceil(attendedAppointments.length / itemsPerPage) || 1,
+    [attendedAppointments.length, itemsPerPage]
+  );
+
+  const paginatedAttendedAppointments = useMemo(() => {
+    const start = (repCurrentPage - 1) * itemsPerPage;
+    return attendedAppointments.slice(start, start + itemsPerPage);
+  }, [attendedAppointments, repCurrentPage, itemsPerPage]);
 
   // Dynamic counts based on real appointments and applied filters
   const summaryCounts = useMemo(() => {
@@ -319,7 +331,7 @@ const AdminReportes: React.FC = () => {
 
               <div className="calendar-legend">
                 <span className="dot-indicator dot-indicator--green" />
-                <span>{filteredAppointments.length} Citas registradas</span>
+                <span>{attendedAppointments.length} Citas registradas</span>
               </div>
             </div>
 
@@ -334,14 +346,14 @@ const AdminReportes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.length === 0 ? (
+                  {paginatedAttendedAppointments.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
-                        No se encontraron citas con los filtros aplicados.
+                        No se encontraron citas atendidas con los filtros aplicados.
                       </td>
                     </tr>
                   ) : (
-                    appointments.map((cita) => (
+                    paginatedAttendedAppointments.map((cita) => (
                       <tr key={cita.id}>
                         <td style={{ fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap' }}>
                           {cita.date}
@@ -375,7 +387,7 @@ const AdminReportes: React.FC = () => {
               <Pagination
                 currentPage={repCurrentPage}
                 totalPages={repTotalPages}
-                totalItems={appointments.length}
+                totalItems={attendedAppointments.length}
                 itemsPerPage={itemsPerPage}
                 itemLabel="registros"
                 onPageChange={(p) => setRepCurrentPage(p)}

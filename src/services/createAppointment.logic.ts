@@ -30,7 +30,7 @@ export interface CreateAppointmentInput {
 }
 
 export type CreateAppointmentResult =
-  | { ok: true; appointment: Appointment; error?: string }
+  | { ok: true; appointment: Appointment; error?: undefined }
   | { ok: false; error: string; appointment?: undefined };
 
 const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';

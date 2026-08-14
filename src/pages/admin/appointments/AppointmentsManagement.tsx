@@ -20,6 +20,7 @@ import type {
   Appointment,
   AppointmentStatus,
   ProfessionalOption,
+  ServiceOption,
 } from '../../../types/appointment.types';
 import type { Patient } from '../../../types/patient.types';
 import {
@@ -28,6 +29,7 @@ import {
   AVAILABLE_TIME_SLOTS,
   checkScheduleConflict,
   getAppointmentsApi,
+  getServicesApi,
   cancelAppointmentApi,
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
@@ -37,18 +39,23 @@ import {
   findPatientByCedula,
   createAppointmentFromInput,
 } from '../../../services/createAppointment.logic';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useSignalR } from '../../../context/SignalRContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import Pagination from '../../../components/common/Pagination';
 import './AppointmentsManagement.css';
 
 const AppointmentsManagement: React.FC = () => {
+  const location = useLocation();
   const { user } = useAuth();
+  const { addNotification, addActivity } = useSignalR();
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico';
 
   // Main Data States
   const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
   const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>([]);
+  const [servicesList, setServicesList] = useState<ServiceOption[]>(mockServices);
 
   const [filterByDate, setFilterByDate] = useState<boolean>(true);
   const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
@@ -76,7 +83,28 @@ const AppointmentsManagement: React.FC = () => {
         setProfessionalsList(data);
       }
     });
+    getServicesApi().then((data) => {
+      if (data && data.length > 0) {
+        setServicesList(data);
+        if (data[0]?.id) {
+          setNewServiceId(data[0].id);
+        }
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    const state = location.state as { patient?: Patient; searchCedula?: string } | undefined;
+    if (state?.patient || state?.searchCedula) {
+      if (state.patient) {
+        setSelectedPatient(state.patient);
+        setCedulaQuery(state.patient.documentNumber);
+      } else if (state.searchCedula) {
+        setCedulaQuery(state.searchCedula);
+      }
+      setIsCreateModalOpen(true);
+    }
+  }, [location.state]);
 
   // Dynamic Calendar Month Navigation State
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date(2026, 9, 1)); // Oct 2026
@@ -262,6 +290,10 @@ const AppointmentsManagement: React.FC = () => {
           prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
         );
       }
+      const targetApp = appointments.find((a) => String(a.id) === String(appId));
+      const pName = targetApp?.patientName || 'Paciente';
+      addNotification(`Estado de cita: ${newStatus}`, `Cita de ${pName} marcada como ${newStatus}.`, newStatus === 'Cancelada' ? 'warning' : 'info');
+      addActivity('Usuario', `cambió estado de cita de ${pName} a`, newStatus, newStatus === 'Cancelada' ? '#EC4899' : '#6366F1');
       showToast(`Estado de cita cambiado a ${newStatus}`);
     } catch (error) {
       console.error('[AppointmentsManagement] Error al cambiar estado de cita:', error);
@@ -274,12 +306,39 @@ const AppointmentsManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedAppointment) return;
 
+    if (rescheduleConflict) {
+      showToast('Conflicto detectado: El profesional no está disponible en este horario.');
+      return;
+    }
+
+    const profObj = professionalsList.find((p) => String(p.id) === String(rescheduleProfId));
+    const serviceObj = servicesList.find((s) => String(s.id) === String(rescheduleServiceId)) || servicesList[0] || mockServices[0];
+
     try {
-      await rescheduleAppointmentApi(selectedAppointment.id, rescheduleDate, rescheduleTime);
+      const updated = await rescheduleAppointmentApi(
+        selectedAppointment.id,
+        rescheduleDate,
+        rescheduleTime,
+        {
+          professionalId: profObj?.id ?? rescheduleProfId,
+          professionalName: profObj?.name,
+          professionalSpecialty: profObj?.specialty,
+          serviceId: serviceObj?.id ?? rescheduleServiceId,
+          serviceName: serviceObj?.name,
+        }
+      );
+
       const fresh = await getAppointmentsApi();
       if (fresh && fresh.length > 0) {
         setPatientsAppointments(fresh);
+      } else if (updated) {
+        setPatientsAppointments((prev) =>
+          prev.map((app) => (String(app.id) === String(selectedAppointment.id) ? updated : app))
+        );
       }
+
+      addNotification('Cita reprogramada', `La cita de ${selectedAppointment.patientName} fue reprogramada para ${rescheduleDate}.`, 'info');
+      addActivity('Usuario', 'reprogramó cita médica de', selectedAppointment.patientName, '#6366F1');
       showToast(`Cita reprogramada exitosamente para ${rescheduleDate} a las ${rescheduleTime}`);
     } catch (error) {
       console.error('[AppointmentsManagement] Error al reprogramar cita:', error);
@@ -339,17 +398,26 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
-    if (!selectedPatient) {
+    let targetPatient = selectedPatient;
+
+    if (!targetPatient && cedulaQuery.trim()) {
+      targetPatient = await findPatientByCedula(cedulaQuery);
+      if (targetPatient) {
+        setSelectedPatient(targetPatient);
+      }
+    }
+
+    if (!targetPatient) {
       showToast('Busque y seleccione un paciente por cédula antes de agendar.');
       return;
     }
 
     const profObj = professionalsList.find((p) => String(p.id) === String(newProfId)) || professionalsList[0];
-    const serviceObj = mockServices.find((s) => String(s.id) === String(newServiceId)) || mockServices[0];
+    const serviceObj = servicesList.find((s) => String(s.id) === String(newServiceId)) || servicesList[0] || mockServices[0];
 
     const result = await createAppointmentFromInput({
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
+      patientId: targetPatient.id,
+      patientName: targetPatient.name,
       professionalId: profObj?.id ?? newProfId,
       professionalName: profObj?.name ?? 'Médico Seleccionado',
       professionalSpecialty: profObj?.specialty ?? 'Medicina General',
@@ -361,7 +429,7 @@ const AppointmentsManagement: React.FC = () => {
     });
 
     if (!result.ok) {
-      showToast(result.error);
+      showToast('error' in result && result.error ? result.error : 'Error al agendar la cita');
       return;
     }
 
@@ -377,7 +445,10 @@ const AppointmentsManagement: React.FC = () => {
     setCedulaQuery('');
     setSelectedPatient(null);
     setNewNotes('');
-    showToast(`Nueva cita agendada para ${created.patientName || selectedPatient.name} con ${created.professionalName}`);
+    const pName = created.patientName || targetPatient.name;
+    addNotification('Nueva cita agendada', `Cita para ${pName} agendada con éxito.`, 'success');
+    addActivity('Sistema de Citas', 'agendó una cita médica para', pName, '#00A896');
+    showToast(`Nueva cita agendada para ${pName} con ${created.professionalName}`);
   };
 
   // Filtered appointments list for table
@@ -901,7 +972,7 @@ const AppointmentsManagement: React.FC = () => {
                       value={rescheduleServiceId}
                       onChange={(e) => setRescheduleServiceId(e.target.value)}
                     >
-                      {mockServices.map((s) => (
+                      {(servicesList.length > 0 ? servicesList : mockServices).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name} (${s.price.toLocaleString('es-CO')})
                         </option>
@@ -1087,7 +1158,7 @@ const AppointmentsManagement: React.FC = () => {
                     onChange={(e) => setNewServiceId(e.target.value)}
                     required
                   >
-                    {mockServices.map((s) => (
+                    {(servicesList.length > 0 ? servicesList : mockServices).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} (${s.price.toLocaleString('es-CO')})
                       </option>

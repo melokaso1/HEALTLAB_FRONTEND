@@ -1603,9 +1603,40 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [pacienteCedula, setPacienteCedula] = useState('');
   const [pacienteNombre, setPacienteNombre] = useState('');
   const [motivoConsulta, setMotivoConsulta] = useState('Consulta Especializada');
-  const [diaAbrev, setDiaAbrev] = useState<DiaSemana>(initialSlot?.dayAbrev || 'MIÉ');
+  const [diaAbrev, setDiaAbrev] = useState<DiaSemana>(initialSlot?.dayAbrev || 'LUN');
+  const [fechaExacta, setFechaExacta] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [horaInicio, setHoraInicio] = useState(initialSlot?.timeStr || '09:00');
   const [horaFin, setHoraFin] = useState('10:00');
+
+  const handleDateChange = (val: string) => {
+    setFechaExacta(val);
+    if (val) {
+      const parts = val.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const abrevMap: Record<number, DiaSemana> = {
+          0: 'DOM', 1: 'LUN', 2: 'MAR', 3: 'MIÉ', 4: 'JUE', 5: 'VIE', 6: 'SÁB',
+        };
+        setDiaAbrev(abrevMap[d.getDay()] || 'LUN');
+      }
+    }
+  };
+
+  const handleDaySelectChange = (day: DiaSemana) => {
+    setDiaAbrev(day);
+    const dayIndexMap: Record<DiaSemana, number> = {
+      DOM: 0, LUN: 1, MAR: 2, MIÉ: 3, JUE: 4, VIE: 5, SÁB: 6,
+    };
+    const currentD = new Date(fechaExacta + 'T00:00:00');
+    const currentDayIdx = currentD.getDay();
+    const targetDayIdx = dayIndexMap[day];
+    const diff = targetDayIdx - currentDayIdx;
+    currentD.setDate(currentD.getDate() + diff);
+    setFechaExacta(currentD.toISOString().split('T')[0]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1614,7 +1645,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       pacienteNombre: finalName,
       motivoConsulta,
       diaAbrev,
-      fecha: '2026-08-12',
+      fecha: fechaExacta,
       horaInicio,
       horaFin,
       estado: 'Confirmada',
@@ -1673,11 +1704,22 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
             <div className="form-row">
               <div className="form-group">
+                <label className="form-label">Fecha de la Cita</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  required
+                  value={fechaExacta}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Día de la Semana</label>
                 <select
                   className="form-select"
                   value={diaAbrev}
-                  onChange={(e) => setDiaAbrev(e.target.value as DiaSemana)}
+                  onChange={(e) => handleDaySelectChange(e.target.value as DiaSemana)}
                 >
                   <option value="LUN">Lunes</option>
                   <option value="MAR">Martes</option>
@@ -1688,7 +1730,9 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                   <option value="DOM">Domingo</option>
                 </select>
               </div>
+            </div>
 
+            <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Hora Inicio</label>
                 <input
@@ -1699,17 +1743,17 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                   onChange={(e) => setHoraInicio(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Hora Fin</label>
-              <input
-                type="time"
-                className="form-input"
-                required
-                value={horaFin}
-                onChange={(e) => setHoraFin(e.target.value)}
-              />
+              <div className="form-group">
+                <label className="form-label">Hora Fin</label>
+                <input
+                  type="time"
+                  className="form-input"
+                  required
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 

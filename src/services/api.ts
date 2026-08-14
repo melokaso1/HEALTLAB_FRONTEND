@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5077/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5077/api';
 const AUTH_STORAGE_KEYS = ['token', 'refreshToken', 'user', 'sesionId'] as const;
 
 const clearSession = (): void => {

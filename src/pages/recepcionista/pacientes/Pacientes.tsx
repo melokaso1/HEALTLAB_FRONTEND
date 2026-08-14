@@ -156,6 +156,11 @@ const RecepPacientes: React.FC = () => {
         name: updated.nombre,
         gender: updated.genero === 'F' ? 'Femenino' : 'Masculino',
         age: updated.edad,
+        contact: {
+          phone: updated.telefono,
+          email: updated.email,
+          address: '',
+        },
       });
 
       const fresh = await getPatientsApi();

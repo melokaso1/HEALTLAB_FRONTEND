@@ -170,33 +170,43 @@ const UsersManagement: React.FC = () => {
     }, 3000);
   };
 
-  const handleDeleteUser = (id: string, e: React.MouseEvent) => {
+  const handleDeleteUser = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!id) return;
-    toggleUserStatusApi(id, 'active');
-    setUsers((prev) =>
-      prev.map((user) =>
-        String(user.id) === String(id) ? { ...user, status: 'inactive' } : user
-      )
-    );
-    if (activePanelUserId === id) {
-      setActivePanelUserId(null);
+    try {
+      await toggleUserStatusApi(id, 'active');
+      setUsers((prev) =>
+        prev.map((user) =>
+          String(user.id) === String(id) ? { ...user, status: 'inactive' } : user
+        )
+      );
+      if (activePanelUserId === id) {
+        setActivePanelUserId(null);
+      }
+      showToast('Usuario deshabilitado en la base de datos PostgreSQL.');
+    } catch (err: any) {
+      console.error('[UsersManagement] Error al deshabilitar usuario:', err);
+      showToast(err.message || 'Error al deshabilitar usuario en el servidor.');
     }
-    showToast('Usuario deshabilitado y movido al archivo');
   };
 
-  const handleReactivateUser = (id: string) => {
-    toggleUserStatusApi(id, 'inactive');
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === id ? { ...user, status: 'active' } : user
-      )
-    );
-    setActivePanelUserId(id);
-    setIsCreateModalOpen(false);
-    setNewUserName('');
-    setNewUserEmail('');
-    showToast('Usuario reactivado exitosamente');
+  const handleReactivateUser = async (id: string) => {
+    try {
+      await toggleUserStatusApi(id, 'inactive');
+      setUsers((prev) =>
+        prev.map((user) =>
+          String(user.id) === String(id) ? { ...user, status: 'active' } : user
+        )
+      );
+      setActivePanelUserId(id);
+      setIsCreateModalOpen(false);
+      setNewUserName('');
+      setNewUserEmail('');
+      showToast('Usuario reactivado exitosamente en PostgreSQL.');
+    } catch (err: any) {
+      console.error('[UsersManagement] Error al reactivar usuario:', err);
+      showToast(err.message || 'Error al reactivar usuario en el servidor.');
+    }
   };
 
   const handleOpenEditRole = (user: ManagedUser, e?: React.MouseEvent) => {

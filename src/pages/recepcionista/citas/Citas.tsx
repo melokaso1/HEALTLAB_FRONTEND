@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -49,6 +50,7 @@ interface CitaHoy {
 
 const RecepCitas: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   // Navigation Pills
   const [viewPill, setViewPill] = useState<'Semana' | 'Dia'>('Semana');
   const [monday, _setMonday] = useState<Date>(() => {
@@ -89,6 +91,19 @@ const RecepCitas: React.FC = () => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3200);
   };
+
+  useEffect(() => {
+    const state = location.state as { patient?: Patient; searchCedula?: string } | undefined;
+    if (state?.patient || state?.searchCedula) {
+      if (state.patient) {
+        setSelectedPatient(state.patient);
+        setCedulaQuery(state.patient.documentNumber);
+      } else if (state.searchCedula) {
+        setCedulaQuery(state.searchCedula);
+      }
+      setIsNuevaCitaOpen(true);
+    }
+  }, [location.state]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -260,7 +275,7 @@ const RecepCitas: React.FC = () => {
     });
 
     if (!result.ok) {
-      showToast(result.error);
+      showToast('error' in result && result.error ? result.error : 'Error al agendar la cita');
       return;
     }
 

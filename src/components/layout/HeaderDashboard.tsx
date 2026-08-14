@@ -6,8 +6,14 @@ import {
   Settings,
   Smile,
   ArrowRightLeft,
+  CheckCheck,
+  Trash2,
+  CheckCircle,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSignalR } from '../../context/SignalRContext';
 import ThemeToggle from '../common/ThemeToggle';
 import healtlabIcon from '../../assets/icons/HEALTLAB_sintitulo.png';
 import healtlabTitle from '../../assets/icons/HEALTLAB_Titulo.png';
@@ -28,10 +34,13 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
   userRole = 'Director Médico',
 }) => {
   const { logout, user } = useAuth();
+  const { notifications, unreadCount, markAllNotificationsAsRead, clearNotifications, isConnected } = useSignalR();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [userStatus, setUserStatus] = useState('Disponible');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -47,11 +56,14 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
     navigate(path);
   };
 
-  // Close dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
       }
     };
 
@@ -63,11 +75,15 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
 
   return (
     <header className="header-dashboard">
-      {/* Brand logo left */}
-      <div className="header-dashboard__brand">
+      {/* Brand logo & title */}
+      <div
+        className="header-dashboard__brand"
+        onClick={() => navigate('/inicio')}
+        style={{ cursor: 'pointer' }}
+      >
         <img
           src={healtlabIcon}
-          alt="HEALTLAB Icono"
+          alt="Icono HEALTLAB"
           className="header-dashboard__logo-icon"
         />
         <img
@@ -83,14 +99,84 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
         <ThemeToggle darkMode={darkMode} onToggle={onToggleDarkMode} />
 
         {/* Notifications bell */}
-        <button
-          type="button"
-          className="header-dashboard__notif-btn"
-          aria-label="Notificaciones"
-        >
-          <Bell size={20} />
-          <span className="header-dashboard__notif-badge" />
-        </button>
+        <div style={{ position: 'relative' }} ref={notifRef}>
+          <button
+            type="button"
+            className="header-dashboard__notif-btn"
+            aria-label="Notificaciones"
+            onClick={() => setNotifOpen((prev) => !prev)}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="header-dashboard__notif-badge-count">{unreadCount}</span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <div className="notif-dropdown">
+              <div className="notif-dropdown__header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '13.5px' }}>Notificaciones</span>
+                  {unreadCount > 0 && (
+                    <span className="notif-unread-count">{unreadCount} nuevas</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    className="notif-action-btn"
+                    title="Marcar todas como leídas"
+                    onClick={markAllNotificationsAsRead}
+                  >
+                    <CheckCheck size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="notif-action-btn"
+                    title="Limpiar notificaciones"
+                    onClick={clearNotifications}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="notif-dropdown__list">
+                {notifications.length === 0 ? (
+                  <div className="notif-empty-state">
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                      No tienes notificaciones pendientes.
+                    </p>
+                    <span style={{ fontSize: '11px', color: isConnected ? '#00A896' : '#EE9B00', marginTop: '6px', display: 'block' }}>
+                      {isConnected ? '● SignalR Conectado' : '○ Modo Local'}
+                    </span>
+                  </div>
+                ) : (
+                  notifications.map((n: any) => (
+                    <div key={n.id} className={`notif-item ${!n.read ? 'notif-item--unread' : ''}`}>
+                      <div className="notif-item__icon">
+                        {n.type === 'success' ? (
+                          <CheckCircle size={16} color="#00A896" />
+                        ) : n.type === 'warning' ? (
+                          <AlertTriangle size={16} color="#EE9B00" />
+                        ) : (
+                          <Info size={16} color="#6366F1" />
+                        )}
+                      </div>
+                      <div className="notif-item__content">
+                        <div className="notif-item__title">{n.title}</div>
+                        <div className="notif-item__msg">{n.message}</div>
+                        <div className="notif-item__time">
+                          {new Date(n.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User Profile Dropdown Container - Avatar Only Button */}
         <div className="header-dashboard__user-wrapper" ref={dropdownRef}>

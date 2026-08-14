@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -40,6 +41,7 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const PatientsManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico' || (user?.role as string) === 'profesional';
 
@@ -223,17 +225,34 @@ const PatientsManagement: React.FC = () => {
     if (!editTargetPatient) return;
 
     try {
-      await updatePatientApi(editTargetPatient.id, {
+      const updated = await updatePatientApi(editTargetPatient.id, {
         name: editName,
         documentType: editDocType,
         documentNumber: editDocNum,
         gender: editGender,
-        age: Number(editAge) || 30,
+        age: Number(editAge) || 0,
+        contact: {
+          phone: editPhone,
+          email: editEmail,
+          address: editAddress,
+        },
+        medicalData: {
+          bloodType: editBloodType,
+          allergies: editAllergies ? editAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
+        },
       });
 
       const fresh = await getPatientsApi();
       if (fresh && fresh.length > 0) {
         setPatients(fresh);
+      } else {
+        setPatients((prev) =>
+          prev.map((p) => (String(p.id) === String(editTargetPatient.id) ? updated : p))
+        );
+      }
+
+      if (lastPatient && String(lastPatient.id) === String(editTargetPatient.id)) {
+        setLastPatient(updated);
       }
 
       setIsEditModalOpen(false);
@@ -518,7 +537,18 @@ const PatientsManagement: React.FC = () => {
 
                 {/* Action Buttons Row */}
                 <div className="patient-detail__actions">
-                  <button type="button" className="btn-agendar">
+                  <button
+                    type="button"
+                    className="btn-agendar"
+                    onClick={() => {
+                      navigate('/citas', {
+                        state: {
+                          patient: activePatient,
+                          searchCedula: activePatient.documentNumber,
+                        },
+                      });
+                    }}
+                  >
                     <CalendarPlus size={14} />
                     <span>Agendar</span>
                   </button>

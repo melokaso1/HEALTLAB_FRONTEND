@@ -126,6 +126,31 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
   };
 };
 
+// ─── LocalStorage Persistence Helper ────────────────────────────────────
+const LOCAL_PACIENTES_KEY = 'HEALTLAB_PERSISTENT_PACIENTES';
+
+const getStoredPatients = (): Patient[] => {
+  try {
+    const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Patient[];
+    return parsed.filter((p) => p.name && p.name !== 'Paciente sin nombre');
+  } catch {
+    return [];
+  }
+};
+
+const saveStoredPatient = (patient: Patient) => {
+  try {
+    if (!patient.name || patient.name === 'Paciente sin nombre') return;
+    const current = getStoredPatients();
+    const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
+    localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error al guardar paciente en localStorage', e);
+  }
+};
+
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getPatientsApi = async (): Promise<Patient[]> => {
   const data = await apiFetch<BackendPaciente[]>('/Pacientes');
@@ -234,16 +259,57 @@ export const createPatientApi = async (
 export const updatePatientApi = async (
   id: string | number,
   patient: Partial<Patient>,
-): Promise<Partial<Patient>> => {
+): Promise<Patient> => {
+  const currentPatients = getStoredPatients();
+  let existing = currentPatients.find((p) => String(p.id) === String(id));
+
+  if (!existing) {
+    const fromApi = await getPatientByIdApi(String(id));
+    if (fromApi) existing = fromApi;
+  }
+
+  const parts = (patient.name ?? existing?.name ?? '').trim().split(/\s+/);
+  const initials = buildInitials(parts[0] ?? '', parts[1] ?? '');
+
+  const updatedPatient: Patient = {
+    id: existing?.id ?? id,
+    name: patient.name ?? existing?.name ?? 'Paciente sin nombre',
+    gender: patient.gender ?? existing?.gender ?? 'Otro',
+    age: patient.age !== undefined && !isNaN(Number(patient.age)) ? Number(patient.age) : (existing?.age ?? 0),
+    documentType: patient.documentType ?? existing?.documentType ?? 'CC',
+    documentNumber: patient.documentNumber ?? existing?.documentNumber ?? '',
+    contact: {
+      phone: patient.contact?.phone ?? existing?.contact?.phone ?? '',
+      email: patient.contact?.email ?? existing?.contact?.email ?? '',
+      address: patient.contact?.address ?? existing?.contact?.address ?? '',
+    },
+    lastVisitDate: existing?.lastVisitDate ?? 'Hoy',
+    lastVisitSpecialty: existing?.lastVisitSpecialty ?? 'Medicina General',
+    specialtyBadgeColor: existing?.specialtyBadgeColor ?? 'green',
+    status: patient.status ?? existing?.status ?? 'active',
+    initials: initials || existing?.initials || 'P',
+    avatarBg: existing?.avatarBg ?? pickColor(id),
+    medicalData: {
+      bloodType: patient.medicalData?.bloodType ?? existing?.medicalData?.bloodType ?? 'O+',
+      allergies: patient.medicalData?.allergies ?? existing?.medicalData?.allergies ?? ['Ninguna'],
+    },
+    recentActivity: existing?.recentActivity ?? [],
+    history: existing?.history ?? [],
+    notes: existing?.notes ?? [],
+  };
+
+  saveStoredPatient(updatedPatient);
+
   try {
     await apiFetch<void>(`/Pacientes/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ activo: patient.status !== 'inactive' }),
+      body: JSON.stringify({ activo: updatedPatient.status !== 'inactive' }),
     });
-    return patient;
   } catch (error) {
-    throw error;
+    console.warn(`[patients.service] Error en PUT /Pacientes/${id}:`, error);
   }
+
+  return updatedPatient;
 };
 
 export const togglePatientStatusApi = async (

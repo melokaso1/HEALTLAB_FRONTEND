@@ -319,16 +319,11 @@ export const toggleUserStatusApi = async (
   currentStatus: 'active' | 'inactive',
 ): Promise<'active' | 'inactive'> => {
   const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-  try {
-    await apiFetch(`/usuarios/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ activo: newStatus === 'active' }),
-    });
-    return newStatus;
-  } catch (error) {
-    console.warn(`[users.service] Error al cambiar estado del usuario ${id}:`, error);
-    return newStatus;
-  }
+  await apiFetch(`/usuarios/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ activo: newStatus === 'active' }),
+  });
+  return newStatus;
 };
 
 export const changeUserRoleApi = async (
