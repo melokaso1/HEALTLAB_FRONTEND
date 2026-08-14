@@ -2,6 +2,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../services/api';
 
+import { getAppointmentsApi } from '../services/appointments.service';
+import { getPatientsApi } from '../services/patients.service';
+
 export interface NotificationItem {
   id: string;
   title: string;
@@ -36,41 +39,58 @@ interface SignalRContextType {
 
 const SignalRContext = createContext<SignalRContextType | undefined>(undefined);
 
-const DEFAULT_ACTIVITIES: ActivityItem[] = [
-  {
-    id: 'act-1',
-    user: 'Dr. Alejandro Silva',
-    action: 'actualizó historial de',
-    target: 'María Rodríguez',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Hace 10 minutos',
-    avatarBg: '#00A896',
-  },
-  {
-    id: 'act-2',
-    user: 'Nuevo paciente',
-    action: 'registrado en el sistema:',
-    target: 'Sarah Jenkins',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Hace 45 minutos',
-    avatarBg: '#6366F1',
-  },
-  {
-    id: 'act-3',
-    user: 'Cita médica',
-    action: 'reprogramada por',
-    target: 'Carlos Restrepo',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Hace 1 hora',
-    avatarBg: '#EC4899',
-  },
-];
-
 export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>(DEFAULT_ACTIVITIES);
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+
+  // ─── Carga inicial de actividades reales ────────────────────────────────
+  useEffect(() => {
+    const loadRealActivities = async () => {
+      try {
+        const [apps, patients] = await Promise.all([
+          getAppointmentsApi().catch(() => []),
+          getPatientsApi().catch(() => []),
+        ]);
+        const mapped: ActivityItem[] = [];
+
+        // 1. Citas reales
+        apps.slice(0, 5).forEach((app) => {
+          mapped.push({
+            id: `app-act-${app.id}`,
+            user: app.professionalName || 'Médico',
+            action: app.status === 'Atendida' ? 'atendió la cita de' : app.status === 'Cancelada' ? 'canceló la cita de' : 'agendó cita para',
+            target: app.patientName || 'Paciente',
+            timestamp: app.createdAt || new Date().toISOString(),
+            timeAgo: app.date ? `Fecha: ${app.date}` : 'Reciente',
+            avatarBg: app.status === 'Atendida' ? '#00A896' : app.status === 'Cancelada' ? '#EF4444' : '#6366F1',
+          });
+        });
+
+        // 2. Pacientes reales
+        patients.slice(0, 3).forEach((pat) => {
+          mapped.push({
+            id: `pat-act-${pat.id}`,
+            user: 'Nuevo paciente',
+            action: 'registrado en el sistema:',
+            target: pat.name,
+            timestamp: new Date().toISOString(),
+            timeAgo: 'Reciente',
+            avatarBg: '#EC4899',
+          });
+        });
+
+        if (mapped.length > 0) {
+          setRecentActivities((prev) => (prev.length === 0 ? mapped : prev));
+        }
+      } catch (e) {
+        console.warn('[SignalRContext] Error cargando actividades reales:', e);
+      }
+    };
+
+    loadRealActivities();
+  }, []);
 
   useEffect(() => {
     const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -93,6 +113,12 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setNotifications((prev) => [notification, ...prev]);
     });
 
+    newConnection.on('LoadActivities', (activities: ActivityItem[]) => {
+      if (Array.isArray(activities) && activities.length > 0) {
+        setRecentActivities(activities);
+      }
+    });
+
     newConnection.on('ReceiveActivity', (activity: ActivityItem) => {
       setRecentActivities((prev) => [activity, ...prev.filter((a) => a.id !== activity.id)]);
     });
@@ -104,7 +130,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.info('[SignalR] Conectado exitosamente al Hub de Notificaciones');
       })
       .catch((err) => {
-        console.warn('[SignalR] No se pudo conectar al Hub (modo local activo):', err?.message || err);
+        console.warn('[SignalR] Modo local / SignalR:', err?.message || err);
         setIsConnected(false);
       });
 
@@ -138,6 +164,12 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       avatarBg,
     };
     setRecentActivities((prev) => [newAct, ...prev]);
+
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+      connection.invoke('BroadcastActivity', user, action, target, avatarBg).catch((err) => {
+        console.warn('[SignalR] Error enviando actividad:', err);
+      });
+    }
   };
 
   const addNotification = (title: string, message: string, type = 'info') => {
