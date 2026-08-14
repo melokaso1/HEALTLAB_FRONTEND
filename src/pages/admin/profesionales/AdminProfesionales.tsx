@@ -26,7 +26,7 @@ import type {
   ScheduleSlot,
 } from './profesional.types';
 import { initialProfesionales } from './mockProfesionales';
-import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
+import { getSchedulableProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
 import { getAppointmentsApi, getServicesApi } from '../../../services/appointments.service';
 import { createAppointmentFromInput } from '../../../services/createAppointment.logic';
 import { getPatientByDocumentApi } from '../../../services/patients.service';
@@ -101,8 +101,8 @@ const AdminProfesionales: React.FC = () => {
   const [profesionales, setProfesionales] = useState<Professional[]>(initialProfesionales);
 
   useEffect(() => {
-    Promise.all([getProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
-      if (Array.isArray(profs) && profs.length > 0) {
+    Promise.all([getSchedulableProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
+      if (Array.isArray(profs)) {
         const localProfs = profs.map(mapBackendProfToLocal);
 
         const abrevMap: Record<number, DiaSemana> = {
@@ -141,7 +141,7 @@ const AdminProfesionales: React.FC = () => {
         });
 
         setProfesionales(updatedProfs);
-        if (updatedProfs[0]) setSelectedId(updatedProfs[0].id);
+        setSelectedId(updatedProfs[0]?.id ?? '');
       }
     });
   }, []);
@@ -348,6 +348,10 @@ const AdminProfesionales: React.FC = () => {
         nombre: newDoctor.nombre,
         apellido: newDoctor.apellido,
         numeroDocumento: newDoctor.numeroDocumento || '',
+        email: newDoctor.email || '',
+        password: newDoctor.password || '',
+        telefono: newDoctor.telefono || '',
+        direccion: newDoctor.direccion || '',
         especialidad: newDoctor.especialidad,
         registroProfesional: newDoctor.registroProfesional,
         consultorio: newDoctor.consultorio,
@@ -1449,6 +1453,10 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
   const [registroProfesional, setRegistroProfesional] = useState('');
   const [numeroDocumento, setNumeroDocumento] = useState('');
   const [consultorio, setConsultorio] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1484,6 +1492,10 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
         especialidad,
         registroProfesional,
         numeroDocumento,
+        email,
+        password,
+        telefono,
+        direccion,
         consultorio,
         estado: 'Activo',
         citasHoy: 0,
@@ -1535,6 +1547,51 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
                   placeholder="Ej. Sarah"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Correo electrónico</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Contraseña</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Teléfono</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  required
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Dirección</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
                 />
               </div>
             </div>

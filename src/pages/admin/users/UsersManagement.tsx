@@ -25,7 +25,6 @@ import {
   canDeactivateOrDemoteAdmin,
 } from '../../../services/users.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
-import { createProfessionalApi } from '../../../services/professionals.service';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './UsersManagement.css';
 
@@ -159,6 +158,8 @@ const UsersManagement: React.FC = () => {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserDocument, setNewUserDocument] = useState('');
+  const [newUserPhone, setNewUserPhone] = useState('');
+  const [newUserAddress, setNewUserAddress] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
   const [newProfTitle, setNewProfTitle] = useState('Dr.');
   const [newProfSpecialty, setNewProfSpecialty] = useState('Medicina General');
@@ -281,8 +282,9 @@ const UsersManagement: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmittingUser) return;
-    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || !newUserDocument.trim()) {
-      showToast('Por favor completa el nombre, documento, correo y contraseña');
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || !newUserDocument.trim()
+      || ((newUserRole === 'professional' || newUserRole === 'receptionist') && (!newUserPhone.trim() || !newUserAddress.trim()))) {
+      showToast('Completa nombre, documento, correo, contraseña y contacto obligatorio para este rol.');
       return;
     }
 
@@ -305,35 +307,12 @@ const UsersManagement: React.FC = () => {
         email: newUserEmail,
         password: newUserPassword,
         numeroDocumento: newUserDocument,
-        empleadoId: '',
-        rolId: '',
+        telefono: newUserPhone,
+        direccion: newUserAddress,
         roleType: newUserRole,
+        especialidad: newProfSpecialty,
+        registroProfesional: newProfRegister,
       });
-
-      // Si el rol creado es Médico/Profesional, se registra automáticamente en el directorio de profesionales de la agenda
-      if (
-        (newUserRole as string) === 'professional' ||
-        (newUserRole as string) === 'Médico' ||
-        (newUserRole as string) === 'Doctor'
-      ) {
-        try {
-          const nameClean = newUserName.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim();
-          const parts = nameClean.split(' ');
-          const nombre = parts[0] || nameClean;
-          const apellido = parts.slice(1).join(' ') || '';
-
-          await createProfessionalApi({
-            nombre: `${newProfTitle ? `${newProfTitle} ` : ''}${nombre}`.trim(),
-            apellido,
-            numeroDocumento: newUserDocument,
-            especialidad: newProfSpecialty.trim() || 'Medicina General',
-            registroProfesional: newProfRegister.trim() || `REG-${Date.now().toString().slice(-6)}`,
-            consultorio: newProfOffice.trim() || 'Consultorio Principal',
-          });
-        } catch (profErr) {
-          console.warn('[UsersManagement] Registro de profesional en agenda:', profErr);
-        }
-      }
 
       const newUser: ManagedUser = {
         ...created,
@@ -349,6 +328,8 @@ const UsersManagement: React.FC = () => {
       setNewUserEmail('');
       setNewUserPassword('');
       setNewUserDocument('');
+      setNewUserPhone('');
+      setNewUserAddress('');
       setIsCreateModalOpen(false);
       showToast(`Usuario ${newUser.name} creado exitosamente`);
     } catch (error: any) {
@@ -848,6 +829,30 @@ const UsersManagement: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">
+                    Teléfono {(newUserRole === 'professional' || newUserRole === 'receptionist') && '*'}
+                  </label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    value={newUserPhone}
+                    onChange={(e) => setNewUserPhone(e.target.value)}
+                    required={newUserRole === 'professional' || newUserRole === 'receptionist'}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">
+                    Dirección {(newUserRole === 'professional' || newUserRole === 'receptionist') && '*'}
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newUserAddress}
+                    onChange={(e) => setNewUserAddress(e.target.value)}
+                    required={newUserRole === 'professional' || newUserRole === 'receptionist'}
+                  />
+                </div>
+                <div className="form-group">
                   <label className="form-label">Contraseña</label>
                   <input
                     type="password"
@@ -926,7 +931,7 @@ const UsersManagement: React.FC = () => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
                       <div className="form-group">
-                        <label className="form-label">Licencia / Reg. Profesional</label>
+                        <label className="form-label">Licencia / Reg. Profesional *</label>
                         <input
                           type="text"
                           className="form-input"

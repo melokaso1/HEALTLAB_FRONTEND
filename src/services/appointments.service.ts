@@ -62,6 +62,7 @@ interface BackendCita {
       numeroDocumento: string;
       tipoDocumento?: string | { nombre: string };
       sexo?: string | { nombre: string };
+      fechaNacimiento?: string;
       telefonos?: Array<{ numero: string; principal?: boolean }>;
     };
   };
@@ -109,6 +110,22 @@ const mapEstado = (estado?: BackendCita['estadoCita']): AppointmentStatus =>
 
 const backendName = (value?: string | { nombre: string }): string =>
   typeof value === 'string' ? value : value?.nombre ?? '';
+
+const calculateAge = (fechaNacimiento?: string): number => {
+  if (!fechaNacimiento) return 0;
+  const [year, month, day] = fechaNacimiento.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return 0;
+
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  if (
+    today.getMonth() + 1 < month ||
+    (today.getMonth() + 1 === month && today.getDate() < day)
+  ) {
+    age -= 1;
+  }
+  return Math.max(age, 0);
+};
 
 // ─── Formateo de hora ──────────────────────────────────────────────────────
 const formatTimeSlot = (timeStr: string): string => {
@@ -178,8 +195,8 @@ const mapBackendCita = (raw: BackendCita): Appointment => {
     id: raw.id,
     patientId: raw.pacienteId,
     patientName: patientNombre,
-    patientAge: 0,
-    patientGender: backendName(persona?.sexo),
+    patientAge: calculateAge(persona?.fechaNacimiento),
+    patientGender: backendName(persona?.sexo) || 'Sin registrar',
     patientDoc: persona?.numeroDocumento ?? '',
     patientPhone: telefonoPrincipal,
     patientEmail: '',
@@ -224,6 +241,29 @@ export const getAppointmentByIdApi = async (id: string): Promise<Appointment | n
   try {
     const raw = await apiFetch<BackendCita>(`/Citas/${id}`);
     return mapBackendCita(raw);
+  } catch (error) {
+    if ((error as { status?: number }).status === 404) return null;
+    throw error;
+  }
+};
+
+export interface AppointmentAttentionDetail {
+  id: string;
+  citaId: string;
+  medicoId: string;
+  notaAtencion?: string;
+  resumenConsulta?: string;
+  fechaRegistro: string;
+}
+
+export const getAppointmentAttentionDetailApi = async (
+  appointmentId: string | number,
+): Promise<AppointmentAttentionDetail | null> => {
+  try {
+    const details = await apiFetch<AppointmentAttentionDetail[]>(
+      `/DetallesCita/cita/${appointmentId}`,
+    );
+    return Array.isArray(details) ? details[0] ?? null : null;
   } catch (error) {
     if ((error as { status?: number }).status === 404) return null;
     throw error;

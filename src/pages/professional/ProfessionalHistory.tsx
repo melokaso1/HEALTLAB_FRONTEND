@@ -10,7 +10,10 @@ import {
   User,
   Stethoscope,
 } from 'lucide-react';
-import { getAppointmentsApi } from '../../services/appointments.service';
+import {
+  getAppointmentAttentionDetailApi,
+  getAppointmentsApi,
+} from '../../services/appointments.service';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/common/Pagination';
 import './ProfessionalHistory.css';
@@ -30,6 +33,15 @@ export interface ConsultationRecord {
   prescription?: string;
 }
 
+const splitAttentionNote = (note?: string) => {
+  if (!note) return { diagnosis: '', observations: '' };
+  const [diagnosisSection, observationsSection = ''] = note.split(/\n\s*\nObservaciones:\s*/i);
+  return {
+    diagnosis: diagnosisSection.replace(/^Diagnóstico:\s*/i, '').trim(),
+    observations: observationsSection.trim(),
+  };
+};
+
 const ProfessionalHistory: React.FC = () => {
   const { user } = useAuth();
   const [history, setHistory] = useState<ConsultationRecord[]>([]);
@@ -38,22 +50,40 @@ const ProfessionalHistory: React.FC = () => {
     const loadHistory = async () => {
       const apps = await getAppointmentsApi();
       if (Array.isArray(apps)) {
+        const attentionDetails = await Promise.all(
+          apps.map(async (app) => ({
+            appointmentId: String(app.id),
+            detail: app.status === 'Atendida'
+              ? await getAppointmentAttentionDetailApi(app.id)
+              : null,
+          })),
+        );
+        const detailsByAppointmentId = new Map(
+          attentionDetails
+            .filter((item) => item.detail)
+            .map((item) => [item.appointmentId, item.detail!]),
+        );
         const scoped = user?.medicoId
           ? apps.filter((a) => String(a.professionalId) === user.medicoId)
           : apps;
         const mapped: ConsultationRecord[] = scoped
-          .map((a) => ({
-          id: a.id,
-          date: a.date,
-          patientName: a.patientName,
-          patientDoc: a.patientDoc,
-          service: a.serviceName,
-          diagnosis: a.notes || 'Sin diagnóstico registrado.',
-          observations: a.notes || 'Sin observaciones adicionales.',
-          result: a.status,
-          resultBadgeType: 'normal',
-          status: a.status,
-        }));
+          .map((a) => {
+            const detail = detailsByAppointmentId.get(String(a.id));
+            const attention = splitAttentionNote(detail?.notaAtencion);
+            return {
+              id: a.id,
+              date: a.date,
+              patientName: a.patientName,
+              patientDoc: a.patientDoc,
+              service: a.serviceName,
+              diagnosis: attention.diagnosis || 'Sin diagnóstico registrado.',
+              observations: attention.observations || 'Sin observaciones adicionales.',
+              result: a.status,
+              resultBadgeType: 'normal',
+              status: a.status,
+              prescription: detail?.resumenConsulta,
+            };
+          });
         setHistory(mapped);
       }
     };

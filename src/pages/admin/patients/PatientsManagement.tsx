@@ -51,6 +51,19 @@ const isValidDocument = (type: 'CC' | 'CE' | 'TI' | 'PAS', value: string): boole
 const normalizeDocument = (type: 'CC' | 'CE' | 'TI' | 'PAS', value: string): string =>
   type === 'PAS' ? value.replace(/[^a-z0-9]/gi, '').slice(0, 20) : value.replace(/\D/g, '').slice(0, 12);
 
+const validateDocumentOnBlur = (
+  input: HTMLInputElement,
+  type: 'CC' | 'CE' | 'TI' | 'PAS',
+) => {
+  input.setCustomValidity(
+    isValidDocument(type, input.value)
+      ? ''
+      : type === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.',
+  );
+};
+
 const PatientsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -948,7 +961,11 @@ const PatientsManagement: React.FC = () => {
                       className="form-input"
                       placeholder="1029384756"
                       value={newDocNum}
-                      onChange={(e) => setNewDocNum(normalizeDocument(newDocType, e.target.value))}
+                      onChange={(e) => {
+                        e.currentTarget.setCustomValidity('');
+                        setNewDocNum(normalizeDocument(newDocType, e.target.value));
+                      }}
+                      onBlur={(e) => validateDocumentOnBlur(e.currentTarget, newDocType)}
                       maxLength={newDocType === 'PAS' ? 20 : 12}
                       required
                     />
@@ -975,6 +992,7 @@ const PatientsManagement: React.FC = () => {
                       type="date"
                       className="form-input"
                       value={newBirthDate}
+                      inputMode="numeric"
                       onChange={(e) => {
                         const val = e.target.value;
                         setNewBirthDate(val);
@@ -1006,6 +1024,7 @@ const PatientsManagement: React.FC = () => {
                       placeholder="+57 300 123 4567"
                       value={newPhone}
                       onChange={(e) => setNewPhone(e.target.value)}
+                      required
                     />
                   </div>
                   <div className="form-group">
@@ -1028,6 +1047,7 @@ const PatientsManagement: React.FC = () => {
                     placeholder="Calle 123 #45-67"
                     value={newAddress}
                     onChange={(e) => setNewAddress(e.target.value)}
+                      required
                   />
                 </div>
 
@@ -1133,7 +1153,11 @@ const PatientsManagement: React.FC = () => {
                       type="text"
                       className="form-input"
                       value={editDocNum}
-                      onChange={(e) => setEditDocNum(normalizeDocument(editDocType, e.target.value))}
+                      onChange={(e) => {
+                        e.currentTarget.setCustomValidity('');
+                        setEditDocNum(normalizeDocument(editDocType, e.target.value));
+                      }}
+                      onBlur={(e) => validateDocumentOnBlur(e.currentTarget, editDocType)}
                       maxLength={editDocType === 'PAS' ? 20 : 12}
                       required
                     />
@@ -1160,6 +1184,7 @@ const PatientsManagement: React.FC = () => {
                       type="date"
                       className="form-input"
                       value={editBirthDate}
+                      inputMode="numeric"
                       onChange={(e) => {
                         const val = e.target.value;
                         setEditBirthDate(val);
@@ -1189,6 +1214,7 @@ const PatientsManagement: React.FC = () => {
                       className="form-input"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
+                      required
                     />
                   </div>
                   <div className="form-group">
@@ -1209,6 +1235,7 @@ const PatientsManagement: React.FC = () => {
                     className="form-input"
                     value={editAddress}
                     onChange={(e) => setEditAddress(e.target.value)}
+                      required
                   />
                 </div>
 

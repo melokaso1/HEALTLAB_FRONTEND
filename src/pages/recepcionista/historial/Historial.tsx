@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Download, Eye, X, FileText, CheckCircle2, Search, User, Filter, Calendar } from 'lucide-react';
-import { getAppointmentsApi } from '../../../services/appointments.service';
+import {
+  getAppointmentAttentionDetailApi,
+  getAppointmentsApi,
+} from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
@@ -18,7 +21,19 @@ interface HistorialRecord {
   estado: 'Agendada' | 'Atendida' | 'Cancelada' | 'No asistió';
   motivo: string;
   observaciones?: string;
+  diagnostico?: string;
+  observacionesClinicas?: string;
+  resumenConsulta?: string;
 }
+
+const splitAttentionNote = (note?: string) => {
+  if (!note) return { diagnosis: '', observations: '' };
+  const [diagnosisSection, observationsSection = ''] = note.split(/\n\s*\nObservaciones:\s*/i);
+  return {
+    diagnosis: diagnosisSection.replace(/^Diagnóstico:\s*/i, '').trim(),
+    observations: observationsSection.trim(),
+  };
+};
 
 const RecepHistorial: React.FC = () => {
   // Data States
@@ -64,11 +79,26 @@ const RecepHistorial: React.FC = () => {
 
         let mapped: HistorialRecord[] = [];
         if (Array.isArray(appsData) && appsData.length > 0) {
+          const attentionDetails = await Promise.all(
+            appsData.map(async (app) => ({
+              appointmentId: String(app.id),
+              detail: app.status === 'Atendida'
+                ? await getAppointmentAttentionDetailApi(app.id)
+                : null,
+            })),
+          );
+          const detailsByAppointmentId = new Map(
+            attentionDetails
+              .filter((item) => item.detail)
+              .map((item) => [item.appointmentId, item.detail!]),
+          );
           mapped = appsData.map((app: Appointment) => {
             let estadoMapped: HistorialRecord['estado'] = 'Agendada';
             if (app.status === 'Atendida') estadoMapped = 'Atendida';
             else if (app.status === 'Cancelada') estadoMapped = 'Cancelada';
             else if (app.status === 'No asistió') estadoMapped = 'No asistió';
+            const detail = detailsByAppointmentId.get(String(app.id));
+            const attention = splitAttentionNote(detail?.notaAtencion);
 
             return {
               id: String(app.id),
@@ -81,6 +111,9 @@ const RecepHistorial: React.FC = () => {
               estado: estadoMapped,
               motivo: app.notes || 'Consulta médica',
               observaciones: app.notes,
+              diagnostico: attention.diagnosis,
+              observacionesClinicas: attention.observations,
+              resumenConsulta: detail?.resumenConsulta,
             };
           });
         }
@@ -452,6 +485,33 @@ const RecepHistorial: React.FC = () => {
                   <label className="form-label">Observaciones de Recepción / Admisión</label>
                   <div className="form-input" style={{ backgroundColor: 'var(--hl-bg-page)', minHeight: '50px' }}>
                     {selectedRecord.observaciones}
+                  </div>
+                </div>
+              )}
+
+              {selectedRecord.diagnostico && (
+                <div className="form-group">
+                  <label className="form-label">Diagnóstico registrado</label>
+                  <div className="form-input" style={{ backgroundColor: 'var(--hl-bg-page)', minHeight: '40px' }}>
+                    {selectedRecord.diagnostico}
+                  </div>
+                </div>
+              )}
+
+              {selectedRecord.observacionesClinicas && (
+                <div className="form-group">
+                  <label className="form-label">Observaciones clínicas</label>
+                  <div className="form-input" style={{ backgroundColor: 'var(--hl-bg-page)', minHeight: '50px' }}>
+                    {selectedRecord.observacionesClinicas}
+                  </div>
+                </div>
+              )}
+
+              {selectedRecord.resumenConsulta && (
+                <div className="form-group">
+                  <label className="form-label">Plan indicado</label>
+                  <div className="form-input" style={{ backgroundColor: 'var(--hl-bg-page)', minHeight: '50px' }}>
+                    {selectedRecord.resumenConsulta}
                   </div>
                 </div>
               )}

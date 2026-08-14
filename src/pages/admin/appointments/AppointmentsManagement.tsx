@@ -34,7 +34,7 @@ import {
   updateAppointmentStatusApi,
   rescheduleAppointmentApi,
 } from '../../../services/appointments.service';
-import { getProfessionalsApi } from '../../../services/professionals.service';
+import { getSchedulableProfessionalsApi } from '../../../services/professionals.service';
 import {
   findPatientByCedula,
   createAppointmentFromInput,
@@ -85,7 +85,7 @@ const AppointmentsManagement: React.FC = () => {
         }
       }
     });
-    getProfessionalsApi().then((data) => {
+    getSchedulableProfessionalsApi().then((data) => {
       if (data && data.length > 0) {
         setProfessionalsList(data);
       }

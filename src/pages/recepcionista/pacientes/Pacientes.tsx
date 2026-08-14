@@ -117,6 +117,7 @@ const RecepPacientes: React.FC = () => {
     tipoSangre?: string;
     alergias?: string;
     fechaNacimiento?: string;
+    phoneType?: string;
   }) => {
     if (isCreatingPatient) return;
     if (!isValidDocument(newPatientDocType, newP.documento)) {
@@ -460,7 +461,8 @@ const RecepPacientes: React.FC = () => {
                   nombre: nom,
                   genero: gen,
                   edad: calculatedEdad,
-                  telefono: `${phoneType}: ${telNum}`,
+                  telefono: telNum.trim(),
+                  phoneType,
                   email: em,
                   direccion: dir,
                   tipoSangre: sangre,
@@ -509,6 +511,14 @@ const RecepPacientes: React.FC = () => {
                             ? e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 30)
                             : e.target.value.replace(/\D/g, '').slice(0, 30);
                         }}
+                        onBlur={(e) => e.currentTarget.setCustomValidity(
+                          isValidDocument(newPatientDocType, e.currentTarget.value)
+                            ? ''
+                            : newPatientDocType === 'PAS'
+                              ? 'El pasaporte debe ser alfanumérico y tener máximo 30 caracteres.'
+                              : 'CC, TI y CE deben contener entre 6 y 30 dígitos.',
+                        )}
+                        onInput={(e) => e.currentTarget.setCustomValidity('')}
                       />
                     </div>
                   </div>
@@ -530,6 +540,7 @@ const RecepPacientes: React.FC = () => {
                       name="fechaNacimiento"
                       className="form-input"
                       required
+                      inputMode="numeric"
                     />
                   </div>
 
@@ -573,6 +584,7 @@ const RecepPacientes: React.FC = () => {
                     name="direccion"
                     className="form-input"
                     placeholder="Ej. Calle 123 #45-67"
+                    required
                   />
                 </div>
 

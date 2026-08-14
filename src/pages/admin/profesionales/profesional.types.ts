@@ -39,6 +39,8 @@ export interface Professional {
   numeroDocumento?: string;
   telefono?: string;
   email?: string;
+  password?: string;
+  direccion?: string;
   disponibilidad: ScheduleSlot[];
   citas: MedicalAppointment[];
 }

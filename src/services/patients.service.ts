@@ -25,8 +25,10 @@ interface BackendPaciente {
     tipoDocumento?: string | { nombre: string };
     sexo?: string | { nombre: string };
     email?: string;
-    telefonos?: Array<{ numero: string; principal?: boolean }>;
-    direcciones?: Array<{ descripcion: string; principal?: boolean }>;
+    telefono?: string;
+    direccion?: string;
+    telefonos?: Array<{ numero?: string; telefono?: string; principal?: boolean }>;
+    direcciones?: Array<{ descripcion?: string; direccion?: string; principal?: boolean }>;
   };
   alergias?: Array<{ nombre: string }>;
 }
@@ -91,6 +93,9 @@ const pickColor = (id?: string | number): string => {
 const backendName = (value?: string | { nombre: string }): string =>
   typeof value === 'string' ? value : value?.nombre ?? '';
 
+const normalizePhone = (value?: string): string =>
+  (value ?? '').replace(/^(m[oó]vil|fijo)\s*:\s*/i, '').trim();
+
 const matchSexoId = (
   sexos: Array<{ id: string; nombre?: string; codigo?: string }>,
   gender?: GenderType,
@@ -127,13 +132,19 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
 
   const telefonoPrincipal =
     raw.telefono ??
+    p?.telefono ??
     p?.telefonos?.find((t) => t.principal)?.numero ??
+    p?.telefonos?.find((t) => t.principal)?.telefono ??
     p?.telefonos?.[0]?.numero ??
+    p?.telefonos?.[0]?.telefono ??
     '';
   const direccionPrincipal =
     raw.direccion ??
+    p?.direccion ??
     p?.direcciones?.find((d) => d.principal)?.descripcion ??
+    p?.direcciones?.find((d) => d.principal)?.direccion ??
     p?.direcciones?.[0]?.descripcion ??
+    p?.direcciones?.[0]?.direccion ??
     '';
   const alergias = raw.alergias?.map((a) => a.nombre) ?? ['Ninguna'];
 
@@ -150,9 +161,7 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
       email: raw.email ?? p?.email ?? '',
       address: direccionPrincipal,
     },
-    lastVisitDate: raw.fechaRegistro
-      ? new Date(raw.fechaRegistro).toLocaleDateString('es-CO')
-      : 'Sin visitas',
+    lastVisitDate: 'Sin visitas',
     lastVisitSpecialty: 'Sin registrar',
     specialtyBadgeColor: 'green',
     status: raw.activo !== false ? 'active' : 'inactive',
@@ -227,7 +236,7 @@ export const searchPatientApi = async (
 };
 
 export const createPatientApi = async (
-  patient: Partial<Patient> & { personaId?: string },
+  patient: Partial<Patient> & { personaId?: string; phoneType?: string },
 ): Promise<Patient> => {
   const documentType = patient.documentType ?? 'CC';
   const documentNumber = patient.documentNumber ?? '';
@@ -269,8 +278,10 @@ export const createPatientApi = async (
         ...(fechaNacimiento ? { fechaNacimiento } : {}),
         sexoId,
       },
-      telefono: patient.contact?.phone || undefined,
+      telefono: normalizePhone(patient.contact?.phone) || undefined,
+      tipoTelefono: patient.phoneType || undefined,
       direccion: patient.contact?.address || undefined,
+      email: patient.contact?.email?.trim() || undefined,
       tipoSangre: patient.medicalData?.bloodType || undefined,
       activo: patient.status !== 'inactive',
     }),
@@ -369,8 +380,9 @@ export const updatePatientApi = async (
         ...(patient.birthDate ? { fechaNacimiento: patient.birthDate } : {}),
         sexoId,
       },
-      telefono: updatedPatient.contact.phone || undefined,
+      telefono: normalizePhone(updatedPatient.contact.phone) || undefined,
       direccion: updatedPatient.contact.address || undefined,
+      email: updatedPatient.contact.email.trim(),
       tipoSangre: updatedPatient.medicalData.bloodType || undefined,
       activo: updatedPatient.status !== 'inactive',
     }),

@@ -24,6 +24,10 @@ interface BackendMedico {
   }>;
 }
 
+interface BackendUsuarioCompleto {
+  medicoId?: string;
+}
+
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
 const AVATAR_COLORS = [
   '#0A9396', '#94D2BD', '#E9D8A6', '#EE9B00',
@@ -86,6 +90,21 @@ export const getProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
     : [];
 };
 
+export const getSchedulableProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
+  const professionals = await getProfessionalsApi();
+  const results = await Promise.allSettled(
+    professionals.map(async (professional) => ({
+      professional,
+      horarios: await apiFetch<unknown[]>(`/Horarios/medico/${professional.id}`),
+    })),
+  );
+  return results.flatMap((result) =>
+    result.status === 'fulfilled' && result.value.horarios.length > 0
+      ? [result.value.professional]
+      : [],
+  );
+};
+
 export const getProfessionalById = async (id: string): Promise<ProfessionalOption | null> => {
   try {
     const raw = await apiFetch<BackendMedico>(`/Medicos/${id}`);
@@ -132,6 +151,10 @@ export interface CreateProfessionalPayload {
   nombre: string;
   apellido: string;
   numeroDocumento: string;
+  email: string;
+  password: string;
+  telefono: string;
+  direccion: string;
   tipoDocumento?: string;
   especialidad?: string;
   registroProfesional?: string;
@@ -149,26 +172,28 @@ export const createProfessionalApi = async (
     throw new Error('El documento del profesional es requerido y debe tener máximo 30 caracteres.');
   }
 
-  // The transactional endpoint creates Persona, Empleado, and Médico together.
-  const [tiposDoc, cargos, especialidades] = await Promise.all([
+  // The transactional endpoint creates Persona, Empleado, Usuario, and Médico together.
+  const [tiposDoc, roles, especialidades] = await Promise.all([
     apiFetch<Array<{ id: string; codigo?: string; nombre?: string }>>('/TiposDocumento'),
-    apiFetch<Array<{ id: string; codigo?: string }>>('/Cargos'),
+    apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles'),
     apiFetch<Array<{ id: string; nombre?: string }>>('/Especialidades'),
   ]);
   const tipoDoc = Array.isArray(tiposDoc)
     ? tiposDoc.find((tipo) => tipo.codigo?.toUpperCase() === (p.tipoDocumento || 'CC').toUpperCase()) || tiposDoc[0]
     : undefined;
-  const medCargo = Array.isArray(cargos)
-    ? cargos.find((cargo) => cargo.codigo === 'MED') || cargos[0]
+  const profesionalRole = Array.isArray(roles)
+    ? roles.find((role) => role.nombreRol === 'Profesional')
     : undefined;
   const especialidad = Array.isArray(especialidades)
     ? especialidades.find((item) => item.nombre?.trim().toLowerCase() === p.especialidad?.trim().toLowerCase()) || especialidades[0]
     : undefined;
-  if (!tipoDoc?.id || !medCargo?.id || !especialidad?.id) {
+  if (!tipoDoc?.id || !profesionalRole?.id || !especialidad?.id) {
     throw new Error('No se encontraron los catálogos requeridos para registrar el profesional.');
   }
 
-  const raw = await apiFetch<BackendMedico>('/Medicos/completo', {
+  let username = String(p.email || '').split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  if (username.length < 5) username = `medico${Date.now().toString().slice(-6)}`;
+  const raw = await apiFetch<BackendUsuarioCompleto>('/Usuarios/completo', {
     method: 'POST',
     body: JSON.stringify({
       persona: {
@@ -177,13 +202,26 @@ export const createProfessionalApi = async (
         tipoDocumentoId: tipoDoc.id,
         numeroDocumento,
       },
-      cargoId: medCargo.id,
+      rolId: profesionalRole.id,
+      username,
+      email: p.email,
+      password: p.password,
       fechaIngreso: new Date().toLocaleDateString('en-CA'),
+      telefono: p.telefono,
+      direccion: p.direccion,
       registroProfesional: p.registroProfesional || '',
       especialidadId: especialidad.id,
       activo: true,
     }),
   });
-  const createdBackend = mapBackendMedico(raw);
+  if (!raw.medicoId) throw new Error('El servidor no devolvió el identificador del médico creado.');
+  const createdBackend = mapBackendMedico({
+    id: raw.medicoId,
+    empleadoId: '',
+    registroProfesional: p.registroProfesional,
+    activo: true,
+    empleado: { persona: { nombre: p.nombre, apellido: p.apellido, email: p.email } },
+    especialidades: [{ especialidad: { nombre: especialidad.nombre || 'Medicina General' } }],
+  });
   return createdBackend;
 };

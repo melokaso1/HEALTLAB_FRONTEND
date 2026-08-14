@@ -19,13 +19,18 @@ const localDateISO = (): string => {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+const parseLocalDate = (value: string): Date => {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
 import {
   cancelAppointmentApi,
   getAppointmentsApi,
   rescheduleAppointmentApi,
   toApiTime,
 } from '../../../services/appointments.service';
-import { getProfessionalsApi } from '../../../services/professionals.service';
+import { getSchedulableProfessionalsApi } from '../../../services/professionals.service';
 import { getHorariosByMedicoApi, getTiposCitaApi, type CatalogOption } from '../../../services/catalogs.service';
 import {
   findPatientByCedula,
@@ -124,7 +129,7 @@ const RecepCitas: React.FC = () => {
     try {
       const [apps, profs, tipos] = await Promise.all([
         getAppointmentsApi(),
-        getProfessionalsApi(),
+        getSchedulableProfessionalsApi(),
         getTiposCitaApi(),
       ]);
       setAppointments(apps);
@@ -154,7 +159,7 @@ const RecepCitas: React.FC = () => {
 
         // Map to agenda timetable blocks
       const agendaMapped: CalendarEventBlock[] = apps.map((app) => {
-          const d = new Date(app.date);
+          const d = parseLocalDate(app.date);
           const dayIndex = (d.getDay() + 6) % 7;
 
           let color: 'teal' | 'blue' | 'red' = 'teal';
@@ -645,6 +650,11 @@ const RecepCitas: React.FC = () => {
                             </option>
                           ))}
                         </select>
+                        {professionals.length === 0 && (
+                          <small style={{ color: '#B42318' }}>
+                            No hay médicos con jornada configurada para agendar.
+                          </small>
+                        )}
                       </div>
 
                       {/* Field: Servicio */}

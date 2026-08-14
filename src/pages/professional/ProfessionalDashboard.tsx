@@ -12,8 +12,9 @@ import {
   Check,
   Stethoscope,
 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getAppointmentsApi } from '../../services/appointments.service';
+import { getAppointmentsApi, updateAppointmentStatusApi } from '../../services/appointments.service';
 import type { Appointment } from '../../types/appointment.types';
 import './ProfessionalDashboard.css';
 
@@ -66,10 +67,12 @@ const parseLocalDate = (value: string): Date => {
 
 const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const doctorName = user?.name || 'Dr. Julian Moore';
 
   const [events, setEvents] = useState<DoctorAppointmentEvent[]>([]);
-  const [_loading, setLoading] = useState<boolean>(true);
+  const [, setLoading] = useState<boolean>(true);
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -109,8 +112,8 @@ const ProfessionalDashboard: React.FC = () => {
             service: app.serviceName || 'Consulta Médica',
             patientName: app.patientName,
             patientDoc: app.patientDoc || 'CC-000000',
-            patientAge: app.patientAge || 30,
-            patientGender: app.patientGender || 'Femenino',
+            patientAge: app.patientAge,
+            patientGender: app.patientGender || 'Sin registrar',
             reason: app.notes || 'Consulta médica agendada',
             status: statusMapped,
             clinicalNotes: app.notes,
@@ -178,6 +181,7 @@ const ProfessionalDashboard: React.FC = () => {
   const [treatmentPlan, setTreatmentPlan] = useState<string>('');
   const [requiresLabs, setRequiresLabs] = useState<boolean>(false);
   const [labDetails, setLabDetails] = useState<string>('');
+  const [isSavingAttention, setIsSavingAttention] = useState(false);
 
   // Form states for Agendar Cita
   const [newPatientName, setNewPatientName] = useState<string>('');
@@ -230,6 +234,20 @@ const ProfessionalDashboard: React.FC = () => {
     setIsAttencionModalOpen(true);
   };
 
+  useEffect(() => {
+    const state = location.state as { openAttencionCitaId?: string | number } | null;
+    if (!state?.openAttencionCitaId || events.length === 0) return;
+
+    const event = events.find((item) => String(item.id) === String(state.openAttencionCitaId));
+    if (event) {
+      const openModal = window.setTimeout(() => {
+        handleOpenAttencionModal(event);
+        navigate(location.pathname, { replace: true, state: null });
+      }, 0);
+      return () => window.clearTimeout(openModal);
+    }
+  }, [events, location.pathname, location.state, navigate]);
+
   // Open "Agendar Cita" at specific slot
   const handleOpenNewAppointmentAtSlot = (
     dayAbrev: 'DOM' | 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB',
@@ -245,33 +263,50 @@ const ProfessionalDashboard: React.FC = () => {
   };
 
   // Save Atención
-  const handleSaveAttencion = (e: React.FormEvent) => {
+  const handleSaveAttencion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEvent) return;
+    if (!selectedEvent || isSavingAttention) return;
     if (!diagnosis.trim()) {
       showToast('Por favor ingrese el diagnóstico principal del paciente');
       return;
     }
 
-    setEvents((prev) =>
-      prev.map((ev) => {
-        if (ev.id === selectedEvent.id) {
-          return {
-            ...ev,
-            status: 'Atendido',
-            diagnosis: diagnosis.trim(),
-            clinicalNotes: clinicalNotes.trim(),
-            treatmentPlan: treatmentPlan.trim(),
-            requiresLabs: requiresLabs,
-            labDetails: labDetails.trim(),
-          };
-        }
-        return ev;
-      })
-    );
+    const note = [
+      `Diagnóstico: ${diagnosis.trim()}`,
+      clinicalNotes.trim() ? `Observaciones: ${clinicalNotes.trim()}` : '',
+    ].filter(Boolean).join('\n\n');
+    const summary = [
+      treatmentPlan.trim(),
+      requiresLabs && labDetails.trim() ? `Exámenes solicitados: ${labDetails.trim()}` : '',
+    ].filter(Boolean).join('\n\n');
 
-    setIsAttencionModalOpen(false);
-    showToast(`Atención médica registrada para ${selectedEvent.patientName}`);
+    try {
+      setIsSavingAttention(true);
+      await updateAppointmentStatusApi(selectedEvent.id, 'Atendida', {
+        medicoId: user?.medicoId || undefined,
+        notaAtencion: note,
+        resumenConsulta: summary,
+      });
+      setEvents((prev) =>
+        prev.map((ev) => ev.id === selectedEvent.id
+          ? {
+              ...ev,
+              status: 'Atendido',
+              diagnosis: diagnosis.trim(),
+              clinicalNotes: clinicalNotes.trim(),
+              treatmentPlan: treatmentPlan.trim(),
+              requiresLabs,
+              labDetails: labDetails.trim(),
+            }
+          : ev)
+      );
+      setIsAttencionModalOpen(false);
+      showToast(`Atención médica registrada para ${selectedEvent.patientName}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo registrar la atención.');
+    } finally {
+      setIsSavingAttention(false);
+    }
   };
 
   // Create New Appointment
@@ -590,9 +625,9 @@ const ProfessionalDashboard: React.FC = () => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary btn-save">
+                <button type="submit" className="btn-primary btn-save" disabled={isSavingAttention}>
                   <CheckCircle2 size={16} />
-                  <span>Guardar atención</span>
+                  <span>{isSavingAttention ? 'Guardando...' : 'Guardar atención'}</span>
                 </button>
               </div>
             </form>

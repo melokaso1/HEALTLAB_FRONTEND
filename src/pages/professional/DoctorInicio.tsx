@@ -240,7 +240,9 @@ const DoctorInicio: React.FC = () => {
                     <button
                       type="button"
                       className="doc-btn-sm"
-                      onClick={() => navigate('/agenda-medico')}
+                      onClick={() => navigate('/agenda-medico', {
+                        state: { openAttencionCitaId: app.id },
+                      })}
                     >
                       <span>{app.status === 'Atendida' ? 'Ver Atención' : 'Atender Paciente'}</span>
                     </button>

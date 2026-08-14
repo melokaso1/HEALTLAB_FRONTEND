@@ -176,12 +176,15 @@ export const getUsersApi = async (): Promise<ManagedUser[]> => {
 };
 
 export interface CreateUserPayload {
-  empleadoId: string;
-  rolId: string;
   username: string;
   email: string;
   password: string;
   numeroDocumento: string;
+  telefono: string;
+  direccion: string;
+  ciudad?: string;
+  especialidad?: string;
+  registroProfesional?: string;
   activo?: boolean;
   debeCambiarPassword?: boolean;
 }
@@ -189,112 +192,59 @@ export interface CreateUserPayload {
 export const createUserApi = async (
   payload: CreateUserPayload & { roleType?: string },
 ): Promise<ManagedUser> => {
-  // 0. Pre-validar contraseña antes de realizar escrituras en la base de datos
   if (!payload.password || payload.password.length < 8) {
     throw new Error('La contraseña debe tener al menos 8 caracteres.');
   }
   if (!payload.numeroDocumento.trim() || payload.numeroDocumento.trim().length > 30) {
     throw new Error('El documento del usuario es requerido y debe tener máximo 30 caracteres.');
   }
-
-  let personaId = '';
-
-  try {
-    // 1. Sanitizar Username para cumplir con Backend UsernameValueObject (^[a-z0-9._\-]+$, min 5 chars)
-    let sanitizedUsername = payload.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '');
-    if (sanitizedUsername.length < 5) {
-      sanitizedUsername = payload.username.toLowerCase().replace(/[^a-z0-9._-]/g, '');
-    }
-    if (sanitizedUsername.length < 5) {
-      sanitizedUsername = `${sanitizedUsername}user_${Date.now().toString().slice(-4)}`;
-    }
-
-    // 2. Obtener catálogos requeridos (TipoDocumento, Rol, Cargo)
-    let tipoDocId = '';
-    let rolId = payload.rolId && payload.rolId.length === 36 ? payload.rolId : '';
-    let cargoId = '';
-
-    try {
-      const tiposDoc = await apiFetch<Array<{ id: string }>>('/TiposDocumento');
-      if (Array.isArray(tiposDoc) && tiposDoc[0]) tipoDocId = tiposDoc[0].id;
-
-      const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles');
-      if (Array.isArray(roles) && roles.length > 0) {
-        const targetRoleName = payload.roleType || 'receptionist';
-        let matchedRole = roles[0];
-        if (targetRoleName === 'admin') {
-          matchedRole = roles.find((r) => r.nombreRol === 'Administrador') || roles[0];
-        } else if (targetRoleName === 'professional') {
-          matchedRole = roles.find((r) => r.nombreRol === 'Profesional') || roles[0];
-        } else {
-          matchedRole = roles.find((r) => r.nombreRol === 'Recepcionista') || roles[0];
-        }
-        rolId = matchedRole.id;
-      }
-
-      const cargos = await apiFetch<Array<{ id: string }>>('/Cargos');
-      if (Array.isArray(cargos) && cargos[0]) cargoId = cargos[0].id;
-    } catch (err) {
-      console.warn('[users.service] Error consultando catálogos:', err);
-    }
-
-    // 3. Crear Persona en /Personas
-    const parts = payload.username.trim().split(/\s+/);
-    if (tipoDocId) {
-      const personaRes = await apiFetch<{ id: string }>('/Personas', {
-        method: 'POST',
-        body: JSON.stringify({
-          nombre: parts[0] || 'Usuario',
-          apellido: parts.slice(1).join(' ') || 'Sistema',
-          tipoDocumentoId: tipoDocId,
-          numeroDocumento: payload.numeroDocumento.trim(),
-        }),
-      });
-      if (personaRes?.id) personaId = personaRes.id;
-    }
-
-    // 4. Crear Empleado en /Empleados vinculando PersonaId y CargoId
-    let empleadoId = payload.empleadoId && payload.empleadoId.length === 36 ? payload.empleadoId : '';
-    if (personaId && cargoId) {
-      const empRes = await apiFetch<{ id: string }>('/Empleados', {
-        method: 'POST',
-        body: JSON.stringify({
-          personaId,
-          cargoId,
-          fechaIngreso: new Date().toISOString().split('T')[0],
-          activo: true,
-        }),
-      });
-      if (empRes?.id) empleadoId = empRes.id;
-    }
-
-    // 5. Crear Usuario en /Usuarios vinculando EmpleadoId y RolId
-    if (empleadoId && rolId) {
-      const raw = await apiFetch<BackendUsuario>('/usuarios', {
-        method: 'POST',
-        body: JSON.stringify({
-          empleadoId,
-          rolId,
-          username: sanitizedUsername,
-          email: payload.email,
-          password: payload.password,
-          activo: payload.activo ?? true,
-          debeCambiarPassword: payload.debeCambiarPassword ?? false,
-        }),
-      });
-      return mapBackendUser(raw);
-    }
-
-    throw new Error('No se pudieron asociar el Empleado y Rol para el nuevo usuario.');
-  } catch (error) {
-    console.error('[users.service] Error en flujo de creación de usuario en backend:', error);
-    // Rollback: Eliminar la persona huérfana creada si el paso final de Usuario falló
-    if (personaId) {
-      console.warn(`[users.service] Revirtiendo creación de Persona huérfana ${personaId}...`);
-      await apiFetch(`/Personas/${personaId}`, { method: 'DELETE' }).catch(() => {});
-    }
-    throw error;
+  const [tiposDoc, roles, especialidades] = await Promise.all([
+    apiFetch<Array<{ id: string }>>('/TiposDocumento'),
+    apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles'),
+    apiFetch<Array<{ id: string; nombre?: string }>>('/Especialidades'),
+  ]);
+  const roleType = payload.roleType ?? 'receptionist';
+  const roleName = roleType === 'admin'
+    ? 'Administrador'
+    : roleType === 'professional' ? 'Profesional' : 'Recepcionista';
+  const rolId = roles.find((role) => role.nombreRol === roleName)?.id;
+  const tipoDocumentoId = tiposDoc[0]?.id;
+  const especialidadId = roleType === 'professional'
+    ? especialidades.find((item) => item.nombre?.trim().toLowerCase() === payload.especialidad?.trim().toLowerCase())?.id
+      ?? especialidades[0]?.id
+    : undefined;
+  if (!rolId || !tipoDocumentoId || (roleType === 'professional' && !especialidadId)) {
+    throw new Error('No se encontraron los catálogos requeridos para registrar el personal.');
   }
+
+  const nameParts = payload.username.trim().split(/\s+/);
+  let username = payload.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  if (username.length < 5) username = `${username || 'usuario'}${Date.now().toString().slice(-5)}`;
+
+  const raw = await apiFetch<BackendUsuario>('/Usuarios/completo', {
+    method: 'POST',
+    body: JSON.stringify({
+      persona: {
+        nombre: nameParts[0] || 'Usuario',
+        apellido: nameParts.slice(1).join(' ') || 'Sistema',
+        tipoDocumentoId,
+        numeroDocumento: payload.numeroDocumento.trim(),
+      },
+      rolId,
+      username,
+      email: payload.email.trim(),
+      password: payload.password,
+      activo: payload.activo ?? true,
+      debeCambiarPassword: payload.debeCambiarPassword ?? false,
+      fechaIngreso: new Date().toLocaleDateString('en-CA'),
+      telefono: payload.telefono.trim(),
+      direccion: payload.direccion.trim(),
+      ciudad: payload.ciudad?.trim(),
+      registroProfesional: payload.registroProfesional?.trim(),
+      especialidadId,
+    }),
+  });
+  return mapBackendUser(raw);
 };
 
 export interface UpdateUserPayload {
