@@ -1337,15 +1337,28 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [schedule, setSchedule] = useState<ScheduleSlot[]>(
-    JSON.parse(JSON.stringify(currentSchedule))
-  );
-
   const [targetDay, setTargetDay] = useState<string>('TODOS');
   const [targetJornada, setTargetJornada] = useState<Jornada | 'AMBAS'>('AMBAS');
   const [horaInicio, setHoraInicio] = useState<string>('08:00');
   const [horaFin, setHoraFin] = useState<string>('18:00');
   const [activo, setActivo] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [schedule, setSchedule] = useState<ScheduleSlot[]>(() => {
+    const cloned: ScheduleSlot[] = JSON.parse(JSON.stringify(currentSchedule));
+    if (cloned.some((slot) => slot.activo)) return cloned;
+    // Professionals without a persisted jornada start with empty/inactive slots.
+    // Seed weekdays from the quick-config defaults so Guardar actually POSTs.
+    return applyQuickConfigToSchedule(cloned, {
+      targetDay: 'TODOS',
+      targetJornada: 'AMBAS',
+      horaInicio: '08:00',
+      horaFin: '18:00',
+      activo: true,
+    }).map((slot) =>
+      isWeekdayDia(slot.dia) ? slot : { ...slot, activo: false },
+    );
+  });
 
   const handleJornadaChange = (val: Jornada | 'AMBAS') => {
     setTargetJornada(val);
@@ -1378,38 +1391,50 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
   };
 
   const handleApplyBatch = () => {
-    setSchedule((prev) =>
-      prev.map((slot) => {
-        const matchesDay = targetDay === 'TODOS' || slot.dia === targetDay;
+    setSchedule((prev) => {
+      const next = applyQuickConfigToSchedule(prev, {
+        targetDay,
+        targetJornada,
+        horaInicio,
+        horaFin,
+        activo,
+      });
+      // Backend scheduling rejects weekends; keep DOM/SÁB inactive on "TODOS".
+      if (targetDay === 'TODOS') {
+        return next.map((slot) =>
+          isWeekdayDia(slot.dia) ? slot : { ...slot, activo: false },
+        );
+      }
+      return next;
+    });
+  };
 
-        if (matchesDay) {
-          if (targetJornada === 'AMBAS') {
-            return {
-              ...slot,
-              horaInicio: slot.jornada === 'Mañana' ? '08:00' : '13:00',
-              horaFin: slot.jornada === 'Mañana' ? '12:00' : '18:00',
-              activo,
-            };
-          }
+  const handleSaveClick = async () => {
+    if (isSaving) return;
+    let toSave = schedule;
+    if (!toSave.some((slot) => slot.activo)) {
+      toSave = applyQuickConfigToSchedule(toSave, {
+        targetDay,
+        targetJornada,
+        horaInicio,
+        horaFin,
+        activo: true,
+      }).map((slot) =>
+        targetDay === 'TODOS' && !isWeekdayDia(slot.dia)
+          ? { ...slot, activo: false }
+          : slot,
+      );
+      setSchedule(toSave);
+    }
 
-          if (slot.jornada === targetJornada) {
-            return {
-              ...slot,
-              horaInicio: horaInicio || slot.horaInicio,
-              horaFin: horaFin || slot.horaFin,
-              activo: true,
-            };
-          } else {
-            // Desactivar la jornada opuesta cuando se selecciona un turno especifico (ej: solo Mañana)
-            return {
-              ...slot,
-              activo: false,
-            };
-          }
-        }
-        return slot;
-      })
-    );
+    setIsSaving(true);
+    try {
+      await onSave(toSave);
+    } catch {
+      // Parent shows toast; keep modal open for correction.
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -1591,16 +1616,17 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
         </div>
 
         <div className="modal-footer">
-          <button type="button" className="btn-outline" onClick={onClose}>
+          <button type="button" className="btn-outline" onClick={onClose} disabled={isSaving}>
             Cancelar
           </button>
           <button
             type="button"
             className="btn-primary"
-            onClick={() => void onSave(schedule)}
+            disabled={isSaving}
+            onClick={() => void handleSaveClick()}
           >
             <Check size={16} />
-            Guardar Disponibilidad
+            {isSaving ? 'Guardando...' : 'Guardar Disponibilidad'}
           </button>
         </div>
       </div>
@@ -1665,16 +1691,16 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
         diaNombre: d === 'LUN' ? 'Lunes' : d === 'MAR' ? 'Martes' : d === 'MIÉ' ? 'Miércoles' : d === 'JUE' ? 'Jueves' : d === 'VIE' ? 'Viernes' : d === 'SÁB' ? 'Sábado' : 'Domingo',
         jornada: 'Mañana',
         horaInicio: '08:00',
-        horaFin: '13:00',
-        activo: d !== 'DOM',
+        horaFin: '12:00',
+        activo: d !== 'DOM' && d !== 'SÁB',
       },
       {
         dia: d,
         diaNombre: d === 'LUN' ? 'Lunes' : d === 'MAR' ? 'Martes' : d === 'MIÉ' ? 'Miércoles' : d === 'JUE' ? 'Jueves' : d === 'VIE' ? 'Viernes' : d === 'SÁB' ? 'Sábado' : 'Domingo',
         jornada: 'Tarde',
-        horaInicio: '14:00',
+        horaInicio: '13:00',
         horaFin: '18:00',
-        activo: d !== 'SÁB' && d !== 'DOM',
+        activo: d !== 'DOM' && d !== 'SÁB',
       },
     ]);
 

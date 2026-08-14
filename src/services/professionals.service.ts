@@ -1,6 +1,6 @@
 import type { ProfessionalOption } from '../types/appointment.types';
 import { apiFetch } from './api';
-import { resolveOrCreateEspecialidad } from './catalogs.service';
+import { getHorariosByMedicoApi, resolveOrCreateEspecialidad } from './catalogs.service';
 
 // ─── Tipo del backend (MedicoEntity con relaciones) ───────────────────────
 interface BackendMedico {
@@ -94,7 +94,7 @@ export const getSchedulableProfessionalsApi = async (): Promise<ProfessionalOpti
   const results = await Promise.allSettled(
     professionals.map(async (professional) => ({
       professional,
-      horarios: await apiFetch<unknown[]>(`/Horarios/medico/${professional.id}`),
+      horarios: await getHorariosByMedicoApi(professional.id),
     })),
   );
   return results.flatMap((result) =>

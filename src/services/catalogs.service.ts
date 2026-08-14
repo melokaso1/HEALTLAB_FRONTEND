@@ -75,8 +75,13 @@ export const resolveOrCreateEspecialidad = async (
   return { id: first.id, nombre: first.nombre || 'Medicina General' };
 };
 
-export const getHorariosByMedicoApi = (medicoId: string): Promise<HorarioApi[]> =>
-  apiFetch<HorarioApi[]>(`/Horarios/medico/${medicoId}`, { cache: 'no-store' });
+export const getHorariosByMedicoApi = async (medicoId: string): Promise<HorarioApi[]> => {
+  const data = await apiFetch<HorarioApi[] | HorarioApi>(`/Horarios/medico/${medicoId}`, {
+    cache: 'no-store',
+  });
+  if (Array.isArray(data)) return data;
+  return data ? [data] : [];
+};
 
 export const saveHorarioMedicoApi = async (
   medicoId: string,
