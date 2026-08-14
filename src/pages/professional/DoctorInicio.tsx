@@ -16,7 +16,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi } from '../../services/appointments.service';
-import { resolveMedicoIdForUser } from '../../services/professionals.service';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './DoctorInicio.css';
 
@@ -55,25 +54,31 @@ const DoctorInicio: React.FC = () => {
   const [tasks, setTasks] = useState<DoctorTask[]>([]);
   const [todayApps, setTodayApps] = useState<TodayAppointment[]>([]);
   const [followUpPatientCount, setFollowUpPatientCount] = useState(0);
+  const [recentPatients, setRecentPatients] = useState<Array<{
+    id: string | number;
+    name: string;
+    initials: string;
+    gender: string;
+    age: number;
+  }>>([]);
 
   useEffect(() => {
     const loadTodayAppointments = async () => {
       const apps = await getAppointmentsApi();
-      const medicoId = await resolveMedicoIdForUser(user);
       if (Array.isArray(apps)) {
         const today = todayIsoLocal();
-        const allDoctorApps = apps.filter((a) =>
-          (medicoId
-            ? String(a.professionalId) === medicoId
-            : a.professionalName.toLowerCase().includes(doctorName.toLowerCase())),
-        );
+        // The API scopes GET /Citas to the authenticated médico. Do not re-filter
+        // by username/name: those values are not equivalent to a MedicoId.
+        const allDoctorApps = apps;
         setFollowUpPatientCount(new Set(allDoctorApps.map((a) => String(a.patientId))).size);
-        const doctorApps = allDoctorApps.filter((a) =>
-          a.date === today &&
-          (medicoId
-            ? String(a.professionalId) === medicoId
-            : a.professionalName.toLowerCase().includes(doctorName.toLowerCase())),
-        );
+        setRecentPatients(Array.from(new Map(allDoctorApps.map((a) => [String(a.patientId), {
+          id: a.patientId,
+          name: a.patientName,
+          initials: a.patientInitials || 'P',
+          gender: a.patientGender || 'Sin registrar',
+          age: a.patientAge,
+        }])).values()).slice(0, 4));
+        const doctorApps = allDoctorApps.filter((a) => a.date === today);
         const mapped: TodayAppointment[] = doctorApps.map((a) => ({
           id: a.id,
           time: a.time,
@@ -88,7 +93,7 @@ const DoctorInicio: React.FC = () => {
       }
     };
     void loadTodayAppointments();
-  }, [user, doctorName]);
+  }, [user]);
 
   const attendedToday = todayApps.filter((app) => app.status === 'Atendida').length;
   const waitingToday = todayApps.filter((app) => app.status === 'Confirmada').length;
@@ -261,23 +266,19 @@ const DoctorInicio: React.FC = () => {
             </div>
 
             <div className="doc-recent-patients-grid">
-              <div className="doc-patient-quick-card">
-                <div className="doc-patient-quick-card__avatar">MR</div>
-                <div className="doc-patient-quick-card__info">
-                  <span className="doc-patient-quick-card__name">Maria Rodriguez</span>
-                  <span className="doc-patient-quick-card__sub">Femenino, 34 años • O+</span>
-                  <span className="doc-patient-quick-card__diag">Hipertensión estadio 1</span>
+              {recentPatients.map((patient) => (
+                <div className="doc-patient-quick-card" key={patient.id}>
+                  <div className="doc-patient-quick-card__avatar">{patient.initials}</div>
+                  <div className="doc-patient-quick-card__info">
+                    <span className="doc-patient-quick-card__name">{patient.name}</span>
+                    <span className="doc-patient-quick-card__sub">{patient.gender}, {patient.age} años</span>
+                    <span className="doc-patient-quick-card__diag">Paciente con citas registradas</span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="doc-patient-quick-card">
-                <div className="doc-patient-quick-card__avatar doc-patient-quick-card__avatar--blue">CM</div>
-                <div className="doc-patient-quick-card__info">
-                  <span className="doc-patient-quick-card__name">Carlos Mendoza</span>
-                  <span className="doc-patient-quick-card__sub">Masculino, 52 años • A+</span>
-                  <span className="doc-patient-quick-card__diag">Evaluación ventricular</span>
-                </div>
-              </div>
+              ))}
+              {recentPatients.length === 0 && (
+                <span className="doc-card__subtitle">No hay pacientes con citas registradas.</span>
+              )}
             </div>
           </div>
         </div>

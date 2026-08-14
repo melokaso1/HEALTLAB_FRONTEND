@@ -462,7 +462,7 @@ const RecepInicio: React.FC = () => {
                 handleCreateAppointment(
                   pacInput.value || 'Paciente Demo',
                   docInput.value || 'Dr. J. Moore',
-                  horaInput.value || '11:00 AM'
+                  horaInput.value || '09:00'
                 );
               }}
             >
@@ -492,9 +492,10 @@ const RecepInicio: React.FC = () => {
                     <label className="form-label">Fecha</label>
                     <input
                       type="date"
+                      name="fecha"
                       className="form-input"
                       required
-                      defaultValue="2026-10-24"
+                      defaultValue={todayIsoLocal()}
                     />
                   </div>
 
@@ -505,7 +506,7 @@ const RecepInicio: React.FC = () => {
                       name="hora"
                       className="form-input"
                       required
-                      defaultValue="11:30 AM"
+                      defaultValue="09:00"
                     />
                   </div>
                 </div>

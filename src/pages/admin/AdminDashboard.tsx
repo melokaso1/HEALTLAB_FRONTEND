@@ -30,7 +30,10 @@ interface AgendaSlot {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
-const todayISO = (): string => new Date().toISOString().split('T')[0];
+const todayISO = (): string => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
 const todayLabel = (): string =>
   new Date().toLocaleDateString('es-CO', {
@@ -66,7 +69,11 @@ const AdminDashboard: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const appointments = await getAppointmentsApi();
+        const [appointments, professionals, patients] = await Promise.all([
+          getAppointmentsApi(),
+          getProfessionalsApi(),
+          getPatientsApi(),
+        ]);
         const today = todayISO();
 
         // ── Tabla: todas las citas ──────────────────────────────────────
@@ -101,18 +108,13 @@ const AdminDashboard: React.FC = () => {
 
         setAgendaSlots(activeSlots);
         setTodayCitasCount(todayApps.length);
+        setTotalProfessionals(professionals.length);
+        setTotalPatients(patients.length);
       } catch (error) {
-        console.error('Error fetching dashboard appointments:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
-
-      void getProfessionalsApi()
-        .then((professionals) => setTotalProfessionals(professionals.length))
-        .catch((error) => console.error('Error fetching dashboard professionals:', error));
-      void getPatientsApi()
-        .then((patients) => setTotalPatients(patients.length))
-        .catch((error) => console.error('Error fetching dashboard patients:', error));
     };
 
     fetchData();

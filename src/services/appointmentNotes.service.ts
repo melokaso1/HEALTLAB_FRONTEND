@@ -2,7 +2,7 @@ import type { Appointment } from '../types/appointment.types';
 
 const STORAGE_KEY = 'HEALTLAB_APPOINTMENT_NOTES';
 
-type AppointmentNote = Pick<Appointment, 'id' | 'notes' | 'status'>;
+type AppointmentNote = Pick<Appointment, 'id' | 'notes'>;
 
 const getStoredNotes = (): Record<string, AppointmentNote> => {
   try {
@@ -14,7 +14,12 @@ const getStoredNotes = (): Record<string, AppointmentNote> => {
 
 export const mergeStoredAppointmentNotes = (appointments: Appointment[]): Appointment[] => {
   const notes = getStoredNotes();
-  return appointments.map((appointment) => ({ ...appointment, ...notes[String(appointment.id)] }));
+  return appointments.map((appointment) => {
+    const stored = notes[String(appointment.id)];
+    if (!stored) return appointment;
+    // Only merge notes — never overwrite API status with stale local values.
+    return { ...appointment, notes: stored.notes ?? appointment.notes };
+  });
 };
 
 export const saveAppointmentNote = (appointment: Appointment): void => {
@@ -22,7 +27,6 @@ export const saveAppointmentNote = (appointment: Appointment): void => {
     const notes = getStoredNotes();
     notes[String(appointment.id)] = {
       id: appointment.id,
-      status: appointment.status,
       notes: appointment.notes,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));

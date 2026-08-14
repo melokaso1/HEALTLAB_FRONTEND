@@ -27,7 +27,10 @@ import type {
 } from './profesional.types';
 import { initialProfesionales } from './mockProfesionales';
 import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
-import { getAppointmentsApi, createAppointmentApi } from '../../../services/appointments.service';
+import { getAppointmentsApi, getServicesApi } from '../../../services/appointments.service';
+import { createAppointmentFromInput } from '../../../services/createAppointment.logic';
+import { getPatientByDocumentApi } from '../../../services/patients.service';
+import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './AdminProfesionales.css';
 
@@ -38,6 +41,9 @@ const getWeekStart = (date: Date): Date => {
   const diff = d.getDate() - day; // Adjust to Sunday
   return new Date(d.setDate(diff));
 };
+
+const localDateISO = (date = new Date()): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 const formatTimeLabel = (hourStr: string): string => {
   const [h] = hourStr.split(':').map(Number);
@@ -90,6 +96,7 @@ const mapBackendProfToLocal = (p: ProfessionalOption): Professional => {
 };
 
 const AdminProfesionales: React.FC = () => {
+  const { user } = useAuth();
   // State
   const [profesionales, setProfesionales] = useState<Professional[]>(initialProfesionales);
 
@@ -120,7 +127,13 @@ const AdminProfesionales: React.FC = () => {
               fecha: a.date,
               horaInicio: a.time,
               horaFin: a.time,
-              estado: a.status === 'Agendada' ? 'Confirmada' : a.status === 'Atendida' ? 'Atendida' : 'Cancelada',
+              estado: a.status === 'Agendada'
+                ? 'Confirmada'
+                : a.status === 'Atendida'
+                  ? 'Atendida'
+                  : a.status === 'No asistió'
+                    ? 'No asistió'
+                    : 'Cancelada',
               motivoConsulta: a.notes || a.serviceName,
             };
           });
@@ -152,9 +165,9 @@ const AdminProfesionales: React.FC = () => {
     );
   };
 
-  // Week Date State (default to current active week in August 2026 or current date)
+  // Week Date State
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
-    getWeekStart(new Date(2026, 7, 9)) // Sunday August 9, 2026
+    getWeekStart(new Date())
   );
 
   // Modal States
@@ -277,7 +290,7 @@ const AdminProfesionales: React.FC = () => {
   };
 
   const handleCurrentWeek = () => {
-    setSelectedWeekStart(getWeekStart(new Date(2026, 7, 9)));
+    setSelectedWeekStart(getWeekStart(new Date()));
   };
 
   // Total calculated weekly hours for selected doctor
@@ -325,6 +338,7 @@ const AdminProfesionales: React.FC = () => {
       const createdOpt = await createProfessionalApi({
         nombre: newDoctor.nombre,
         apellido: newDoctor.apellido,
+        numeroDocumento: newDoctor.numeroDocumento || '',
         especialidad: newDoctor.especialidad,
         registroProfesional: newDoctor.registroProfesional,
         consultorio: newDoctor.consultorio,
@@ -334,7 +348,7 @@ const AdminProfesionales: React.FC = () => {
       const fullProf: Professional = {
         ...newDoctor,
         ...mappedProf,
-        id: createdOpt.id || `prof-${Date.now()}`,
+        id: createdOpt.id,
         nombre: newDoctor.nombre || mappedProf.nombre,
         apellido: newDoctor.apellido || mappedProf.apellido,
         especialidad: newDoctor.especialidad || mappedProf.especialidad,
@@ -352,7 +366,9 @@ const AdminProfesionales: React.FC = () => {
   };
 
   // Handler: Create New Appointment
-  const handleCreateAppointment = async (newApp: Omit<MedicalAppointment, 'id'>) => {
+  const handleCreateAppointment = async (
+    newApp: Omit<MedicalAppointment, 'id'> & { pacienteCedula?: string },
+  ) => {
     if (!selectedProf) return;
 
     const abrevMap: Record<number, DiaSemana> = {
@@ -360,18 +376,36 @@ const AdminProfesionales: React.FC = () => {
     };
 
     try {
-      const createdBackend = await createAppointmentApi({
-        patientId: '00000000-0000-0000-0000-000000000000',
-        patientName: newApp.pacienteNombre,
+      const document = newApp.pacienteCedula?.trim();
+      if (!document) {
+        throw new Error('Ingrese la cédula del paciente antes de agendar.');
+      }
+      const patient = await getPatientByDocumentApi(document);
+      if (!patient) {
+        throw new Error('No existe un paciente con esa cédula. Regístrelo antes de agendar.');
+      }
+      const services = await getServicesApi();
+      const service = services.find((item) =>
+        item.name.trim().toLowerCase() === newApp.motivoConsulta.trim().toLowerCase(),
+      ) ?? services.find((item) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id));
+      if (!service) {
+        throw new Error('No hay un tipo de cita válido disponible en el servidor.');
+      }
+      const result = await createAppointmentFromInput({
+        patientId: patient.id,
+        patientName: patient.name,
         professionalId: selectedProf.id,
         professionalName: `${selectedProf.tituloPrefix} ${selectedProf.nombre} ${selectedProf.apellido}`.trim(),
         professionalSpecialty: selectedProf.especialidad,
-        serviceName: newApp.motivoConsulta || 'Consulta Médica',
-        date: newApp.fecha || new Date().toISOString().split('T')[0],
-        time: newApp.horaInicio || '09:00 AM',
+        serviceId: service.id,
+        serviceName: service.name,
+        date: newApp.fecha || localDateISO(),
+        time: newApp.horaInicio || '09:00',
         notes: newApp.motivoConsulta,
-        status: 'Agendada',
+        usuarioCreacionId: user?.id,
       });
+      if (!result.ok) throw new Error(result.error);
+      const createdBackend = result.appointment;
 
       const dateParts = (newApp.fecha || '').split('-');
       let diaAbrev: DiaSemana = newApp.diaAbrev || 'LUN';
@@ -1344,6 +1378,7 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
   const [tituloPrefix, setTituloPrefix] = useState('Dra.');
   const [especialidad, setEspecialidad] = useState('');
   const [registroProfesional, setRegistroProfesional] = useState('');
+  const [numeroDocumento, setNumeroDocumento] = useState('');
   const [consultorio, setConsultorio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1379,6 +1414,7 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
         tituloPrefix,
         especialidad,
         registroProfesional,
+        numeroDocumento,
         consultorio,
         estado: 'Activo',
         citasHoy: 0,
@@ -1469,6 +1505,18 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
                   placeholder="Ej. CMP-45892"
                   value={registroProfesional}
                   onChange={(e) => setRegistroProfesional(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Documento</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  maxLength={30}
+                  placeholder="Documento de identidad"
+                  value={numeroDocumento}
+                  onChange={(e) => setNumeroDocumento(e.target.value)}
                 />
               </div>
               <div className="form-group">
@@ -1587,7 +1635,7 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
 interface NewAppointmentModalProps {
   initialSlot: { dayAbrev: DiaSemana; timeStr: string } | null;
   onClose: () => void;
-  onSave: (app: Omit<MedicalAppointment, 'id'>) => void;
+  onSave: (app: Omit<MedicalAppointment, 'id'> & { pacienteCedula?: string }) => void;
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
@@ -1600,8 +1648,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [motivoConsulta, setMotivoConsulta] = useState('Consulta Especializada');
   const [diaAbrev, setDiaAbrev] = useState<DiaSemana>(initialSlot?.dayAbrev || 'LUN');
   const [fechaExacta, setFechaExacta] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return localDateISO();
   });
   const [horaInicio, setHoraInicio] = useState(initialSlot?.timeStr || '09:00');
   const [horaFin, setHoraFin] = useState('10:00');
@@ -1630,14 +1677,14 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
     const targetDayIdx = dayIndexMap[day];
     const diff = targetDayIdx - currentDayIdx;
     currentD.setDate(currentD.getDate() + diff);
-    setFechaExacta(currentD.toISOString().split('T')[0]);
+    setFechaExacta(localDateISO(currentD));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = pacienteCedula.trim() ? `CC: ${pacienteCedula.trim()} — ${pacienteNombre.trim()}` : pacienteNombre.trim();
     onSave({
-      pacienteNombre: finalName,
+      pacienteNombre: pacienteNombre.trim(),
+      pacienteCedula: pacienteCedula.trim(),
       motivoConsulta,
       diaAbrev,
       fecha: fechaExacta,

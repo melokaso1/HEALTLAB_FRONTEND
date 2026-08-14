@@ -11,9 +11,6 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { getAppointmentsApi } from '../../services/appointments.service';
-import { useAuth } from '../../context/AuthContext';
-import { resolveMedicoIdForUser } from '../../services/professionals.service';
-import { mergeStoredAppointmentNotes } from '../../services/appointmentNotes.service';
 import Pagination from '../../components/common/Pagination';
 import './ProfessionalHistory.css';
 
@@ -27,45 +24,36 @@ export interface ConsultationRecord {
   observations: string;
   result: string;
   resultBadgeType?: 'normal' | 'blue' | 'red' | 'green';
-  status: 'Atendido' | 'Completado' | 'En seguimiento';
+  status: string;
   doctorNotes?: string;
   prescription?: string;
 }
 
 const ProfessionalHistory: React.FC = () => {
-  const { user } = useAuth();
   const [history, setHistory] = useState<ConsultationRecord[]>([]);
 
   useEffect(() => {
     const loadHistory = async () => {
-      const [apps, medicoId] = await Promise.all([
-        getAppointmentsApi(),
-        resolveMedicoIdForUser(user),
-      ]);
+      const apps = await getAppointmentsApi();
       if (Array.isArray(apps)) {
-        const mapped: ConsultationRecord[] = mergeStoredAppointmentNotes(apps)
-          .filter((a) =>
-            (medicoId
-              ? String(a.professionalId) === medicoId
-              : a.professionalName.toLowerCase().includes((user?.name || '').toLowerCase())) &&
-            (a.status === 'Atendida' || Boolean(a.notes)))
+        const mapped: ConsultationRecord[] = apps
           .map((a: any) => ({
           id: a.id,
           date: a.date,
           patientName: a.patientName,
           patientDoc: a.patientDoc,
           service: a.serviceName,
-          diagnosis: a.notes || 'Atención Médica Finalizada',
+          diagnosis: a.notes || 'Sin diagnóstico registrado.',
           observations: a.notes || 'Sin observaciones adicionales.',
-          result: 'Atención Completada',
+          result: a.status,
           resultBadgeType: 'normal',
-          status: a.status === 'Atendida' ? 'Completado' : 'En seguimiento',
+          status: a.status,
         }));
         setHistory(mapped);
       }
     };
     void loadHistory();
-  }, [user]);
+  }, []);
 
   const [searchPatient, setSearchPatient] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -213,9 +201,10 @@ const ProfessionalHistory: React.FC = () => {
               }}
             >
               <option value="all">Todos los estados</option>
-              <option value="Completado">Completado</option>
-              <option value="En seguimiento">En seguimiento</option>
-              <option value="Atendido">Atendido</option>
+              <option value="Agendada">Agendada</option>
+              <option value="Atendida">Atendida</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="No asistió">No asistió</option>
             </select>
           </div>
 

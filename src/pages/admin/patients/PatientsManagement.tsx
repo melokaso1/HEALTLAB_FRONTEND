@@ -23,7 +23,6 @@ import {
   addPatientNoteApi,
 } from '../../../services/patients.service';
 import { getAppointmentsApi } from '../../../services/appointments.service';
-import { resolveMedicoIdForUser } from '../../../services/professionals.service';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './PatientsManagement.css';
@@ -62,20 +61,34 @@ const PatientsManagement: React.FC = () => {
 
   useEffect(() => {
     const loadPatients = async () => {
-      const data = await getPatientsApi();
-      setPatients(data);
       if (isDoctor) {
-        const [appointments, medicoId] = await Promise.all([
-          getAppointmentsApi(),
-          resolveMedicoIdForUser(user),
-        ]);
-        const ids = appointments
-          .filter((appointment) => medicoId
-            ? String(appointment.professionalId) === medicoId
-            : appointment.professionalName.toLowerCase().includes((user?.name || '').toLowerCase()))
-          .map((appointment) => String(appointment.patientId));
-        setDoctorPatientIds(new Set(ids));
+        const appointments = await getAppointmentsApi();
+        const patientsFromAppointments = Array.from(
+          new Map(appointments.map((appointment) => [String(appointment.patientId), {
+            id: appointment.patientId,
+            name: appointment.patientName,
+            gender: appointment.patientGender === 'Femenino' || appointment.patientGender === 'Masculino'
+              ? appointment.patientGender
+              : 'Otro' as GenderType,
+            age: appointment.patientAge,
+            documentType: 'CC' as const,
+            documentNumber: appointment.patientDoc,
+            contact: { phone: appointment.patientPhone, email: appointment.patientEmail, address: '' },
+            lastVisitDate: appointment.date,
+            lastVisitSpecialty: appointment.serviceName,
+            specialtyBadgeColor: 'green' as const,
+            status: 'active' as const,
+            initials: appointment.patientInitials || 'P',
+            medicalData: { bloodType: 'N/A', allergies: ['Ninguna'] },
+            recentActivity: [],
+            history: [],
+            notes: [],
+          }])).values(),
+        );
+        setPatients(patientsFromAppointments);
+        setDoctorPatientIds(null);
       } else {
+        setPatients(await getPatientsApi());
         setDoctorPatientIds(null);
       }
     };
@@ -351,7 +364,8 @@ const PatientsManagement: React.FC = () => {
         }),
       ]);
 
-      setPatients((prev) => [created, ...prev.filter((patient) => String(patient.id) !== String(created.id))]);
+      const fresh = await getPatientsApi();
+      setPatients(fresh);
 
       setActivePatientId(created.id);
       setIsCreateModalOpen(false);

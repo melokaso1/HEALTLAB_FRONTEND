@@ -15,8 +15,7 @@ import {
   updateAppointmentStatusApi,
 } from '../../services/appointments.service';
 import { useAuth } from '../../context/AuthContext';
-import { resolveMedicoIdForUser } from '../../services/professionals.service';
-import { mergeStoredAppointmentNotes, saveAppointmentNote } from '../../services/appointmentNotes.service';
+import { saveAppointmentNote } from '../../services/appointmentNotes.service';
 import './DoctorCitas.css';
 
 // Hourly timetable slots (matching screenshot layout)
@@ -87,23 +86,18 @@ const DoctorCitas: React.FC = () => {
 
   useEffect(() => {
     const loadAppointments = async () => {
-      const [data, medicoId] = await Promise.all([
-        getAppointmentsApi(),
-        resolveMedicoIdForUser(user),
-      ]);
+      const data = await getAppointmentsApi();
       const today = new Date();
       const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const doctorAppointments = mergeStoredAppointmentNotes(data).filter((appointment) =>
+      const doctorAppointments = data.filter((appointment) =>
         appointment.date === todayIso &&
-        (medicoId
-          ? String(appointment.professionalId) === medicoId
-          : appointment.professionalName.toLowerCase().includes((user?.name || '').toLowerCase())),
+        (!user?.medicoId || String(appointment.professionalId) === user.medicoId),
       );
       setAppointments(doctorAppointments);
       setSelectedAppId(doctorAppointments[0]?.id ?? null);
     };
     void loadAppointments();
-  }, [user]);
+  }, [user?.medicoId]);
 
   // READ CURRENT HOUR DYNAMICALLY FROM PC SYSTEM TIME
   const pcCurrentHour = new Date().getHours();

@@ -16,6 +16,8 @@ interface BackendUsuario {
   fechaCreacion?: string;
   ultimoLogin?: string;
   debeCambiarPassword?: boolean;
+  nombreCompleto?: string;
+  rolNombre?: string;
   tokenVersion?: number;
   empleado?: {
     persona?: { nombre: string; apellido: string };
@@ -30,33 +32,14 @@ const mapBackendUser = (
 ): ManagedUser => {
   const userId = raw.id || raw.usuarioId || `usr-${Math.random().toString(36).substr(2, 9)}`;
   const persona = raw.empleado?.persona;
-  const fullName = persona
+  const fullName = raw.nombreCompleto || (persona
     ? `${persona.nombre} ${persona.apellido}`.trim()
-    : raw.username;
+    : raw.username);
 
   const rolFromMap = raw.rolId ? roleMap?.get(raw.rolId) : '';
-  const rolNombre = raw.rol?.nombreRol || raw.rol?.nombre || rolFromMap || '';
-  const usrNameLower = (raw.username || '').toLowerCase();
-  const emailLower = (raw.email || '').toLowerCase();
-
-  let role: UserRoleType = 'receptionist';
-  if (
-    rolNombre.toLowerCase().includes('admin') ||
-    usrNameLower.includes('admin') ||
-    usrNameLower.includes('legoat') ||
-    emailLower.includes('admin')
-  ) {
-    role = 'admin';
-  } else if (
-    rolNombre.toLowerCase().includes('prof') ||
-    rolNombre.toLowerCase().includes('med') ||
-    usrNameLower.includes('medico') ||
-    usrNameLower.includes('doctor')
-  ) {
-    role = 'professional';
-  } else {
-    role = (BACKEND_ROLE_MAP[rolNombre] as UserRoleType) ?? 'receptionist';
-  }
+  const rolNombre = raw.rolNombre || raw.rol?.nombreRol || raw.rol?.nombre || rolFromMap || '';
+  const role: UserRoleType =
+    (BACKEND_ROLE_MAP[rolNombre] as UserRoleType | undefined) ?? 'receptionist';
 
   const initials = (fullName || 'US')
     .split(' ')
@@ -198,6 +181,7 @@ export interface CreateUserPayload {
   username: string;
   email: string;
   password: string;
+  numeroDocumento: string;
   activo?: boolean;
   debeCambiarPassword?: boolean;
 }
@@ -208,6 +192,9 @@ export const createUserApi = async (
   // 0. Pre-validar contraseña antes de realizar escrituras en la base de datos
   if (!payload.password || payload.password.length < 8) {
     throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  }
+  if (!payload.numeroDocumento.trim() || payload.numeroDocumento.trim().length > 30) {
+    throw new Error('El documento del usuario es requerido y debe tener máximo 30 caracteres.');
   }
 
   let personaId = '';
@@ -260,7 +247,7 @@ export const createUserApi = async (
           nombre: parts[0] || 'Usuario',
           apellido: parts.slice(1).join(' ') || 'Sistema',
           tipoDocumentoId: tipoDocId,
-          numeroDocumento: `DOC${Date.now().toString().slice(-7)}`,
+          numeroDocumento: payload.numeroDocumento.trim(),
         }),
       });
       if (personaRes?.id) personaId = personaRes.id;
@@ -316,6 +303,15 @@ export interface UpdateUserPayload {
   debeCambiarPassword?: boolean;
 }
 
+const roleNameForType = (role: UserRoleType): string => FRONTEND_ROLE_MAP[role];
+
+export const getRoleIdForType = async (role: UserRoleType): Promise<string> => {
+  const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles');
+  const roleItem = roles.find((item) => item.nombreRol === roleNameForType(role));
+  if (!roleItem?.id) throw new Error(`No se encontró el rol ${roleNameForType(role)}.`);
+  return roleItem.id;
+};
+
 export const updateUserApi = async (
   id: string | number,
   payload: UpdateUserPayload,
@@ -352,16 +348,11 @@ export const changeUserRoleApi = async (
   newRole: UserRoleType,
   rolId: string,
 ): Promise<UserRoleType> => {
-  try {
-    await apiFetch(`/usuarios/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ rolId }),
-    });
-    return newRole;
-  } catch (error) {
-    console.warn(`[users.service] Error al cambiar rol del usuario ${id}:`, error);
-    return newRole;
-  }
+  await apiFetch(`/usuarios/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ rolId }),
+  });
+  return newRole;
 };
 
 // Alias exportados para compatibilidad

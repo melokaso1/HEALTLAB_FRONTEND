@@ -68,10 +68,21 @@ const AppointmentsManagement: React.FC = () => {
   const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => toLocalDateInput());
 
+  // Dynamic Calendar Month Navigation State
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => new Date());
+
   useEffect(() => {
     getAppointmentsApi().then((data) => {
       if (data && data.length > 0) {
         setPatientsAppointments(data);
+        const parts = data[0].date?.split('-') ?? [];
+        if (parts.length === 3) {
+          const yr = parseInt(parts[0], 10);
+          const mo = parseInt(parts[1], 10) - 1;
+          if (!isNaN(yr) && !isNaN(mo)) {
+            setCalendarViewDate(new Date(yr, mo, 1));
+          }
+        }
       }
     });
     getProfessionalsApi().then((data) => {
@@ -101,9 +112,6 @@ const AppointmentsManagement: React.FC = () => {
       setIsCreateModalOpen(true);
     }
   }, [location.state]);
-
-  // Dynamic Calendar Month Navigation State
-  const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => new Date());
 
   const handlePrevMonth = () => {
     setCalendarViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -232,7 +240,7 @@ const AppointmentsManagement: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
   const [newProfId, setNewProfId] = useState<string>('');
-  const [newServiceId, setNewServiceId] = useState<string>('srv-1');
+  const [newServiceId, setNewServiceId] = useState<string>('');
   const [newDate, setNewDate] = useState<string>(() => toLocalDateInput());
   const [newTime, setNewTime] = useState<string>('10:00 AM');
   const [newNotes, setNewNotes] = useState<string>('');
@@ -414,21 +422,31 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
 
-    const profObj = professionalsList.find((p) => String(p.id) === String(newProfId)) || professionalsList[0];
-    const serviceObj = servicesList.find((s) => String(s.id) === String(newServiceId)) || servicesList[0] || mockServices[0];
+    const profObj = professionalsList.find((p) => String(p.id) === String(newProfId));
+    const serviceObj = servicesList.find((s) => String(s.id) === String(newServiceId));
+    const isGuid = (value?: string) =>
+      Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
+    if (!profObj || !isGuid(profObj.id)) {
+      showToast('Seleccione un profesional válido.');
+      return;
+    }
+    if (!serviceObj || !isGuid(serviceObj.id)) {
+      showToast('Seleccione un tipo de cita válido cargado desde el servidor.');
+      return;
+    }
 
     const result = await createAppointmentFromInput({
       patientId: targetPatient.id,
       patientName: targetPatient.name,
-      professionalId: profObj?.id ?? newProfId,
-      professionalName: profObj?.name ?? 'Médico Seleccionado',
-      professionalSpecialty: profObj?.specialty ?? 'Medicina General',
-      serviceId: serviceObj?.id,
-      serviceName: serviceObj?.name ?? 'Consulta Médica',
+      professionalId: profObj.id,
+      professionalName: profObj.name,
+      professionalSpecialty: profObj.specialty,
+      serviceId: serviceObj.id,
+      serviceName: serviceObj.name,
       date: newDate,
       time: newTime,
       notes: newNotes.trim() || undefined,
-      usuarioCreacionId: user?.id ?? '',
+      usuarioCreacionId: user?.id,
     });
 
     if (!result.ok) {
@@ -458,10 +476,8 @@ const AppointmentsManagement: React.FC = () => {
   const filteredAppointments = useMemo(() => {
     return appointments.filter((app) => {
       const matchesDate = !filterByDate || app.date === selectedDate;
-      const matchesDoctorUser =
-        !isDoctor ||
-        app.professionalId === 'prof-1' ||
-        app.professionalName.toLowerCase().includes((user?.name || '').toLowerCase());
+      // GET /Citas is already scoped by the backend for the authenticated doctor.
+      const matchesDoctorUser = true;
       const matchesProf = isDoctor || profFilter === 'all' || app.professionalId === profFilter;
       const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
       const matchesSearch =

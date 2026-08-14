@@ -12,14 +12,18 @@ interface BackendPaciente {
   personaId: string;
   activo?: boolean;
   fechaRegistro: string;
+  telefono?: string;
+  direccion?: string;
+  tipoSangre?: string;
   persona?: {
     id: string;
     nombre: string;
     apellido: string;
     numeroDocumento: string;
     fechaNacimiento?: string;
-    tipoDocumento?: { nombre: string };
-    sexo?: { nombre: string };
+    tipoDocumento?: string | { nombre: string };
+    sexo?: string | { nombre: string };
+    email?: string;
     telefonos?: Array<{ numero: string; principal?: boolean }>;
     direcciones?: Array<{ descripcion: string; principal?: boolean }>;
   };
@@ -59,9 +63,9 @@ const isValidPatientDocument = (
   value: string,
 ): boolean => {
   const document = value.trim();
-  return type === 'PAS'
-    ? /^[a-z0-9]+$/i.test(document) && document.length <= 20
-    : /^\d{6,12}$/.test(document);
+  return document.length <= 30 && (type === 'PAS'
+    ? /^[a-z0-9]+$/i.test(document)
+    : /^\d{6,12}$/.test(document));
 };
 
 const buildInitials = (nombre?: string, apellido?: string): string => {
@@ -83,6 +87,9 @@ const pickColor = (id?: string | number): string => {
   return AVATAR_COLORS[charCode % AVATAR_COLORS.length];
 };
 
+const backendName = (value?: string | { nombre: string }): string =>
+  typeof value === 'string' ? value : value?.nombre ?? '';
+
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
 const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: string; apellido?: string; numeroDocumento?: string; gender?: GenderType; age?: number; birthDate?: string }): Patient => {
   const p = raw.persona;
@@ -96,28 +103,24 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
   if (!fullName) fullName = 'Paciente sin nombre';
 
   const docNum = p?.numeroDocumento ?? raw.numeroDocumento ?? '';
-  const stored = getStoredPatients().find(
-    (sp) => String(sp.id) === String(raw.id) || (Boolean(docNum) && sp.documentNumber === docNum)
-  );
-
-  const genderFromBackend = mapGender(p?.sexo?.nombre);
+  const genderFromBackend = mapGender(backendName(p?.sexo));
   const ageFromBackend = calcAge(p?.fechaNacimiento);
 
-  const gender = genderFromBackend !== 'Otro' ? genderFromBackend : (raw.gender || stored?.gender || 'Otro');
-  const age = ageFromBackend > 0 ? ageFromBackend : (raw.age || stored?.age || 0);
-  const birthDate = p?.fechaNacimiento || raw.birthDate || stored?.birthDate || '';
+  const gender = genderFromBackend !== 'Otro' ? genderFromBackend : (raw.gender || 'Otro');
+  const age = ageFromBackend > 0 ? ageFromBackend : (raw.age || 0);
+  const birthDate = p?.fechaNacimiento || raw.birthDate || '';
 
   const telefonoPrincipal =
+    raw.telefono ??
     p?.telefonos?.find((t) => t.principal)?.numero ??
     p?.telefonos?.[0]?.numero ??
-    stored?.contact?.phone ??
     '';
   const direccionPrincipal =
+    raw.direccion ??
     p?.direcciones?.find((d) => d.principal)?.descripcion ??
     p?.direcciones?.[0]?.descripcion ??
-    stored?.contact?.address ??
     '';
-  const alergias = raw.alergias?.map((a) => a.nombre) ?? stored?.medicalData?.allergies ?? ['Ninguna'];
+  const alergias = raw.alergias?.map((a) => a.nombre) ?? ['Ninguna'];
 
   return {
     id: raw.id as unknown as number,
@@ -125,72 +128,35 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
     gender,
     age,
     birthDate,
-    documentType: mapDocType(p?.tipoDocumento?.nombre) || stored?.documentType || 'CC',
-    documentNumber: docNum || stored?.documentNumber || '',
+    documentType: mapDocType(backendName(p?.tipoDocumento)),
+    documentNumber: docNum,
     contact: {
       phone: telefonoPrincipal,
-      email: stored?.contact?.email ?? '',
+      email: p?.email ?? '',
       address: direccionPrincipal,
     },
     lastVisitDate: raw.fechaRegistro
       ? new Date(raw.fechaRegistro).toLocaleDateString('es-CO')
-      : (stored?.lastVisitDate ?? 'Sin visitas'),
-    lastVisitSpecialty: stored?.lastVisitSpecialty ?? 'Sin registrar',
-    specialtyBadgeColor: stored?.specialtyBadgeColor ?? 'green',
+      : 'Sin visitas',
+    lastVisitSpecialty: 'Sin registrar',
+    specialtyBadgeColor: 'green',
     status: raw.activo !== false ? 'active' : 'inactive',
     initials: buildInitials(nombre || fullName, apellido),
     avatarBg: pickColor(raw.id),
     medicalData: {
-      bloodType: stored?.medicalData?.bloodType ?? 'N/A',
+      bloodType: raw.tipoSangre ?? 'N/A',
       allergies: alergias,
     },
-    recentActivity: stored?.recentActivity ?? [],
-    history: stored?.history ?? [],
-    notes: stored?.notes ?? [],
+    recentActivity: [],
+    history: [],
+    notes: [],
   };
-};
-
-// ─── LocalStorage Persistence Helper ────────────────────────────────────
-const LOCAL_PACIENTES_KEY = 'HEALTLAB_PERSISTENT_PACIENTES';
-
-const getStoredPatients = (): Patient[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Patient[];
-    return parsed.filter((p) => Boolean(p.id));
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredPatient = (patient: Patient) => {
-  try {
-    const current = getStoredPatients();
-    const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
-    localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Error al guardar paciente en localStorage', e);
-  }
 };
 
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getPatientsApi = async (): Promise<Patient[]> => {
-  try {
-    const data = await apiFetch<BackendPaciente[]>('/Pacientes');
-    const mapped = Array.isArray(data) ? data.map(mapBackendPatient) : [];
-    const stored = getStoredPatients();
-
-    const combined = [...mapped];
-    for (const sp of stored) {
-      if (!combined.some((p) => String(p.id) === String(sp.id) || (Boolean(sp.documentNumber) && p.documentNumber === sp.documentNumber))) {
-        combined.push(sp);
-      }
-    }
-    return combined;
-  } catch {
-    return getStoredPatients();
-  }
+  const data = await apiFetch<BackendPaciente[]>('/Pacientes');
+  return Array.isArray(data) ? data.map(mapBackendPatient) : [];
 };
 
 export const getPatientByIdApi = async (id: string): Promise<Patient | null> => {
@@ -205,41 +171,35 @@ export const getPatientByIdApi = async (id: string): Promise<Patient | null> => 
 
 /**
  * Busca un paciente por número de documento (cédula).
- * GET /pacientes/por-documento/{numeroDocumento}
+ * GET /Pacientes/buscar?tipoDocumento=&numeroDocumento=
  * 404 → null; otros errores se re-lanzan.
  */
 export const getPatientByDocumentApi = async (
   numeroDocumento: string,
+  documentType: Patient['documentType'] = 'CC',
 ): Promise<Patient | null> => {
   const doc = numeroDocumento.trim();
   if (!doc) {
     throw new Error('El número de documento es requerido');
   }
+  if (doc.length > 30) throw new Error('El número de documento no puede superar 30 caracteres.');
 
-  try {
-    const data = await apiFetch<BackendPaciente>(
-      `/Pacientes/por-documento/${encodeURIComponent(doc)}`,
-    );
-    return mapBackendPatient(data);
-  } catch (error) {
-    const apiError = error as ApiError;
-    if (apiError.status === 409) throw error;
-    if (apiError.status !== 404) throw error;
-
-    const tipos = await getTiposDocumentoApi();
-    const cc = tipos.find((tipo) =>
-      tipo.codigo?.toUpperCase() === 'CC' || tipo.nombre.toUpperCase() === 'CC' ||
-      tipo.nombre.toUpperCase().includes('CÉDULA'),
-    );
-    if (!cc) return null;
-    return searchPatientApi(cc.id, doc);
-  }
+  const tipos = await getTiposDocumentoApi();
+  const tipo = tipos.find((item) =>
+    item.codigo?.toUpperCase() === documentType ||
+    item.nombre.toUpperCase() === documentType,
+  );
+  if (!tipo) throw new Error('No se encontró el tipo de documento seleccionado.');
+  return searchPatientApi(tipo.id, doc);
 };
 
 export const searchPatientApi = async (
   tipoDocumentoId: string,
   numeroDocumento: string,
 ): Promise<Patient | null> => {
+  if (numeroDocumento.trim().length > 30) {
+    throw new Error('El número de documento no puede superar 30 caracteres.');
+  }
   try {
     const data = await apiFetch<BackendPaciente>(
       `/Pacientes/buscar?tipoDocumento=${encodeURIComponent(tipoDocumentoId)}&numeroDocumento=${encodeURIComponent(numeroDocumento.trim())}`,
@@ -272,6 +232,16 @@ export const createPatientApi = async (
     tipo.nombre.toUpperCase() === (patient.documentType ?? 'CC').toUpperCase(),
   );
   if (!tipoDoc) throw new Error('No se encontró el tipo de documento seleccionado.');
+  const sexos = await apiFetch<Array<{ id: string; nombre?: string; codigo?: string }>>('/Sexos');
+  const sexo = sexos.find((item) => {
+    const value = `${item.nombre ?? ''} ${item.codigo ?? ''}`.toLowerCase();
+    return patient.gender === 'Femenino'
+      ? value.includes('femen') || value.includes('f')
+      : patient.gender === 'Masculino'
+        ? value.includes('mascul') || value.includes('m')
+        : value.includes('otro') || value.includes('none') || value.includes('n/a');
+  }) ?? (patient.gender === 'Otro' ? sexos[0] : undefined);
+  if (!sexo?.id) throw new Error('No se encontró el sexo seleccionado.');
 
   // Calcular fechaNacimiento
   let fechaNacimiento = patient.birthDate || '';
@@ -280,59 +250,30 @@ export const createPatientApi = async (
     fechaNacimiento = `${year}-01-01`;
   }
 
-  // Buscar sexoId
-  let sexoId: string | undefined;
-  try {
-    const sexos = await apiFetch<Array<{ id: string; nombre: string }>>('/Sexos');
-    const requestedGender = patient.gender ?? 'Otro';
-    const aliases: Record<GenderType, string[]> = {
-      Femenino: ['femenino', 'femenina', 'f'],
-      Masculino: ['masculino', 'masculina', 'm'],
-      Otro: ['otro', 'otra', 'o'],
-    };
-    const match = sexos.find((s) => {
-      const name = s.nombre.trim().toLowerCase();
-      return aliases[requestedGender].some((alias) => name === alias || name.includes(alias));
-    });
-    if (match) sexoId = match.id;
-  } catch {
-    // fallback if endpoint /Sexos does not exist
-  }
-
-  // 2. Crear Persona en /Personas si no existe
-  let personaId = patient.personaId && patient.personaId.length === 36 ? patient.personaId : '';
-  if (!personaId) {
-    const personaRes = await apiFetch<{ id: string }>('/Personas', {
-      method: 'POST',
-      body: JSON.stringify({
+  const raw = await apiFetch<BackendPaciente>('/Pacientes/completo', {
+    method: 'POST',
+    body: JSON.stringify({
+      persona: {
         nombre: parts[0] ?? 'Nuevo',
         apellido: parts.slice(1).join(' ') || 'Paciente',
         tipoDocumentoId: tipoDoc.id,
-        numeroDocumento: patient.documentNumber,
+        numeroDocumento: documentNumber.trim(),
         ...(fechaNacimiento ? { fechaNacimiento } : {}),
-        ...(sexoId ? { sexoId } : {}),
-        ...(patient.contact?.email ? { email: patient.contact.email } : {}),
-        telefonos: patient.contact?.phone
-          ? [{ numero: patient.contact.phone, principal: true }]
-          : [],
-        direcciones: patient.contact?.address
-          ? [{ descripcion: patient.contact.address, principal: true }]
-          : [],
-      }),
-    });
-    personaId = personaRes.id;
-  }
-
-  // 3. Crear Paciente en /Pacientes. Los errores se propagan a la UI.
-  const raw = await apiFetch<BackendPaciente>('/Pacientes', {
-    method: 'POST',
-    body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
+        sexoId: sexo.id,
+      },
+      telefono: patient.contact?.phone || undefined,
+      direccion: patient.contact?.address || undefined,
+      tipoSangre: patient.medicalData?.bloodType || undefined,
+      activo: patient.status !== 'inactive',
+    }),
   });
   const createdPatient = mapBackendPatient(raw);
 
   const finalPatient: Patient = {
     ...createdPatient,
     name: (patient.name ?? createdPatient.name).trim() || createdPatient.name,
+    documentType,
+    documentNumber: documentNumber.trim(),
     gender: patient.gender ?? createdPatient.gender,
     age: patient.age !== undefined && patient.age > 0 ? patient.age : createdPatient.age,
     birthDate: fechaNacimiento || createdPatient.birthDate,
@@ -349,7 +290,6 @@ export const createPatientApi = async (
     },
   };
 
-  saveStoredPatient(finalPatient);
   return finalPatient;
 };
 
@@ -357,13 +297,7 @@ export const updatePatientApi = async (
   id: string | number,
   patient: Partial<Patient>,
 ): Promise<Patient> => {
-  const currentPatients = getStoredPatients();
-  let existing = currentPatients.find((p) => String(p.id) === String(id));
-
-  if (!existing) {
-    const fromApi = await getPatientByIdApi(String(id));
-    if (fromApi) existing = fromApi;
-  }
+  const existing = await getPatientByIdApi(String(id));
 
   const documentType = patient.documentType ?? existing?.documentType ?? 'CC';
   const documentNumber = patient.documentNumber ?? existing?.documentNumber ?? '';
@@ -405,18 +339,49 @@ export const updatePatientApi = async (
     notes: existing?.notes ?? [],
   };
 
-  saveStoredPatient(updatedPatient);
-
-  try {
-    await apiFetch<void>(`/Pacientes/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ activo: updatedPatient.status !== 'inactive' }),
-    });
-  } catch (error) {
-    console.warn(`[patients.service] Error en PUT /Pacientes/${id}:`, error);
+  const tiposDoc = await getTiposDocumentoApi();
+  const tipoDoc = tiposDoc.find((tipo) =>
+    tipo.codigo?.toUpperCase() === documentType ||
+    tipo.nombre.toUpperCase() === documentType,
+  );
+  const sexos = await apiFetch<Array<{ id: string; nombre?: string; codigo?: string }>>('/Sexos');
+  const sexo = sexos.find((item) => {
+    const value = `${item.nombre ?? ''} ${item.codigo ?? ''}`.toLowerCase();
+    return updatedPatient.gender === 'Femenino'
+      ? value.includes('femen')
+      : updatedPatient.gender === 'Masculino'
+        ? value.includes('mascul')
+        : value.includes('otro');
+  });
+  if (!tipoDoc?.id || !sexo?.id) {
+    throw new Error('No se encontraron los catálogos requeridos para actualizar el paciente.');
   }
 
-  return updatedPatient;
+  const raw = await apiFetch<BackendPaciente>(`/Pacientes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      persona: {
+        nombre: parts[0] ?? '',
+        apellido: parts.slice(1).join(' '),
+        tipoDocumentoId: tipoDoc.id,
+        numeroDocumento: documentNumber.trim(),
+        ...(patient.birthDate ? { fechaNacimiento: patient.birthDate } : {}),
+        sexoId: sexo.id,
+      },
+      telefono: updatedPatient.contact.phone || undefined,
+      direccion: updatedPatient.contact.address || undefined,
+      tipoSangre: updatedPatient.medicalData.bloodType || undefined,
+      activo: updatedPatient.status !== 'inactive',
+    }),
+  });
+
+  return raw ? {
+    ...mapBackendPatient(raw),
+    documentType,
+    documentNumber: documentNumber.trim(),
+    contact: updatedPatient.contact,
+    medicalData: updatedPatient.medicalData,
+  } : updatedPatient;
 };
 
 export const togglePatientStatusApi = async (
