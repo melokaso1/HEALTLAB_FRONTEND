@@ -509,7 +509,7 @@ const AppointmentsManagement: React.FC = () => {
 
       return matchesDate && matchesDoctorUser && matchesProf && matchesStatus && matchesSearch;
     });
-  }, [appointments, selectedDate, filterByDate, isDoctor, user?.name, profFilter, statusFilter, searchTerm]);
+  }, [appointments, selectedDate, filterByDate, isDoctor, profFilter, statusFilter, searchTerm]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;

@@ -74,23 +74,38 @@ interface BackendCita {
       especialidad?: { nombre: string };
     }>;
   };
-  estadoCita?: { nombre: string };
+  estadoCita?: {
+    codigo?: string;
+    descripcion?: string;
+    nombre?: string;
+  };
   tipoCita?: { nombre: string };
 }
 
 // ─── Mapeo de estado ───────────────────────────────────────────────────────
 const MAP_ESTADO: Record<string, AppointmentStatus> = {
-  Agendada: 'Agendada',
-  Confirmada: 'Agendada',
-  Atendida: 'Atendida',
-  Completada: 'Atendida',
-  Cancelada: 'Cancelada',
-  'No asistió': 'No asistió',
-  'No Asistió': 'No asistió',
+  AGENDADA: 'Agendada',
+  CONFIRMADA: 'Agendada',
+  EN_SALA: 'Agendada',
+  ATENDIDA: 'Atendida',
+  COMPLETADA: 'Atendida',
+  CANCELADA: 'Cancelada',
+  NO_ASISTIO: 'No asistió',
 };
 
-const mapEstado = (nombre?: string): AppointmentStatus =>
-  MAP_ESTADO[nombre ?? ''] ?? 'Agendada';
+const normalizeEstado = (value?: string): string =>
+  (value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s-]+/g, '_')
+    .toUpperCase();
+
+const mapEstado = (estado?: BackendCita['estadoCita']): AppointmentStatus =>
+  MAP_ESTADO[normalizeEstado(estado?.codigo)] ??
+  MAP_ESTADO[normalizeEstado(estado?.descripcion)] ??
+  MAP_ESTADO[normalizeEstado(estado?.nombre)] ??
+  'Agendada';
 
 const backendName = (value?: string | { nombre: string }): string =>
   typeof value === 'string' ? value : value?.nombre ?? '';
@@ -176,7 +191,7 @@ const mapBackendCita = (raw: BackendCita): Appointment => {
     serviceName: raw.tipoCita?.nombre ?? 'Consulta',
     date: raw.fecha,
     time: formatTimeSlot(raw.horaInicio),
-    status: mapEstado(raw.estadoCita?.nombre),
+    status: mapEstado(raw.estadoCita),
     notes: raw.observaciones ?? raw.motivoConsulta,
     createdAt: raw.fechaCreacion,
   };
@@ -351,14 +366,34 @@ export const markNoShowApi = async (
 export const updateAppointmentStatusApi = async (
   id: string | number,
   status: AppointmentStatus,
-): Promise<AppointmentStatus> => {
+  options: {
+    medicoId?: string;
+    notaAtencion?: string;
+    resumenConsulta?: string;
+  } = {},
+): Promise<Appointment | null> => {
   if (status === 'Cancelada') {
-    await cancelAppointmentApi(id);
-    return status;
+    return cancelAppointmentApi(id);
   }
   if (status === 'No asistió') {
-    await markNoShowApi(id);
-    return status;
+    return markNoShowApi(id);
   }
-  throw new Error(`La API no admite cambiar una cita directamente a "${status}".`);
+  if (status === 'Atendida') {
+    const appointment = await getAppointmentByIdApi(String(id));
+    const medicoId = options.medicoId ?? appointment?.professionalId;
+    if (!isValidGuid(medicoId)) {
+      throw new Error('No se encontró un médico válido para finalizar la cita.');
+    }
+    await apiFetch('/DetallesCita', {
+      method: 'POST',
+      body: JSON.stringify({
+        citaId: String(id),
+        medicoId,
+        notaAtencion: options.notaAtencion ?? '',
+        resumenConsulta: options.resumenConsulta ?? '',
+      }),
+    });
+    return getAppointmentByIdApi(String(id));
+  }
+  return getAppointmentByIdApi(String(id));
 };

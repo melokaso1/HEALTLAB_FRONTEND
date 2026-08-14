@@ -30,7 +30,7 @@ const mapBackendUser = (
   raw: BackendUsuario,
   roleMap?: Map<string, string>,
 ): ManagedUser => {
-  const userId = raw.id || raw.usuarioId || `usr-${Math.random().toString(36).substr(2, 9)}`;
+  const userId = raw.usuarioId || raw.id || `usr-${Math.random().toString(36).substr(2, 9)}`;
   const persona = raw.empleado?.persona;
   const fullName = raw.nombreCompleto || (persona
     ? `${persona.nombre} ${persona.apellido}`.trim()

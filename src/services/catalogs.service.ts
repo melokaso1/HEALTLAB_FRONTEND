@@ -15,6 +15,9 @@ export const getEstadosCitaApi = () =>
 export const getTiposDocumentoApi = () =>
   apiFetch<CatalogOption[]>('/TiposDocumento');
 
+export const getSexosApi = () =>
+  apiFetch<CatalogOption[]>('/Sexos');
+
 export const getHorariosByMedicoApi = async (medicoId: string): Promise<CatalogOption[]> => {
   try {
     return await apiFetch<CatalogOption[]>(`/Horarios/medico/${medicoId}`);

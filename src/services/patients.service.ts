@@ -1,6 +1,6 @@
 import type { Patient, GenderType } from '../types/patient.types';
 import { apiFetch, type ApiError } from './api';
-import { getTiposDocumentoApi } from './catalogs.service';
+import { getSexosApi, getTiposDocumentoApi } from './catalogs.service';
 
 // ─── Tipos de respuesta del backend ───────────────────────────────────────
 /**
@@ -15,6 +15,7 @@ interface BackendPaciente {
   telefono?: string;
   direccion?: string;
   tipoSangre?: string;
+  email?: string;
   persona?: {
     id: string;
     nombre: string;
@@ -90,11 +91,25 @@ const pickColor = (id?: string | number): string => {
 const backendName = (value?: string | { nombre: string }): string =>
   typeof value === 'string' ? value : value?.nombre ?? '';
 
+const matchSexoId = (
+  sexos: Array<{ id: string; nombre?: string; codigo?: string }>,
+  gender?: GenderType,
+): string | undefined => {
+  const match = sexos.find((item) => {
+    const nombre = (item.nombre ?? '').toLowerCase();
+    const codigo = (item.codigo ?? '').toUpperCase();
+    if (gender === 'Femenino') return nombre.includes('femen') || codigo === 'F';
+    if (gender === 'Masculino') return nombre.includes('mascul') || codigo === 'M';
+    return nombre.includes('otro') || codigo === 'O' || codigo === 'N';
+  });
+  return match?.id ?? (gender === 'Otro' ? sexos[0]?.id : undefined);
+};
+
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
 const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: string; apellido?: string; numeroDocumento?: string; gender?: GenderType; age?: number; birthDate?: string }): Patient => {
   const p = raw.persona;
-  let nombre = p?.nombre ?? raw.nombre ?? '';
-  let apellido = p?.apellido ?? raw.apellido ?? '';
+  const nombre = p?.nombre ?? raw.nombre ?? '';
+  const apellido = p?.apellido ?? raw.apellido ?? '';
   let fullName = `${nombre} ${apellido}`.trim();
 
   if (!fullName && raw.name && raw.name !== 'Nuevo Paciente') {
@@ -132,7 +147,7 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
     documentNumber: docNum,
     contact: {
       phone: telefonoPrincipal,
-      email: p?.email ?? '',
+      email: raw.email ?? p?.email ?? '',
       address: direccionPrincipal,
     },
     lastVisitDate: raw.fechaRegistro
@@ -232,16 +247,9 @@ export const createPatientApi = async (
     tipo.nombre.toUpperCase() === (patient.documentType ?? 'CC').toUpperCase(),
   );
   if (!tipoDoc) throw new Error('No se encontró el tipo de documento seleccionado.');
-  const sexos = await apiFetch<Array<{ id: string; nombre?: string; codigo?: string }>>('/Sexos');
-  const sexo = sexos.find((item) => {
-    const value = `${item.nombre ?? ''} ${item.codigo ?? ''}`.toLowerCase();
-    return patient.gender === 'Femenino'
-      ? value.includes('femen') || value.includes('f')
-      : patient.gender === 'Masculino'
-        ? value.includes('mascul') || value.includes('m')
-        : value.includes('otro') || value.includes('none') || value.includes('n/a');
-  }) ?? (patient.gender === 'Otro' ? sexos[0] : undefined);
-  if (!sexo?.id) throw new Error('No se encontró el sexo seleccionado.');
+  const sexos = await getSexosApi();
+  const sexoId = matchSexoId(sexos, patient.gender);
+  if (!sexoId) throw new Error('No se encontró el sexo seleccionado.');
 
   // Calcular fechaNacimiento
   let fechaNacimiento = patient.birthDate || '';
@@ -259,7 +267,7 @@ export const createPatientApi = async (
         tipoDocumentoId: tipoDoc.id,
         numeroDocumento: documentNumber.trim(),
         ...(fechaNacimiento ? { fechaNacimiento } : {}),
-        sexoId: sexo.id,
+        sexoId,
       },
       telefono: patient.contact?.phone || undefined,
       direccion: patient.contact?.address || undefined,
@@ -344,16 +352,9 @@ export const updatePatientApi = async (
     tipo.codigo?.toUpperCase() === documentType ||
     tipo.nombre.toUpperCase() === documentType,
   );
-  const sexos = await apiFetch<Array<{ id: string; nombre?: string; codigo?: string }>>('/Sexos');
-  const sexo = sexos.find((item) => {
-    const value = `${item.nombre ?? ''} ${item.codigo ?? ''}`.toLowerCase();
-    return updatedPatient.gender === 'Femenino'
-      ? value.includes('femen')
-      : updatedPatient.gender === 'Masculino'
-        ? value.includes('mascul')
-        : value.includes('otro');
-  });
-  if (!tipoDoc?.id || !sexo?.id) {
+  const sexos = await getSexosApi();
+  const sexoId = matchSexoId(sexos, updatedPatient.gender);
+  if (!tipoDoc?.id || !sexoId) {
     throw new Error('No se encontraron los catálogos requeridos para actualizar el paciente.');
   }
 
@@ -366,7 +367,7 @@ export const updatePatientApi = async (
         tipoDocumentoId: tipoDoc.id,
         numeroDocumento: documentNumber.trim(),
         ...(patient.birthDate ? { fechaNacimiento: patient.birthDate } : {}),
-        sexoId: sexo.id,
+        sexoId,
       },
       telefono: updatedPatient.contact.phone || undefined,
       direccion: updatedPatient.contact.address || undefined,

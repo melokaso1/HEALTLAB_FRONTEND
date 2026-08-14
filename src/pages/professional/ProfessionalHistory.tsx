@@ -11,11 +11,12 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { getAppointmentsApi } from '../../services/appointments.service';
+import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/common/Pagination';
 import './ProfessionalHistory.css';
 
 export interface ConsultationRecord {
-  id: number;
+  id: string | number;
   date: string;
   patientName: string;
   patientDoc: string;
@@ -30,14 +31,18 @@ export interface ConsultationRecord {
 }
 
 const ProfessionalHistory: React.FC = () => {
+  const { user } = useAuth();
   const [history, setHistory] = useState<ConsultationRecord[]>([]);
 
   useEffect(() => {
     const loadHistory = async () => {
       const apps = await getAppointmentsApi();
       if (Array.isArray(apps)) {
-        const mapped: ConsultationRecord[] = apps
-          .map((a: any) => ({
+        const scoped = user?.medicoId
+          ? apps.filter((a) => String(a.professionalId) === user.medicoId)
+          : apps;
+        const mapped: ConsultationRecord[] = scoped
+          .map((a) => ({
           id: a.id,
           date: a.date,
           patientName: a.patientName,
@@ -53,7 +58,7 @@ const ProfessionalHistory: React.FC = () => {
       }
     };
     void loadHistory();
-  }, []);
+  }, [user?.medicoId]);
 
   const [searchPatient, setSearchPatient] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');

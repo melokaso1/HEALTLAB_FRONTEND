@@ -63,8 +63,11 @@ const PatientsManagement: React.FC = () => {
     const loadPatients = async () => {
       if (isDoctor) {
         const appointments = await getAppointmentsApi();
+        const scoped = user?.medicoId
+          ? appointments.filter((appointment) => String(appointment.professionalId) === user.medicoId)
+          : appointments;
         const patientsFromAppointments = Array.from(
-          new Map(appointments.map((appointment) => [String(appointment.patientId), {
+          new Map(scoped.map((appointment) => [String(appointment.patientId), {
             id: appointment.patientId,
             name: appointment.patientName,
             gender: appointment.patientGender === 'Femenino' || appointment.patientGender === 'Masculino'
@@ -350,7 +353,7 @@ const PatientsManagement: React.FC = () => {
           documentType: newDocType,
           documentNumber: newDocNum,
           contact: {
-            phone: newPhone || '+57 300 000 0000',
+            phone: newPhone,
             email: newEmail,
             address: newAddress,
           },

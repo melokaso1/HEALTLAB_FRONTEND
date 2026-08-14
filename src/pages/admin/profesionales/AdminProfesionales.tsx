@@ -1707,6 +1707,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                 type="text"
                 className="form-input"
                 placeholder="Ej. 1098472635"
+                required
                 value={pacienteCedula}
                 onChange={(e) => setPacienteCedula(e.target.value)}
               />

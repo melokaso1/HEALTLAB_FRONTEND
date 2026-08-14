@@ -29,7 +29,8 @@ export async function apiFetch<T = unknown>(
       return fetch(url, { ...options, headers });
     };
 
-    let response = await sendRequest(localStorage.getItem('token'));
+    const initialToken = localStorage.getItem('token');
+    let response = await sendRequest(initialToken);
 
     if (response.status === 401) {
       const refreshToken = localStorage.getItem('refreshToken');
@@ -52,6 +53,7 @@ export async function apiFetch<T = unknown>(
             rolNombre: string;
             sesionId?: string;
             debeCambiarPassword?: boolean;
+            medicoId?: string;
           };
           localStorage.setItem('token', refreshed.accessToken);
           localStorage.setItem('refreshToken', refreshed.refreshToken);
@@ -62,6 +64,7 @@ export async function apiFetch<T = unknown>(
             role: (BACKEND_ROLE_MAP[refreshed.rolNombre] as UserRole | undefined) ?? 'receptionist',
             sesionId: refreshed.sesionId,
             debeCambiarPassword: refreshed.debeCambiarPassword,
+            ...(refreshed.medicoId ? { medicoId: refreshed.medicoId } : {}),
           }));
           if (refreshed.sesionId) localStorage.setItem('sesionId', refreshed.sesionId);
           response = await sendRequest(refreshed.accessToken);
@@ -123,9 +126,8 @@ export async function apiFetch<T = unknown>(
     if (error instanceof Error && (error as ApiError).status) {
       throw error;
     }
-    // Network or parse errors
     const networkError: ApiError = new Error(
-      (error as Error)?.message || 'No se pudo conectar con el servidor backend'
+      'No se pudo conectar con la API en http://localhost:5077. Verifica que el backend esté en ejecución.'
     );
     throw networkError;
   }

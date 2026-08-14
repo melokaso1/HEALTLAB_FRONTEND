@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi } from '../../services/appointments.service';
-import { resolveMedicoIdForUser } from '../../services/professionals.service';
 import type { Appointment } from '../../types/appointment.types';
 import './ProfessionalDashboard.css';
 
@@ -80,24 +79,16 @@ const ProfessionalDashboard: React.FC = () => {
       try {
         setLoading(true);
         const apps = await getAppointmentsApi();
-        const doctorId = await resolveMedicoIdForUser(user);
-        const currentDoctorName = user?.name || '';
-
-        const filtered = apps.filter((app: Appointment) => {
-          if (doctorId && String(app.professionalId) === String(doctorId)) {
-            return true;
-          }
-          if (!doctorId && currentDoctorName) {
-            return app.professionalName.toLowerCase().includes(currentDoctorName.toLowerCase());
-          }
-          return true;
-        });
+        const doctorId = String(user?.medicoId ?? '').trim();
+        const filtered = doctorId
+          ? apps.filter((app: Appointment) => String(app.professionalId) === doctorId)
+          : apps;
 
         const mapped: DoctorAppointmentEvent[] = filtered.map((app: Appointment, index: number) => {
           let statusMapped: 'Atendido' | 'Confirmada' | 'En sala de espera' | 'Cancelada' = 'Confirmada';
           if (app.status === 'Atendida') statusMapped = 'Atendido';
           else if (app.status === 'Cancelada') statusMapped = 'Cancelada';
-          else if (app.status === 'No asistió') statusMapped = 'En sala de espera';
+          else if (app.status === 'No asistió') statusMapped = 'Cancelada';
 
           const appDate = parseLocalDate(app.date);
           const dayIndex = isNaN(appDate.getDay()) ? 1 : appDate.getDay();

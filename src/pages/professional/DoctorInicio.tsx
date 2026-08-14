@@ -69,7 +69,9 @@ const DoctorInicio: React.FC = () => {
         const today = todayIsoLocal();
         // The API scopes GET /Citas to the authenticated médico. Do not re-filter
         // by username/name: those values are not equivalent to a MedicoId.
-        const allDoctorApps = apps;
+        const allDoctorApps = user?.medicoId
+          ? apps.filter((a) => String(a.professionalId) === user.medicoId)
+          : apps;
         setFollowUpPatientCount(new Set(allDoctorApps.map((a) => String(a.patientId))).size);
         setRecentPatients(Array.from(new Map(allDoctorApps.map((a) => [String(a.patientId), {
           id: a.patientId,
