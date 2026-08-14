@@ -9,6 +9,7 @@ import './AdminDashboard.css';
 import Loading from '../../components/common/Loading';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
+import { getPatientsApi } from '../../services/patients.service';
 import { useSignalR } from '../../context/SignalRContext';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────
@@ -60,14 +61,16 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [todayCitasCount, setTodayCitasCount] = useState(0);
   const [totalProfessionals, setTotalProfessionals] = useState(0);
+  const [totalPatients, setTotalPatients] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [appointments, professionals] = await Promise.all([
+        const [appointments, professionals, patients] = await Promise.all([
           getAppointmentsApi(),
           getProfessionalsApi(),
+          getPatientsApi(),
         ]);
 
         const today = todayISO();
@@ -105,6 +108,7 @@ const AdminDashboard: React.FC = () => {
         setAgendaSlots(activeSlots);
         setTodayCitasCount(todayApps.length);
         setTotalProfessionals(professionals.length);
+        setTotalPatients(patients.length);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -164,16 +168,17 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="card kpi-card kpi-card--chart">
+            <div className="card kpi-card">
               <div className="kpi-card__header">
-                <span className="kpi-card__title">Pacientes por Profesional</span>
+                <span className="kpi-card__title">Total Pacientes</span>
+                <UserCheck size={18} className="kpi-card__icon" />
               </div>
-              <div className="kpi-card__chart-wrapper">
-                <svg className="donut-chart" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#00A896" strokeWidth="16" strokeDasharray="95 125" strokeDashoffset="0" />
-                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#0EA5E9" strokeWidth="16" strokeDasharray="60 160" strokeDashoffset="-95" />
-                  <circle cx="50" cy="50" r="35" fill="transparent" stroke="#64748B" strokeWidth="16" strokeDasharray="45 175" strokeDashoffset="-155" />
-                </svg>
+              <div className="kpi-card__body">
+                <span className="kpi-card__value">{totalPatients}</span>
+                <span className="kpi-card__trend kpi-card__trend--up">
+                  <TrendingUp size={14} />
+                  <span>Registrados</span>
+                </span>
               </div>
             </div>
           </div>
