@@ -228,12 +228,19 @@ const AppointmentsManagement: React.FC = () => {
   // Update reschedule form state whenever selected appointment changes
   React.useEffect(() => {
     if (selectedAppointment) {
-      setRescheduleProfId(selectedAppointment.professionalId);
-      setRescheduleServiceId(selectedAppointment.serviceId);
-      setRescheduleDate(selectedAppointment.date);
-      setRescheduleTime(selectedAppointment.time);
+      setRescheduleProfId(selectedAppointment.professionalId || (professionalsList[0]?.id ? String(professionalsList[0].id) : 'prof-1'));
+      
+      const currentServices = servicesList.length > 0 ? servicesList : mockServices;
+      const matchedService = currentServices.find(
+        (s) => String(s.id) === String(selectedAppointment.serviceId) ||
+               s.name.toLowerCase() === selectedAppointment.serviceName.toLowerCase()
+      );
+      setRescheduleServiceId(matchedService ? String(matchedService.id) : (currentServices[0]?.id ? String(currentServices[0].id) : 'srv-1'));
+      
+      setRescheduleDate(selectedAppointment.date || toLocalDateInput());
+      setRescheduleTime(selectedAppointment.time || '10:00 AM');
     }
-  }, [selectedAppointment]);
+  }, [selectedAppointment, servicesList, professionalsList]);
 
   // New Appointment Form State
   const [cedulaQuery, setCedulaQuery] = useState<string>('');
@@ -320,11 +327,26 @@ const AppointmentsManagement: React.FC = () => {
       showToast('Conflicto detectado: El profesional no está disponible en este horario.');
       return;
     }
-
-    const profObj = professionalsList.find((p) => String(p.id) === String(rescheduleProfId));
-    const serviceObj = servicesList.find((s) => String(s.id) === String(rescheduleServiceId)) || servicesList[0] || mockServices[0];
-
     try {
+      const currentServices = servicesList.length > 0 ? servicesList : mockServices;
+      const profObj = professionalsList.find((p) => String(p.id) === String(rescheduleProfId));
+      const serviceObj = currentServices.find((s) => String(s.id) === String(rescheduleServiceId));
+
+      const updatedLocally: Appointment = {
+        ...selectedAppointment,
+        date: rescheduleDate,
+        time: rescheduleTime,
+        professionalId: profObj?.id ?? selectedAppointment.professionalId,
+        professionalName: profObj?.name ?? selectedAppointment.professionalName,
+        professionalSpecialty: profObj?.specialty ?? selectedAppointment.professionalSpecialty,
+        serviceId: serviceObj?.id ?? selectedAppointment.serviceId,
+        serviceName: serviceObj?.name ?? selectedAppointment.serviceName,
+      };
+
+      setPatientsAppointments((prev) =>
+        prev.map((app) => (String(app.id) === String(selectedAppointment.id) ? updatedLocally : app))
+      );
+
       const updated = await rescheduleAppointmentApi(
         selectedAppointment.id,
         rescheduleDate,
@@ -338,7 +360,7 @@ const AppointmentsManagement: React.FC = () => {
         }
       );
 
-      const fresh = await getAppointmentsApi();
+      const fresh = await getAppointmentsApi().catch(() => []);
       if (fresh && fresh.length > 0) {
         setPatientsAppointments(fresh);
       } else if (updated) {

@@ -25,6 +25,7 @@ import {
   canDeactivateOrDemoteAdmin,
 } from '../../../services/users.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
+import { createProfessionalApi } from '../../../services/professionals.service';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './UsersManagement.css';
 
@@ -304,6 +305,30 @@ const UsersManagement: React.FC = () => {
         rolId: '',
         roleType: newUserRole,
       });
+
+      // Si el rol creado es Médico/Profesional, se registra automáticamente en el directorio de profesionales de la agenda
+      if (
+        (newUserRole as string) === 'professional' ||
+        (newUserRole as string) === 'Médico' ||
+        (newUserRole as string) === 'Doctor'
+      ) {
+        try {
+          const nameClean = newUserName.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim();
+          const parts = nameClean.split(' ');
+          const nombre = parts[0] || nameClean;
+          const apellido = parts.slice(1).join(' ') || '';
+
+          await createProfessionalApi({
+            nombre,
+            apellido,
+            especialidad: 'Medicina General',
+            registroProfesional: `REG-${Date.now().toString().slice(-6)}`,
+            consultorio: 'Consultorio Principal',
+          });
+        } catch (profErr) {
+          console.warn('[UsersManagement] Registro de profesional en agenda:', profErr);
+        }
+      }
 
       const newUser: ManagedUser = {
         ...created,

@@ -575,18 +575,24 @@ const AdminProfesionales: React.FC = () => {
             ) : (
               filteredProfesionales.map((prof) => {
                 const isSelected = selectedProf?.id === prof.id;
+                const fullName = `${prof.tituloPrefix} ${prof.nombre} ${prof.apellido}`.trim();
                 return (
                   <div
                     key={prof.id}
                     className={`doctor-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => setSelectedId(prof.id)}
+                    onDoubleClick={() => {
+                      setSelectedId(prof.id);
+                      setIsEditProfileOpen(true);
+                    }}
+                    title={`Doble clic para ver/editar perfil completo de ${fullName}`}
                   >
                     {/* Doctor Avatar */}
                     <div className="doctor-avatar-wrapper">
                       {prof.foto && !imageErrors[prof.id] ? (
                         <img
                           src={prof.foto}
-                          alt={`${prof.nombre} ${prof.apellido}`}
+                          alt={fullName}
                           className="doctor-avatar"
                           onError={() => handleImageError(prof.id)}
                         />
@@ -605,11 +611,11 @@ const AdminProfesionales: React.FC = () => {
                     </div>
 
                     {/* Doctor Info */}
-                    <div className="doctor-info">
-                      <h3 className="doctor-name">
-                        {prof.tituloPrefix} {prof.nombre} {prof.apellido}
+                    <div className="doctor-info" title={fullName}>
+                      <h3 className="doctor-name" title={fullName}>
+                        {fullName}
                       </h3>
-                      <p className="doctor-specialty">{prof.especialidad}</p>
+                      <p className="doctor-specialty" title={prof.especialidad}>{prof.especialidad}</p>
                       <div className="doctor-appointments">
                         <CalendarIcon size={12} color="#64748B" />
                         <span>{prof.citasHoy} citas hoy</span>
@@ -919,7 +925,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [registroProfesional, setRegistroProfesional] = useState(professional.registroProfesional);
   const [consultorio, setConsultorio] = useState(professional.consultorio);
   const [estado, setEstado] = useState(professional.estado);
-  const [citasHoy, setCitasHoy] = useState(professional.citasHoy);
   const [foto, setFoto] = useState(professional.foto);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -932,7 +937,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
       registroProfesional,
       consultorio,
       estado,
-      citasHoy: Number(citasHoy),
       foto,
       disponibleHoy: estado === 'Activo',
     });
@@ -1025,28 +1029,16 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Estado</label>
-                <select
-                  className="form-select"
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value as 'Activo' | 'Inactivo')}
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Citas de hoy</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="form-input"
-                  value={citasHoy}
-                  onChange={(e) => setCitasHoy(Number(e.target.value))}
-                />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Estado</label>
+              <select
+                className="form-select"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as 'Activo' | 'Inactivo')}
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
             </div>
 
             <div className="form-group">
