@@ -51,6 +51,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-height: 890px;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -64,7 +65,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 580px;
+  min-height: 890px;
   width: 100%;
   box-sizing: border-box;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
@@ -73,8 +74,8 @@
 }
 
 .calendar-card.is-shrunk {
-  transform: scale(0.992);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: none;
+  box-shadow: var(--hl-shadow-sm);
 }
 
 /* Top Toolbar inside Calendar Card */
@@ -86,33 +87,6 @@
   border-bottom: 1px solid var(--hl-border);
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.view-pills {
-  display: flex;
-  align-items: center;
-  background-color: var(--hl-bg-page);
-  padding: 3px;
-  border-radius: var(--hl-radius-md);
-  border: 1px solid var(--hl-border);
-}
-
-.pill-btn {
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border: none;
-  background: transparent;
-  color: var(--hl-text-sub);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.pill-btn.active {
-  background-color: var(--hl-card-bg);
-  color: var(--hl-text-main);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .date-navigator {
@@ -277,7 +251,7 @@
   grid-template-columns: 55px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--hl-border);
   flex: 1;
-  min-height: 48px;
+  min-height: 75px;
 }
 
 .time-label-cell {
@@ -362,19 +336,18 @@
   margin-top: 1px;
 }
 
-/* Right Column Container (~350px - 380px Width) */
+/* Right Column Container (~360px Fixed Width) */
 .citas-right-column {
-  width: 350px;
+  width: 360px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
   height: 100%;
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .citas-right-column.is-open {
-  width: 380px;
+  width: 360px;
 }
 
 /* Smooth Collapsible Container for Nueva Cita Card using CSS Grid */
@@ -805,4 +778,199 @@
 .dark-mode .doc-type-inline-select option {
   background-color: #0F172A;
   color: #F8FAFC;
+}
+
+/* Slot Count Badge Button inside Timetable Cells */
+.slot-count-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 6px);
+  margin: 3px;
+  padding: 6px 8px;
+  background-color: #00A896;
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--hl-radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 168, 150, 0.25);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slot-count-btn:hover {
+  background-color: #008E7F;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 168, 150, 0.35);
+}
+
+/* Slot Appointments List in Right Column Card */
+.slot-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.slot-event-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background-color: var(--hl-bg-page);
+  border: 1px solid var(--hl-border);
+  border-radius: var(--hl-radius-md);
+  gap: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slot-event-item:hover {
+  border-color: #00A896;
+  box-shadow: 0 2px 8px rgba(0, 168, 150, 0.12);
+}
+
+.slot-event-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slot-event-item__patient {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hl-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-event-item__service {
+  font-size: 11.5px;
+  color: var(--hl-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-manage-cita {
+  background-color: #00A896;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.btn-manage-cita:hover {
+  background-color: #008E7F;
+}
+
+.btn-back-to-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #00A896;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 8px;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.btn-back-to-slot:hover {
+  color: #008E7F;
+  text-decoration: underline;
+}
+
+/* Form Switch Entrance Animation & Pulsing Edit Badge */
+.form-anim-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-mode--reprogram {
+  animation: formSlideInFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes formSlideInFade {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.selected-cita-badge--active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(0, 168, 150, 0.12);
+  color: #00A896;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid rgba(0, 168, 150, 0.3);
+  margin-top: 4px;
+}
+
+.badge-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #00A896;
+  animation: badgeDotPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes badgeDotPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.4;
+  }
+}
+
+/* Smooth Subview Accordion Vertical Expansion (Alargamiento Suave) */
+.collapsible-subview {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.collapsible-subview.is-active {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsible-subview.is-inactive {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsible-subview-content {
+  min-height: 0;
+  overflow: hidden;
 }

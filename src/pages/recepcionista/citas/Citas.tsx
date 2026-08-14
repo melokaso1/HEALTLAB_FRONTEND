@@ -11,6 +11,7 @@ import {
   Plus,
   Trash2,
   RefreshCw,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import './Citas.css';
 import {
@@ -29,7 +30,7 @@ import type { ProfessionalOption } from '../../../types/appointment.types';
 import type { Patient } from '../../../types/patient.types';
 import { useAuth } from '../../../context/AuthContext';
 
-interface CalendarEventBlock {
+export interface CalendarEventBlock {
   id: string;
   dayIndex: number;
   hour: string;
@@ -37,6 +38,13 @@ interface CalendarEventBlock {
   servicio: string;
   horaLabel: string;
   color: 'teal' | 'blue' | 'red';
+}
+
+export interface SlotSelection {
+  dayLabel: string;
+  dateISO: string;
+  hour: string;
+  events: CalendarEventBlock[];
 }
 
 interface CitaHoy {
@@ -51,8 +59,6 @@ interface CitaHoy {
 const RecepCitas: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
-  // Navigation Pills
-  const [viewPill, setViewPill] = useState<'Semana' | 'Dia'>('Semana');
   const [monday, _setMonday] = useState<Date>(() => {
     const d = new Date();
     const day = d.getDay();
@@ -73,6 +79,7 @@ const RecepCitas: React.FC = () => {
   // Selection & Form State for Nueva / Reprogramar Cita
   const [isNuevaCitaOpen, setIsNuevaCitaOpen] = useState(false);
   const [selectedCita, setSelectedCita] = useState<CitaHoy | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<SlotSelection | null>(null);
 
   const [docType, setDocType] = useState('CC');
   const [cedulaQuery, setCedulaQuery] = useState('');
@@ -180,7 +187,7 @@ const RecepCitas: React.FC = () => {
       .then((horarios) => setAvailableHours(
         horarios
           .map((horario) => (horario as CatalogOption & { horaInicio?: string }).horaInicio ?? horario.nombre)
-          .map((hora) => hora.slice(0, 5))
+          .map((hora) => (hora || '').slice(0, 5))
           .filter(Boolean),
       ))
       .catch((error) => showToast(error instanceof Error ? error.message : 'No se pudieron cargar los horarios.'));
@@ -188,6 +195,7 @@ const RecepCitas: React.FC = () => {
 
   const handleClearForm = () => {
     setSelectedCita(null);
+    setSelectedSlot(null);
     setCedulaQuery('');
     setSelectedPatient(null);
     setProfesionalSelect('');
@@ -301,7 +309,8 @@ const RecepCitas: React.FC = () => {
     d.setDate(monday.getDate() + i);
     const names = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
     const isTodayStr = d.toDateString() === new Date().toDateString();
-    return { name: names[i], num: d.getDate(), isToday: isTodayStr };
+    const dateISO = d.toISOString().split('T')[0];
+    return { name: names[i], num: d.getDate(), isToday: isTodayStr, dateISO };
   });
 
   const monthNames = [
@@ -346,23 +355,6 @@ const RecepCitas: React.FC = () => {
           <div className={`calendar-card ${isNuevaCitaOpen ? 'is-shrunk' : 'is-expanded'}`}>
             {/* Top Toolbar with "+ Agendar Cita" Button ON TOP OF THE AGENDA */}
             <div className="calendar-toolbar">
-              <div className="view-pills">
-                <button
-                  type="button"
-                  className={`pill-btn ${viewPill === 'Semana' ? 'active' : ''}`}
-                  onClick={() => setViewPill('Semana')}
-                >
-                  Semana
-                </button>
-                <button
-                  type="button"
-                  className={`pill-btn ${viewPill === 'Dia' ? 'active' : ''}`}
-                  onClick={() => setViewPill('Dia')}
-                >
-                  Dia
-                </button>
-              </div>
-
               <div className="date-navigator">
                 <button className="nav-arrow-btn" type="button" title="Semana anterior">
                   <ChevronLeft size={18} />
@@ -384,10 +376,11 @@ const RecepCitas: React.FC = () => {
                   type="button"
                   className={`btn-toggle-nueva-cita ${isNuevaCitaOpen ? 'active' : ''}`}
                   onClick={() => {
-                    if (isNuevaCitaOpen && selectedCita) {
+                    if (isNuevaCitaOpen && (selectedCita || selectedSlot)) {
                       handleClearForm();
                     } else {
                       setSelectedCita(null);
+                      setSelectedSlot(null);
                       setIsNuevaCitaOpen((prev) => !prev);
                     }
                   }}
@@ -431,31 +424,32 @@ const RecepCitas: React.FC = () => {
                     <div key={hour} className="time-row">
                       <div className="time-label-cell">{hour}</div>
                       {daysHeader.map((d, colIndex) => {
-                        const matchingEvent = agendaEvents.find(
+                        const slotEvents = agendaEvents.filter(
                           (ev) => ev.dayIndex === colIndex && ev.hour === hour
                         );
 
                         return (
                           <div key={d.num} className="slot-cell">
-                            {matchingEvent && (
-                              <div
-                                className={`agenda-block ${matchingEvent.color}`}
+                            {slotEvents.length > 0 && (
+                              <button
+                                type="button"
+                                className="slot-count-btn"
                                 onClick={() => {
-                                  const matchingHoy = citasHoyList.find((c) => c.id === matchingEvent.id) || {
-                                    id: matchingEvent.id,
-                                    hora: matchingEvent.horaLabel,
-                                    paciente: matchingEvent.paciente,
-                                    profesional: 'Dr. Asignado',
-                                    servicio: matchingEvent.servicio,
-                                    estado: 'Agendada',
-                                  };
-                                  handleSelectCita(matchingHoy);
+                                  setSelectedSlot({
+                                    dayLabel: `${d.name} ${d.num}`,
+                                    dateISO: d.dateISO,
+                                    hour,
+                                    events: slotEvents,
+                                  });
+                                  setSelectedCita(null);
+                                  setIsNuevaCitaOpen(true);
                                 }}
                               >
-                                <span className="block-patient">{matchingEvent.paciente}</span>
-                                <span className="block-desc">{matchingEvent.servicio}</span>
-                                <span className="block-time">{matchingEvent.horaLabel}</span>
-                              </div>
+                                <CalendarIcon size={12} />
+                                <span>
+                                  {slotEvents.length} {slotEvents.length === 1 ? 'Cita' : 'Citas'}
+                                </span>
+                              </button>
                             )}
                           </div>
                         );
@@ -468,200 +462,273 @@ const RecepCitas: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column Container: Collapsible Nueva Cita + Citas de Hoy */}
+        {/* Right Column Container: Collapsible Nueva Cita / Slot Table + Citas de Hoy */}
         <div className={`citas-right-column ${isNuevaCitaOpen ? 'is-open' : 'is-closed'}`}>
           {/* Smooth Collapsible Container for Nueva Cita Card */}
           <div className={`nueva-cita-collapsible-wrapper ${isNuevaCitaOpen ? 'is-open' : 'is-closed'}`}>
             <div className="nueva-cita-collapsible-content">
               <div className="nueva-cita-card">
-                <div className="nueva-cita-header">
-                  <div>
-                    <h2 className="nueva-cita-title">
-                      {selectedCita ? 'Reprogramar / Cancelar Cita' : 'Nueva Cita'}
-                    </h2>
-                    {selectedCita && (
-                      <span className="selected-cita-badge">
-                        ● Editando cita de {selectedCita.paciente}
-                      </span>
+                {/* SUBVIEW A: Slot Appointments Table */}
+                <div className={`collapsible-subview ${selectedSlot && !selectedCita ? 'is-active' : 'is-inactive'}`}>
+                  <div className="collapsible-subview-content">
+                    {selectedSlot && (
+                      <div className="slot-citas-container">
+                        <div className="nueva-cita-header">
+                          <div>
+                            <h2 className="nueva-cita-title">
+                              Citas a las {selectedSlot.hour}
+                            </h2>
+                            <span className="selected-cita-badge">
+                              ● {selectedSlot.dayLabel} — {selectedSlot.events.length} {selectedSlot.events.length === 1 ? 'Cita Agendada' : 'Citas Agendadas'}
+                            </span>
+                          </div>
+                          <button
+                            className="btn-close-form"
+                            type="button"
+                            onClick={() => {
+                              setSelectedSlot(null);
+                              setIsNuevaCitaOpen(false);
+                            }}
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+
+                        <div className="slot-events-list">
+                          {selectedSlot.events.map((ev) => (
+                            <div key={ev.id} className="slot-event-item">
+                              <div className="slot-event-item__info">
+                                <span className="slot-event-item__patient">{ev.paciente}</span>
+                                <span className="slot-event-item__service">{ev.servicio} ({ev.horaLabel})</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-manage-cita"
+                                onClick={() => {
+                                  const matchingHoy = citasHoyList.find((c) => c.id === ev.id) || {
+                                    id: ev.id,
+                                    hora: ev.horaLabel,
+                                    paciente: ev.paciente,
+                                    profesional: 'Dr. Asignado',
+                                    servicio: ev.servicio,
+                                    estado: 'Agendada',
+                                  };
+                                  handleSelectCita(matchingHoy);
+                                }}
+                              >
+                                Gestionar
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <button className="btn-close-form" type="button" onClick={handleClearForm}>
-                    <X size={18} />
-                  </button>
                 </div>
 
-                <form onSubmit={handleAgendarCita} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {/* Field: Documento del Paciente (CC / TI / RC) */}
-                  <div className="form-field-group">
-                    <label className="field-label">Cédula del Paciente</label>
-                    <div className="search-field-wrapper doc-search-wrapper">
-                      <select
-                        className="doc-type-inline-select"
-                        value={docType}
-                        onChange={(e) => setDocType(e.target.value)}
-                        disabled={Boolean(selectedCita)}
-                      >
-                        <option value="CC">CC</option>
-                        <option value="TI">TI</option>
-                        <option value="RC">RC</option>
-                      </select>
-
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="Número de cédula..."
-                        inputMode="numeric"
-                        value={cedulaQuery}
-                        disabled={Boolean(selectedCita)}
-                        onChange={(e) => {
-                          setCedulaQuery(e.target.value.replace(/\D/g, ''));
-                          setSelectedPatient(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            void handleBuscarPaciente();
-                          }
-                        }}
-                      />
-                      {!selectedCita && (
-                        <button
-                          type="button"
-                          className="btn-limpiar"
-                          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-                          onClick={() => void handleBuscarPaciente()}
-                          disabled={isSearchingPatient}
-                        >
-                          {isSearchingPatient ? 'Buscando...' : 'Buscar'}
-                        </button>
-                      )}
-                    </div>
-                    {selectedCita ? (
-                      <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
-                        Paciente: {selectedCita.paciente}
-                      </span>
-                    ) : selectedPatient ? (
-                      <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
-                        ● {selectedPatient.name}
-                        {selectedPatient.documentNumber
-                          ? ` — ${selectedPatient.documentType} ${selectedPatient.documentNumber}`
-                          : ''}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Field: Profesional */}
-                  <div className="form-field-group">
-                    <label className="field-label">Profesional</label>
-                    <select
-                      className="field-select"
-                      value={profesionalSelect}
-                      onChange={(e) => setProfesionalSelect(e.target.value)}
-                    >
-                      <option value="">Seleccione médico</option>
-                      {professionals.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} - {p.specialty}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Field: Servicio */}
-                  <div className="form-field-group">
-                    <label className="field-label">Servicio</label>
-                    <select
-                      className="field-select"
-                      value={servicioSelect}
-                      onChange={(e) => setServicioSelect(e.target.value)}
-                    >
-                      <option value="">
-                        {profesionalSelect ? 'Seleccione servicio' : 'Seleccione primero el profesional'}
-                      </option>
-                      {tiposCita.map((tipo) => (
-                        <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Field: Fecha & Hora */}
-                  <div className="date-time-row">
-                    <div className="form-field-group">
-                      <label className="field-label">Fecha</label>
-                      <input
-                        type="date"
-                        className="field-input"
-                        value={fechaInput}
-                        onChange={(e) => setFechaInput(e.target.value)}
-                      />
+                {/* SUBVIEW B: Nueva / Reprogramar Form */}
+                <div className={`collapsible-subview ${!selectedSlot || selectedCita ? 'is-active' : 'is-inactive'}`}>
+                  <div className="collapsible-subview-content">
+                    <div className="nueva-cita-header">
+                      <div>
+                        {selectedSlot && selectedCita && (
+                          <button
+                            type="button"
+                            className="btn-back-to-slot"
+                            onClick={() => setSelectedCita(null)}
+                          >
+                            <ChevronLeft size={14} />
+                            <span>Volver a citas de las {selectedSlot.hour}</span>
+                          </button>
+                        )}
+                        <h2 className="nueva-cita-title">
+                          {selectedCita ? 'Reprogramar / Cancelar Cita' : 'Nueva Cita'}
+                        </h2>
+                        {selectedCita && (
+                          <span className="selected-cita-badge--active">
+                            <span className="badge-pulse-dot" /> Editando cita de {selectedCita.paciente}
+                          </span>
+                        )}
+                      </div>
+                      <button className="btn-close-form" type="button" onClick={handleClearForm}>
+                        <X size={18} />
+                      </button>
                     </div>
 
-                    <div className="form-field-group">
-                      <label className="field-label">Hora</label>
-                      {availableHours.length > 0 ? (
+                    <form onSubmit={handleAgendarCita} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Field: Documento del Paciente (CC / TI / RC) */}
+                      <div className="form-field-group">
+                        <label className="field-label">Cédula del Paciente</label>
+                        <div className="search-field-wrapper doc-search-wrapper">
+                          <select
+                            className="doc-type-inline-select"
+                            value={docType}
+                            onChange={(e) => setDocType(e.target.value)}
+                            disabled={Boolean(selectedCita)}
+                          >
+                            <option value="CC">CC</option>
+                            <option value="TI">TI</option>
+                            <option value="RC">RC</option>
+                          </select>
+
+                          <input
+                            type="text"
+                            className="field-input"
+                            placeholder="Número de cédula..."
+                            inputMode="numeric"
+                            value={cedulaQuery}
+                            disabled={Boolean(selectedCita)}
+                            onChange={(e) => {
+                              setCedulaQuery(e.target.value.replace(/\D/g, ''));
+                              setSelectedPatient(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                void handleBuscarPaciente();
+                              }
+                            }}
+                          />
+                          {!selectedCita && (
+                            <button
+                              type="button"
+                              className="btn-limpiar"
+                              style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                              onClick={() => void handleBuscarPaciente()}
+                              disabled={isSearchingPatient}
+                            >
+                              {isSearchingPatient ? 'Buscando...' : 'Buscar'}
+                            </button>
+                          )}
+                        </div>
+                        {selectedCita ? (
+                          <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
+                            Paciente: {selectedCita.paciente}
+                          </span>
+                        ) : selectedPatient ? (
+                          <span className="selected-cita-badge" style={{ marginTop: 6, display: 'inline-block' }}>
+                            ● {selectedPatient.name}
+                            {selectedPatient.documentNumber
+                              ? ` — ${selectedPatient.documentType} ${selectedPatient.documentNumber}`
+                              : ''}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* Field: Profesional */}
+                      <div className="form-field-group">
+                        <label className="field-label">Profesional</label>
                         <select
                           className="field-select"
-                          value={horaInput}
-                          onChange={(e) => setHoraInput(e.target.value)}
+                          value={profesionalSelect}
+                          onChange={(e) => setProfesionalSelect(e.target.value)}
                         >
-                          {availableHours.map((hora) => <option key={hora} value={hora}>{hora}</option>)}
+                          <option value="">Seleccione médico</option>
+                          {professionals.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} - {p.specialty}
+                            </option>
+                          ))}
                         </select>
-                      ) : (
-                        <input
-                          type="time"
-                          className="field-input"
-                          value={horaInput}
-                          onChange={(e) => setHoraInput(e.target.value)}
+                      </div>
+
+                      {/* Field: Servicio */}
+                      <div className="form-field-group">
+                        <label className="field-label">Servicio</label>
+                        <select
+                          className="field-select"
+                          value={servicioSelect}
+                          onChange={(e) => setServicioSelect(e.target.value)}
+                        >
+                          <option value="">
+                            {profesionalSelect ? 'Seleccione servicio' : 'Seleccione primero el profesional'}
+                          </option>
+                          {tiposCita.map((tipo) => (
+                            <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Field: Fecha & Hora */}
+                      <div className="date-time-row">
+                        <div className="form-field-group">
+                          <label className="field-label">Fecha</label>
+                          <input
+                            type="date"
+                            className="field-input"
+                            value={fechaInput}
+                            onChange={(e) => setFechaInput(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-field-group">
+                          <label className="field-label">Hora</label>
+                          {availableHours.length > 0 ? (
+                            <select
+                              className="field-select"
+                              value={horaInput}
+                              onChange={(e) => setHoraInput(e.target.value)}
+                            >
+                              {availableHours.map((hora) => <option key={hora} value={hora}>{hora}</option>)}
+                            </select>
+                          ) : (
+                            <input
+                              type="time"
+                              className="field-input"
+                              value={horaInput}
+                              onChange={(e) => setHoraInput(e.target.value)}
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Field: Motivo / Notas */}
+                      <div className="form-field-group">
+                        <label className="field-label">Motivo / Notas</label>
+                        <textarea
+                          className="field-textarea"
+                          placeholder="Opcional..."
+                          value={notasInput}
+                          onChange={(e) => setNotasInput(e.target.value)}
                         />
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Field: Motivo / Notas */}
-                  <div className="form-field-group">
-                    <label className="field-label">Motivo / Notas</label>
-                    <textarea
-                      className="field-textarea"
-                      placeholder="Opcional..."
-                      value={notasInput}
-                      onChange={(e) => setNotasInput(e.target.value)}
-                    />
-                  </div>
+                      {/* Footer Form Buttons */}
+                      <div className="nueva-cita-footer">
+                        {selectedCita ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-cancelar-cita"
+                              onClick={handleCancelarCita}
+                            >
+                              <Trash2 size={14} />
+                              <span>Cancelar</span>
+                            </button>
 
-                  {/* Footer Form Buttons */}
-                  <div className="nueva-cita-footer">
-                    {selectedCita ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn-cancelar-cita"
-                          onClick={handleCancelarCita}
-                        >
-                          <Trash2 size={14} />
-                          <span>Cancelar Cita</span>
-                        </button>
-
-                        <button type="submit" className="btn-agendar-main">
-                          <RefreshCw size={14} />
-                          <span>Reprogramar Cita</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn-limpiar"
-                          onClick={handleClearForm}
-                        >
-                          Limpiar
-                        </button>
-                        <button type="submit" className="btn-agendar-main">
-                          Agendar Cita
-                        </button>
-                      </>
-                    )}
+                            <button type="submit" className="btn-agendar-main">
+                              <RefreshCw size={14} />
+                              <span>Reprogramar Cita</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-limpiar"
+                              onClick={handleClearForm}
+                            >
+                              Limpiar
+                            </button>
+                            <button type="submit" className="btn-agendar-main">
+                              Agendar Cita
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </form>
                   </div>
-                </form>
+                </div>
               </div>
             </div>
           </div>
