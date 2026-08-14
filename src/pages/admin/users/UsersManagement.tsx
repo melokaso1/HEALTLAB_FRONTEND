@@ -21,6 +21,7 @@ import {
   createUserApi,
   updateUserApi,
   toggleUserStatusApi,
+  canDeactivateOrDemoteAdmin,
 } from '../../../services/users.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
 import CustomSelect from '../../../components/common/CustomSelect';
@@ -112,16 +113,28 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const UsersManagement: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>(mockUsers);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   useEffect(() => {
-    getUsersApi().then((data) => {
-      if (data && data.length > 0) {
+    const loadUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        setUsersError(null);
+        const data = await getUsersApi();
         setUsers(data);
+      } catch (error) {
+        console.error('[UsersManagement] Error al cargar usuarios:', error);
+        setUsers([]);
+        setUsersError(error instanceof Error ? error.message : 'No se pudieron cargar los usuarios.');
+      } finally {
+        setIsLoadingUsers(false);
       }
-    });
+    };
+    void loadUsers();
   }, []);
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('active'); // Show active users by default
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Pagination state
@@ -163,6 +176,11 @@ const UsersManagement: React.FC = () => {
   const isPanelOpen = activePanelUserId !== null && activeUser !== undefined;
   const panelUser = activeUser || lastPanelUser;
 
+  const lastActiveAdminGuard =
+    panelUser != null ? canDeactivateOrDemoteAdmin(users, panelUser) : { ok: true as const };
+  const isOnlyActiveAdmin = !lastActiveAdminGuard.ok;
+  const onlyActiveAdminMessage = !lastActiveAdminGuard.ok ? lastActiveAdminGuard.error : undefined;
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -173,6 +191,14 @@ const UsersManagement: React.FC = () => {
   const handleDeleteUser = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!id) return;
+    const target = users.find((u) => String(u.id) === String(id));
+    if (target) {
+      const guard = canDeactivateOrDemoteAdmin(users, target);
+      if (!guard.ok) {
+        showToast(guard.error);
+        return;
+      }
+    }
     try {
       await toggleUserStatusApi(id, 'active');
       setUsers((prev) =>
@@ -219,6 +245,14 @@ const UsersManagement: React.FC = () => {
   const handleSaveRole = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTargetUser) return;
+
+    if (editTargetUser.role === 'admin' && targetRole !== 'admin') {
+      const guard = canDeactivateOrDemoteAdmin(users, editTargetUser);
+      if (!guard.ok) {
+        showToast(guard.error);
+        return;
+      }
+    }
 
     // Note: role change requires rolId (Guid). Updating local state only until rolId is available.
     updateUserApi(editTargetUser.id, {});
@@ -484,6 +518,12 @@ const UsersManagement: React.FC = () => {
         </div>
       </div>
 
+      {usersError && (
+        <div role="alert" style={{ marginBottom: '16px', color: '#B42318' }}>
+          No se pudieron cargar los usuarios: {usersError}
+        </div>
+      )}
+
       {/* Grid Layout (Table Full-Width by default, 2-column when 3-dots clicked) */}
       <div className={`users-mgmt__grid${isPanelOpen ? ' users-mgmt__grid--with-panel' : ''}`}>
         {/* Left Column: Users Table */}
@@ -505,7 +545,7 @@ const UsersManagement: React.FC = () => {
                       colSpan={4}
                       style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}
                     >
-                      No se encontraron usuarios con los filtros aplicados.
+                      {isLoadingUsers ? 'Cargando usuarios...' : 'No se encontraron usuarios con los filtros aplicados.'}
                     </td>
                   </tr>
                 ) : (
@@ -582,7 +622,12 @@ const UsersManagement: React.FC = () => {
                     <button
                       type="button"
                       className="trash-btn"
-                      title="Desactivar usuario"
+                      title={
+                        isOnlyActiveAdmin
+                          ? onlyActiveAdminMessage
+                          : 'Desactivar usuario'
+                      }
+                      disabled={isOnlyActiveAdmin}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteUser(panelUser.id, e);

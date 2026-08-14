@@ -46,6 +46,13 @@ import CustomSelect from '../../../components/common/CustomSelect';
 import Pagination from '../../../components/common/Pagination';
 import './AppointmentsManagement.css';
 
+const toLocalDateInput = (date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const AppointmentsManagement: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
@@ -59,23 +66,12 @@ const AppointmentsManagement: React.FC = () => {
 
   const [filterByDate, setFilterByDate] = useState<boolean>(true);
   const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-28'); // Current active date view
+  const [selectedDate, setSelectedDate] = useState<string>(() => toLocalDateInput());
 
   useEffect(() => {
     getAppointmentsApi().then((data) => {
       if (data && data.length > 0) {
         setPatientsAppointments(data);
-        if (data[0]?.date) {
-          setSelectedDate(data[0].date);
-          const parts = data[0].date.split('-');
-          if (parts.length === 3) {
-            const yr = parseInt(parts[0], 10);
-            const mo = parseInt(parts[1], 10) - 1;
-            if (!isNaN(yr) && !isNaN(mo)) {
-              setCalendarViewDate(new Date(yr, mo, 1));
-            }
-          }
-        }
       }
     });
     getProfessionalsApi().then((data) => {
@@ -107,7 +103,7 @@ const AppointmentsManagement: React.FC = () => {
   }, [location.state]);
 
   // Dynamic Calendar Month Navigation State
-  const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date(2026, 9, 1)); // Oct 2026
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => new Date());
 
   const handlePrevMonth = () => {
     setCalendarViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -215,7 +211,7 @@ const AppointmentsManagement: React.FC = () => {
     selectedAppointment?.serviceId || 'srv-1'
   );
   const [rescheduleDate, setRescheduleDate] = useState<string>(
-    selectedAppointment?.date || '2026-10-28'
+    selectedAppointment?.date || toLocalDateInput()
   );
   const [rescheduleTime, setRescheduleTime] = useState<string>(
     selectedAppointment?.time || '10:00 AM'
@@ -237,7 +233,7 @@ const AppointmentsManagement: React.FC = () => {
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
   const [newProfId, setNewProfId] = useState<string>('');
   const [newServiceId, setNewServiceId] = useState<string>('srv-1');
-  const [newDate, setNewDate] = useState<string>('2026-10-28');
+  const [newDate, setNewDate] = useState<string>(() => toLocalDateInput());
   const [newTime, setNewTime] = useState<string>('10:00 AM');
   const [newNotes, setNewNotes] = useState<string>('');
 
@@ -247,6 +243,12 @@ const AppointmentsManagement: React.FC = () => {
       setNewProfId(String(professionalsList[0].id));
     }
   }, [professionalsList, newProfId]);
+
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      setNewDate(selectedDate || toLocalDateInput());
+    }
+  }, [isCreateModalOpen, selectedDate]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -426,6 +428,7 @@ const AppointmentsManagement: React.FC = () => {
       date: newDate,
       time: newTime,
       notes: newNotes.trim() || undefined,
+      usuarioCreacionId: user?.id ?? '',
     });
 
     if (!result.ok) {

@@ -1332,7 +1332,7 @@ const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
    ========================================================================= */
 interface AddProfessionalModalProps {
   onClose: () => void;
-  onSave: (doctor: Omit<Professional, 'id'>) => void;
+  onSave: (doctor: Omit<Professional, 'id'>) => Promise<void>;
 }
 
 const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
@@ -1345,9 +1345,11 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
   const [especialidad, setEspecialidad] = useState('');
   const [registroProfesional, setRegistroProfesional] = useState('');
   const [consultorio, setConsultorio] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const DIAS_KEYS: DiaSemana[] = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
     const defaultSchedule: ScheduleSlot[] = DIAS_KEYS.flatMap((d) => [
@@ -1369,31 +1371,36 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
       },
     ]);
 
-    onSave({
-      nombre,
-      apellido,
-      tituloPrefix,
-      especialidad,
-      registroProfesional,
-      consultorio,
-      estado: 'Activo',
-      citasHoy: 0,
-      disponibleHoy: true,
-      foto: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop&q=80',
-      disponibilidad: defaultSchedule,
-      citas: [],
-    });
+    try {
+      setIsSubmitting(true);
+      await onSave({
+        nombre,
+        apellido,
+        tituloPrefix,
+        especialidad,
+        registroProfesional,
+        consultorio,
+        estado: 'Activo',
+        citasHoy: 0,
+        disponibleHoy: true,
+        foto: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop&q=80',
+        disponibilidad: defaultSchedule,
+        citas: [],
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={() => !isSubmitting && onClose()}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">
             <UserPlus size={18} color="#00A896" />
             Registrar Nuevo Profesional
           </h3>
-          <button className="btn-icon" type="button" onClick={onClose}>
+          <button className="btn-icon" type="button" onClick={onClose} disabled={isSubmitting}>
             <X size={16} />
           </button>
         </div>
@@ -1479,12 +1486,12 @@ const AddProfessionalModal: React.FC<AddProfessionalModalProps> = ({
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="btn-outline" onClick={onClose}>
+            <button type="button" className="btn-outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
               <Check size={16} />
-              Registrar Profesional
+              {isSubmitting ? 'Registrando…' : 'Registrar Profesional'}
             </button>
           </div>
         </form>

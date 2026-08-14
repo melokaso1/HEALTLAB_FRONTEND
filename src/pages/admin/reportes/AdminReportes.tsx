@@ -19,6 +19,23 @@ import { getProfessionalsApi } from '../../../services/professionals.service';
 import { getReporteConteoPorEstadoApi } from '../../../services/reports.service';
 import './AdminReportes.css';
 
+const toDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getRecentDateRange = (): { fechaDesde: string; fechaHasta: string } => {
+  const fechaHasta = new Date();
+  const fechaDesde = new Date(fechaHasta);
+  fechaDesde.setDate(fechaHasta.getDate() - 29);
+  return {
+    fechaDesde: toDateInputValue(fechaDesde),
+    fechaHasta: toDateInputValue(fechaHasta),
+  };
+};
+
 const AdminReportes: React.FC = () => {
   // Real appointments & professionals state
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -38,8 +55,9 @@ const AdminReportes: React.FC = () => {
   }, []);
 
   // Reportes Filter State
-  const [repFechaDesde, setRepFechaDesde] = useState('2026-01-01');
-  const [repFechaHasta, setRepFechaHasta] = useState('2026-12-31');
+  const [recentDateRange] = useState(getRecentDateRange);
+  const [repFechaDesde, setRepFechaDesde] = useState(recentDateRange.fechaDesde);
+  const [repFechaHasta, setRepFechaHasta] = useState(recentDateRange.fechaHasta);
   const [repProfesional, setRepProfesional] = useState('Todos');
   const [repEstado, setRepEstado] = useState('Todos');
 
@@ -49,8 +67,8 @@ const AdminReportes: React.FC = () => {
 
   // Applied Filters State for "Filtrar" action
   const [appliedFilters, setAppliedFilters] = useState({
-    fechaDesde: '2026-01-01',
-    fechaHasta: '2026-12-31',
+    fechaDesde: recentDateRange.fechaDesde,
+    fechaHasta: recentDateRange.fechaHasta,
     profesional: 'Todos',
     estado: 'Todos',
   });
@@ -113,15 +131,15 @@ const AdminReportes: React.FC = () => {
 
   // Simplified Historial Filter State
   const [histSearch, setHistSearch] = useState('');
-  const [histFechaDesde, setHistFechaDesde] = useState('2026-01-01');
-  const [histFechaHasta, setHistFechaHasta] = useState('2026-12-31');
+  const [histFechaDesde, setHistFechaDesde] = useState(recentDateRange.fechaDesde);
+  const [histFechaHasta, setHistFechaHasta] = useState(recentDateRange.fechaHasta);
   const [histEstado, setHistEstado] = useState('Todos');
   const [histProfesional, setHistProfesional] = useState('Todos');
 
   const [appliedHistFilters, setAppliedHistFilters] = useState({
     search: '',
-    fechaDesde: '2026-01-01',
-    fechaHasta: '2026-12-31',
+    fechaDesde: recentDateRange.fechaDesde,
+    fechaHasta: recentDateRange.fechaHasta,
     estado: 'Todos',
     profesional: 'Todos',
   });
@@ -138,14 +156,14 @@ const AdminReportes: React.FC = () => {
 
   const handleClearHistFilters = () => {
     setHistSearch('');
-    setHistFechaDesde('2026-01-01');
-    setHistFechaHasta('2026-12-31');
+    setHistFechaDesde(recentDateRange.fechaDesde);
+    setHistFechaHasta(recentDateRange.fechaHasta);
     setHistEstado('Todos');
     setHistProfesional('Todos');
     setAppliedHistFilters({
       search: '',
-      fechaDesde: '2026-01-01',
-      fechaHasta: '2026-12-31',
+      fechaDesde: recentDateRange.fechaDesde,
+      fechaHasta: recentDateRange.fechaHasta,
       estado: 'Todos',
       profesional: 'Todos',
     });

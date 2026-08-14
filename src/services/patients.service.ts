@@ -10,7 +10,7 @@ import { getTiposDocumentoApi } from './catalogs.service';
 interface BackendPaciente {
   id: string;
   personaId: string;
-  activo: boolean;
+  activo?: boolean;
   fechaRegistro: string;
   persona?: {
     id: string;
@@ -52,6 +52,16 @@ const mapGender = (nombre?: string): GenderType => {
   if (n.includes('femen') || n === 'f') return 'Femenino';
   if (n.includes('mascul') || n === 'm') return 'Masculino';
   return 'Otro';
+};
+
+const isValidPatientDocument = (
+  type: Patient['documentType'],
+  value: string,
+): boolean => {
+  const document = value.trim();
+  return type === 'PAS'
+    ? /^[a-z0-9]+$/i.test(document) && document.length <= 20
+    : /^\d{6,12}$/.test(document);
 };
 
 const buildInitials = (nombre?: string, apellido?: string): string => {
@@ -127,7 +137,7 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
       : (stored?.lastVisitDate ?? 'Sin visitas'),
     lastVisitSpecialty: stored?.lastVisitSpecialty ?? 'Sin registrar',
     specialtyBadgeColor: stored?.specialtyBadgeColor ?? 'green',
-    status: raw.activo ? 'active' : 'inactive',
+    status: raw.activo !== false ? 'active' : 'inactive',
     initials: buildInitials(nombre || fullName, apellido),
     avatarBg: pickColor(raw.id),
     medicalData: {
@@ -148,7 +158,7 @@ const getStoredPatients = (): Patient[] => {
     const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Patient[];
-    return parsed.filter((p) => p.name && p.name !== 'Paciente sin nombre');
+    return parsed.filter((p) => Boolean(p.id));
   } catch {
     return [];
   }
@@ -156,7 +166,6 @@ const getStoredPatients = (): Patient[] => {
 
 const saveStoredPatient = (patient: Patient) => {
   try {
-    if (!patient.name || patient.name === 'Paciente sin nombre') return;
     const current = getStoredPatients();
     const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
     localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
@@ -245,6 +254,16 @@ export const searchPatientApi = async (
 export const createPatientApi = async (
   patient: Partial<Patient> & { personaId?: string },
 ): Promise<Patient> => {
+  const documentType = patient.documentType ?? 'CC';
+  const documentNumber = patient.documentNumber ?? '';
+  if (!isValidPatientDocument(documentType, documentNumber)) {
+    throw new Error(
+      documentType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.',
+    );
+  }
+
   const parts = (patient.name ?? '').trim().split(/\s+/);
   // 1. Obtener TipoDocumentoId real del backend
   const tiposDoc = await getTiposDocumentoApi();
@@ -265,10 +284,16 @@ export const createPatientApi = async (
   let sexoId: string | undefined;
   try {
     const sexos = await apiFetch<Array<{ id: string; nombre: string }>>('/Sexos');
-    const match = sexos.find((s) =>
-      s.nombre.toLowerCase().includes((patient.gender ?? 'Otro').toLowerCase()) ||
-      s.nombre.toLowerCase().startsWith((patient.gender ?? 'Otro')[0].toLowerCase())
-    );
+    const requestedGender = patient.gender ?? 'Otro';
+    const aliases: Record<GenderType, string[]> = {
+      Femenino: ['femenino', 'femenina', 'f'],
+      Masculino: ['masculino', 'masculina', 'm'],
+      Otro: ['otro', 'otra', 'o'],
+    };
+    const match = sexos.find((s) => {
+      const name = s.nombre.trim().toLowerCase();
+      return aliases[requestedGender].some((alias) => name === alias || name.includes(alias));
+    });
     if (match) sexoId = match.id;
   } catch {
     // fallback if endpoint /Sexos does not exist
@@ -286,6 +311,7 @@ export const createPatientApi = async (
         numeroDocumento: patient.documentNumber,
         ...(fechaNacimiento ? { fechaNacimiento } : {}),
         ...(sexoId ? { sexoId } : {}),
+        ...(patient.contact?.email ? { email: patient.contact.email } : {}),
         telefonos: patient.contact?.phone
           ? [{ numero: patient.contact.phone, principal: true }]
           : [],
@@ -297,47 +323,16 @@ export const createPatientApi = async (
     personaId = personaRes.id;
   }
 
-  // 3. Crear Paciente en /Pacientes
-  let createdPatient: Patient;
-  try {
-    const raw = await apiFetch<BackendPaciente>('/Pacientes', {
-      method: 'POST',
-      body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
-    });
-    createdPatient = mapBackendPatient(raw);
-  } catch {
-    const newId = Date.now();
-    createdPatient = {
-      id: newId,
-      name: (patient.name ?? 'Nuevo Paciente').trim(),
-      gender: patient.gender ?? 'Otro',
-      age: patient.age ?? 0,
-      birthDate: fechaNacimiento,
-      documentType: patient.documentType ?? 'CC',
-      documentNumber: patient.documentNumber ?? '',
-      contact: {
-        phone: patient.contact?.phone ?? '',
-        email: patient.contact?.email ?? '',
-        address: patient.contact?.address ?? '',
-      },
-      lastVisitDate: 'Hoy',
-      lastVisitSpecialty: 'Sin registrar',
-      specialtyBadgeColor: 'green',
-      status: 'active',
-      initials: buildInitials(parts[0] ?? '', parts[1] ?? ''),
-      avatarBg: pickColor(newId),
-      medicalData: {
-        bloodType: patient.medicalData?.bloodType ?? 'O+',
-        allergies: patient.medicalData?.allergies ?? ['Ninguna'],
-      },
-      recentActivity: [],
-      history: [],
-      notes: [],
-    };
-  }
+  // 3. Crear Paciente en /Pacientes. Los errores se propagan a la UI.
+  const raw = await apiFetch<BackendPaciente>('/Pacientes', {
+    method: 'POST',
+    body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
+  });
+  const createdPatient = mapBackendPatient(raw);
 
   const finalPatient: Patient = {
     ...createdPatient,
+    name: (patient.name ?? createdPatient.name).trim() || createdPatient.name,
     gender: patient.gender ?? createdPatient.gender,
     age: patient.age !== undefined && patient.age > 0 ? patient.age : createdPatient.age,
     birthDate: fechaNacimiento || createdPatient.birthDate,
@@ -368,6 +363,16 @@ export const updatePatientApi = async (
   if (!existing) {
     const fromApi = await getPatientByIdApi(String(id));
     if (fromApi) existing = fromApi;
+  }
+
+  const documentType = patient.documentType ?? existing?.documentType ?? 'CC';
+  const documentNumber = patient.documentNumber ?? existing?.documentNumber ?? '';
+  if (!isValidPatientDocument(documentType, documentNumber)) {
+    throw new Error(
+      documentType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.',
+    );
   }
 
   const parts = (patient.name ?? existing?.name ?? '').trim().split(/\s+/);

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi } from '../../services/appointments.service';
+import { resolveMedicoIdForUser } from '../../services/professionals.service';
 import type { Appointment } from '../../types/appointment.types';
 import './ProfessionalDashboard.css';
 
@@ -22,6 +23,7 @@ export interface DoctorAppointmentEvent {
   weekOffset?: number; // 0 for current week, 1 for next week, -1 for prev week, etc.
   dayAbrev: 'DOM' | 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB';
   dayNum: number;
+  date: string;
   timeSlot: string; // e.g. '08:00', '09:00', '10:00'
   timeDisplay: string; // e.g. '08:00 - 09:00'
   service: string;
@@ -58,6 +60,11 @@ const hoursAxisList = [
   '6:00 p. m.',
 ];
 
+const parseLocalDate = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+
 const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
   const doctorName = user?.name || 'Dr. Julian Moore';
@@ -73,14 +80,14 @@ const ProfessionalDashboard: React.FC = () => {
       try {
         setLoading(true);
         const apps = await getAppointmentsApi();
-        const doctorId = user?.medicoId || user?.id || '';
+        const doctorId = await resolveMedicoIdForUser(user);
         const currentDoctorName = user?.name || '';
 
         const filtered = apps.filter((app: Appointment) => {
           if (doctorId && String(app.professionalId) === String(doctorId)) {
             return true;
           }
-          if (currentDoctorName) {
+          if (!doctorId && currentDoctorName) {
             return app.professionalName.toLowerCase().includes(currentDoctorName.toLowerCase());
           }
           return true;
@@ -92,7 +99,7 @@ const ProfessionalDashboard: React.FC = () => {
           else if (app.status === 'Cancelada') statusMapped = 'Cancelada';
           else if (app.status === 'No asistió') statusMapped = 'En sala de espera';
 
-          const appDate = new Date(app.date);
+          const appDate = parseLocalDate(app.date);
           const dayIndex = isNaN(appDate.getDay()) ? 1 : appDate.getDay();
 
           // Formateo de la hora (ej: "08:00 AM" -> "08:00")
@@ -105,6 +112,7 @@ const ProfessionalDashboard: React.FC = () => {
             weekOffset: 0,
             dayAbrev: DAY_ABREVS_LIST[dayIndex] || 'LUN',
             dayNum: isNaN(appDate.getDate()) ? 12 : appDate.getDate(),
+            date: app.date,
             timeSlot,
             timeDisplay: app.time,
             service: app.serviceName || 'Consulta Médica',
@@ -131,7 +139,7 @@ const ProfessionalDashboard: React.FC = () => {
 
   // Calculate dynamic week info
   const { currentDaysHeaderList, currentWeekRangeLabel } = useMemo(() => {
-    const baseDate = new Date(2026, 7, 12);
+    const baseDate = new Date();
     const dayOfWeek = baseDate.getDay();
     const sunday = new Date(baseDate);
     sunday.setDate(baseDate.getDate() - dayOfWeek + weekOffset * 7);
@@ -144,7 +152,10 @@ const ProfessionalDashboard: React.FC = () => {
       days.push({
         abrev: DAY_ABREVS_LIST[i],
         dayNum: d.getDate(),
-        isToday: weekOffset === 0 && d.getDate() === 12 && d.getMonth() === 7,
+        isToday: weekOffset === 0 &&
+          d.getDate() === baseDate.getDate() &&
+          d.getMonth() === baseDate.getMonth() &&
+          d.getFullYear() === baseDate.getFullYear(),
       });
     }
 
@@ -197,8 +208,14 @@ const ProfessionalDashboard: React.FC = () => {
 
   // Filtered Events
   const filteredEvents = useMemo(() => {
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + weekOffset * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
     return events.filter((ev) => {
-      const matchesWeek = (ev.weekOffset ?? 0) === weekOffset;
+      const eventDate = parseLocalDate(ev.date);
+      const matchesWeek = eventDate >= weekStart && eventDate < weekEnd;
       const matchesStatus = statusFilter === 'all' || ev.status === statusFilter;
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch =
@@ -281,6 +298,7 @@ const ProfessionalDashboard: React.FC = () => {
       weekOffset: weekOffset,
       dayAbrev: newDayAbrev,
       dayNum: dayObj.dayNum,
+      date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dayObj.dayNum).padStart(2, '0')}`,
       timeSlot: newTimeSlot,
       timeDisplay: `${newTimeSlot} - ${parseInt(newTimeSlot.split(':')[0], 10) + 1}:00`,
       service: newService,

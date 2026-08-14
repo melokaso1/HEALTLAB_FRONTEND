@@ -16,6 +16,14 @@ import Loading from '../../../components/common/Loading';
 import { getAppointmentsApi } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 
+const todayIsoLocal = (): string => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+};
+
+const formatTodayLabel = (): string =>
+  new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
 interface ProximaCita {
   id: string;
   hora: string;
@@ -60,7 +68,7 @@ const RecepInicio: React.FC = () => {
         const professionals = Array.isArray(professionalsRes) ? professionalsRes : ((professionalsRes as any)?.data || []);
         
         // Filter for today's appointments
-        const today = new Date().toISOString().split('T')[0];
+        const today = todayIsoLocal();
         const todaysAppointments = allAppointments.filter((app: any) => app.date === today);
 
         const mappedCitas: ProximaCita[] = todaysAppointments.map((app: any) => {
@@ -152,7 +160,7 @@ const RecepInicio: React.FC = () => {
         <div className="recep-inicio-header__text">
           <h1 className="recep-inicio-header__title">Buenos días, Ana</h1>
           <p className="recep-inicio-header__subtitle">
-            Aquí está el resumen para hoy, Jueves 24 de Octubre.
+            Aquí está el resumen para hoy, {formatTodayLabel()}.
           </p>
         </div>
       </div>

@@ -21,6 +21,7 @@ export interface User {
   name: string;        // username del backend
   email: string;
   role: UserRole;
+  medicoId?: string;
   sesionId?: string;   // guardado para logout dirigido
   debeCambiarPassword?: boolean;
   [key: string]: unknown;
@@ -39,6 +40,7 @@ export interface BackendLoginResponse {
   username: string;
   email: string;
   rolNombre: string;
+  medicoId?: string;
   debeCambiarPassword: boolean;
   accessExpiresAt: string;
   refreshExpiresAt: string;

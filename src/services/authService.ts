@@ -50,6 +50,7 @@ const mapBackendResponse = (
       role,
       sesionId: raw.sesionId,
       debeCambiarPassword: raw.debeCambiarPassword,
+      ...(raw.medicoId ? { medicoId: raw.medicoId } : {}),
     },
   };
 };

@@ -27,6 +27,11 @@ interface PatientRecord {
   estado: 'Activo' | 'Inactivo';
 }
 
+const isValidDocument = (type: string, value: string): boolean =>
+  type === 'PAS'
+    ? /^[a-z0-9]+$/i.test(value) && value.length <= 20
+    : /^\d{6,12}$/.test(value);
+
 const RecepPacientes: React.FC = () => {
   const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -111,8 +116,14 @@ const RecepPacientes: React.FC = () => {
   };
 
   const handleCreatePatient = async (newP: Omit<PatientRecord, 'id' | 'iniciales' | 'avatarBg'>) => {
+    if (!isValidDocument(newPatientDocType, newP.documento)) {
+      showToast(newPatientDocType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
+      return;
+    }
     try {
-      await createPatientApi({
+      const created = await createPatientApi({
         name: newP.nombre,
         gender: newP.genero === 'F' ? 'Femenino' : 'Masculino',
         age: newP.edad,
@@ -141,6 +152,19 @@ const RecepPacientes: React.FC = () => {
             estado: p.status === 'active' ? 'Activo' : 'Inactivo',
           }))
         );
+      } else {
+        setPatients((previous) => [{
+          id: String(created.id),
+          documento: `${created.documentType}-${created.documentNumber}`,
+          nombre: created.name,
+          iniciales: created.initials || 'P',
+          avatarBg: 'mint',
+          genero: created.gender === 'Femenino' ? 'F' : 'M',
+          edad: created.age,
+          telefono: created.contact.phone,
+          email: created.contact.email,
+          estado: created.status === 'active' ? 'Activo' : 'Inactivo',
+        }, ...previous]);
       }
       setIsNewPatientOpen(false);
       showToast(`Paciente ${newP.nombre} registrado exitosamente.`);
@@ -447,7 +471,8 @@ const RecepPacientes: React.FC = () => {
                       >
                         <option value="CC">CC</option>
                         <option value="TI">TI</option>
-                        <option value="RC">RC</option>
+                        <option value="CE">CE</option>
+                        <option value="PAS">PAS</option>
                       </select>
                       <input
                         type="text"
@@ -455,8 +480,13 @@ const RecepPacientes: React.FC = () => {
                         className="form-input"
                         required
                         placeholder="Número de documento..."
-                        inputMode="numeric"
-                        onChange={(e) => (e.target.value = e.target.value.replace(/\D/g, ''))}
+                        inputMode={newPatientDocType === 'PAS' ? 'text' : 'numeric'}
+                        maxLength={newPatientDocType === 'PAS' ? 20 : 12}
+                        onChange={(e) => {
+                          e.target.value = newPatientDocType === 'PAS'
+                            ? e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 20)
+                            : e.target.value.replace(/\D/g, '').slice(0, 12);
+                        }}
                       />
                     </div>
                   </div>

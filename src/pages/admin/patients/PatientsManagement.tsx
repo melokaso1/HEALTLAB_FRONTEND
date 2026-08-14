@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -22,6 +22,8 @@ import {
   togglePatientStatusApi,
   addPatientNoteApi,
 } from '../../../services/patients.service';
+import { getAppointmentsApi } from '../../../services/appointments.service';
+import { resolveMedicoIdForUser } from '../../../services/professionals.service';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './PatientsManagement.css';
@@ -40,24 +42,49 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const isValidDocument = (type: 'CC' | 'CE' | 'TI' | 'PAS', value: string): boolean => {
+  const document = value.trim();
+  return type === 'PAS'
+    ? /^[a-z0-9]+$/i.test(document) && document.length <= 20
+    : /^\d{6,12}$/.test(document);
+};
+
+const normalizeDocument = (type: 'CC' | 'CE' | 'TI' | 'PAS', value: string): string =>
+  type === 'PAS' ? value.replace(/[^a-z0-9]/gi, '').slice(0, 20) : value.replace(/\D/g, '').slice(0, 12);
+
 const PatientsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico' || (user?.role as string) === 'profesional';
 
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const [doctorPatientIds, setDoctorPatientIds] = useState<Set<string> | null>(null);
 
   useEffect(() => {
-    getPatientsApi().then((data) => {
-      if (data && data.length > 0) {
-        setPatients(data);
+    const loadPatients = async () => {
+      const data = await getPatientsApi();
+      setPatients(data);
+      if (isDoctor) {
+        const [appointments, medicoId] = await Promise.all([
+          getAppointmentsApi(),
+          resolveMedicoIdForUser(user),
+        ]);
+        const ids = appointments
+          .filter((appointment) => medicoId
+            ? String(appointment.professionalId) === medicoId
+            : appointment.professionalName.toLowerCase().includes((user?.name || '').toLowerCase()))
+          .map((appointment) => String(appointment.patientId));
+        setDoctorPatientIds(new Set(ids));
+      } else {
+        setDoctorPatientIds(null);
       }
-    });
-  }, []);
+    };
+    void loadPatients();
+  }, [isDoctor, user]);
   const [activePatientId, setActivePatientId] = useState<string | number | null>(null);
   const [lastPatient, setLastPatient] = useState<Patient | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -91,6 +118,7 @@ const PatientsManagement: React.FC = () => {
 
   // Modal State for New Patient
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Helper to calculate age from birth date string YYYY-MM-DD
@@ -235,6 +263,12 @@ const PatientsManagement: React.FC = () => {
   const handleSaveEditPatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTargetPatient) return;
+    if (!isValidDocument(editDocType, editDocNum)) {
+      showToast(editDocType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
+      return;
+    }
 
     try {
       const computedAge = Number(editAge) || (editBirthDate ? calcAgeFromBirthDate(editBirthDate) : 0);
@@ -279,37 +313,45 @@ const PatientsManagement: React.FC = () => {
 
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!newName.trim() || !newDocNum.trim()) {
       showToast('Por favor completa el nombre y número de documento');
       return;
     }
+    if (!isValidDocument(newDocType, newDocNum)) {
+      showToast(newDocType === 'PAS'
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
+      return;
+    }
 
     try {
+      setIsSubmitting(true);
       const computedAge = Number(newAge) || (newBirthDate ? calcAgeFromBirthDate(newBirthDate) : 30);
-      const created = await createPatientApi({
-        name: newName,
-        gender: newGender,
-        birthDate: newBirthDate,
-        age: computedAge,
-        documentType: newDocType,
-        documentNumber: newDocNum,
-        contact: {
-          phone: newPhone || '+57 300 000 0000',
-          email: newEmail,
-          address: newAddress,
-        },
-        medicalData: {
-          bloodType: newBloodType,
-          allergies: newAllergies ? newAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
-        },
-      });
+      const created = await Promise.race([
+        createPatientApi({
+          name: newName,
+          gender: newGender,
+          birthDate: newBirthDate,
+          age: computedAge,
+          documentType: newDocType,
+          documentNumber: newDocNum,
+          contact: {
+            phone: newPhone || '+57 300 000 0000',
+            email: newEmail,
+            address: newAddress,
+          },
+          medicalData: {
+            bloodType: newBloodType,
+            allergies: newAllergies ? newAllergies.split(',').map((a) => a.trim()) : ['Ninguna'],
+          },
+        }),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('El registro tardó demasiado. Verifique la conexión e intente nuevamente.')), 15_000);
+        }),
+      ]);
 
-      const fresh = await getPatientsApi();
-      if (fresh && fresh.length > 0) {
-        setPatients(fresh);
-      } else {
-        setPatients((prev) => [created, ...prev]);
-      }
+      setPatients((prev) => [created, ...prev.filter((patient) => String(patient.id) !== String(created.id))]);
 
       setActivePatientId(created.id);
       setIsCreateModalOpen(false);
@@ -321,7 +363,9 @@ const PatientsManagement: React.FC = () => {
       showToast(`Paciente ${created.name || newName} creado exitosamente`);
     } catch (error) {
       console.error('[PatientsManagement] Error al crear paciente:', error);
-      showToast('Error al registrar el paciente en el servidor. Intente nuevamente.');
+      showToast(error instanceof Error ? error.message : 'Error al registrar el paciente en el servidor. Intente nuevamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -346,7 +390,14 @@ const PatientsManagement: React.FC = () => {
     return isExactName || isExactDoc || isExactEmail;
   });
 
-  const filteredPatients = patients.filter((p) => {
+  const scopedPatients = useMemo(
+    () => !isDoctor || doctorPatientIds === null
+      ? patients
+      : patients.filter((patient) => doctorPatientIds.has(String(patient.id))),
+    [patients, isDoctor, doctorPatientIds],
+  );
+
+  const filteredPatients = scopedPatients.filter((p) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
       p.name.toLowerCase().includes(term) ||
@@ -798,14 +849,15 @@ const PatientsManagement: React.FC = () => {
 
       {/* Modal: Create New Patient */}
       {isCreateModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCreateModalOpen(false)}>
+        <div className="modal-backdrop" onClick={() => !isSubmitting && setIsCreateModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Nuevo Paciente</h3>
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => !isSubmitting && setIsCreateModalOpen(false)}
+                disabled={isSubmitting}
               >
                 <X size={18} />
               </button>
@@ -860,7 +912,11 @@ const PatientsManagement: React.FC = () => {
                       className="patients-mgmt__select"
                       style={{ width: '100%' }}
                       value={newDocType}
-                      onChange={(e) => setNewDocType(e.target.value as 'CC' | 'CE' | 'TI' | 'PAS')}
+                      onChange={(e) => {
+                        const type = e.target.value as 'CC' | 'CE' | 'TI' | 'PAS';
+                        setNewDocType(type);
+                        setNewDocNum((value) => normalizeDocument(type, value));
+                      }}
                     >
                       <option value="CC">CC</option>
                       <option value="CE">CE</option>
@@ -875,7 +931,8 @@ const PatientsManagement: React.FC = () => {
                       className="form-input"
                       placeholder="1029384756"
                       value={newDocNum}
-                      onChange={(e) => setNewDocNum(e.target.value)}
+                      onChange={(e) => setNewDocNum(normalizeDocument(newDocType, e.target.value))}
+                      maxLength={newDocType === 'PAS' ? 20 : 12}
                       required
                     />
                   </div>
@@ -993,12 +1050,13 @@ const PatientsManagement: React.FC = () => {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => !isSubmitting && setIsCreateModalOpen(false)}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  Guardar Paciente
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Guardando…' : 'Guardar Paciente'}
                 </button>
               </div>
             </form>
@@ -1040,7 +1098,11 @@ const PatientsManagement: React.FC = () => {
                       className="patients-mgmt__select"
                       style={{ width: '100%' }}
                       value={editDocType}
-                      onChange={(e) => setEditDocType(e.target.value as 'CC' | 'CE' | 'TI' | 'PAS')}
+                      onChange={(e) => {
+                        const type = e.target.value as 'CC' | 'CE' | 'TI' | 'PAS';
+                        setEditDocType(type);
+                        setEditDocNum((value) => normalizeDocument(type, value));
+                      }}
                     >
                       <option value="CC">CC</option>
                       <option value="CE">CE</option>
@@ -1054,7 +1116,8 @@ const PatientsManagement: React.FC = () => {
                       type="text"
                       className="form-input"
                       value={editDocNum}
-                      onChange={(e) => setEditDocNum(e.target.value)}
+                      onChange={(e) => setEditDocNum(normalizeDocument(editDocType, e.target.value))}
+                      maxLength={editDocType === 'PAS' ? 20 : 12}
                       required
                     />
                   </div>

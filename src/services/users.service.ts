@@ -1,5 +1,5 @@
 import type { ManagedUser, PermissionGroup, UserRoleType } from '../types/user.types';
-import { apiFetch } from './api';
+import { apiFetch, type ApiError } from './api';
 import { BACKEND_ROLE_MAP, FRONTEND_ROLE_MAP } from '../types/auth';
 
 export const mockUsers: ManagedUser[] = [];
@@ -12,7 +12,7 @@ interface BackendUsuario {
   rolId?: string;
   username: string;
   email: string;
-  activo: boolean;
+  activo?: boolean;
   fechaCreacion?: string;
   ultimoLogin?: string;
   debeCambiarPassword?: boolean;
@@ -79,7 +79,7 @@ const mapBackendUser = (
     name: fullName,
     email: raw.email,
     role,
-    status: raw.activo ? 'active' : 'inactive',
+    status: raw.activo !== false ? 'active' : 'inactive',
     initials,
     avatarBg: role === 'admin' ? '#CA6702' : role === 'professional' ? '#0A9396' : '#005F73',
     lastAccess,
@@ -149,26 +149,47 @@ export const getRoleLabel = (role: UserRoleType): string => {
   return labels[role] ?? role;
 };
 
+/** Cuenta administradores con status active. */
+export function countActiveAdmins(users: ManagedUser[]): number {
+  return users.filter((u) => u.role === 'admin' && u.status === 'active').length;
+}
+
+/**
+ * Impide desactivar o degradar al único admin activo.
+ * Reactivar o degradar no-admins siempre está permitido.
+ */
+export function canDeactivateOrDemoteAdmin(
+  users: ManagedUser[],
+  target: ManagedUser,
+): { ok: true } | { ok: false; error: string } {
+  if (target.role !== 'admin' || target.status !== 'active') return { ok: true };
+  if (countActiveAdmins(users) >= 2) return { ok: true };
+  return {
+    ok: false,
+    error:
+      'No se puede desactivar el único administrador activo. Crea o reactiva otro admin primero.',
+  };
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getUsersApi = async (): Promise<ManagedUser[]> => {
+  let data: BackendUsuario[];
   try {
-    const [data, roles] = await Promise.all([
-      apiFetch<BackendUsuario[]>('/usuarios'),
-      apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles').catch(() => []),
-    ]);
-
-    const roleMap = new Map<string, string>();
-    if (Array.isArray(roles)) {
-      roles.forEach((r) => {
-        if (r.id && r.nombreRol) roleMap.set(r.id, r.nombreRol);
-      });
-    }
-
-    return Array.isArray(data) ? data.map((u) => mapBackendUser(u, roleMap)) : [];
+    data = await apiFetch<BackendUsuario[]>('/Usuarios');
   } catch (error) {
-    console.warn('[users.service] Conexión API /usuarios:', error);
-    return [];
+    if ((error as ApiError).status !== 404) throw error;
+    data = await apiFetch<BackendUsuario[]>('/usuarios');
   }
+
+  const roles = await apiFetch<Array<{ id: string; nombreRol?: string }>>('/Roles').catch(() => []);
+  const roleMap = new Map<string, string>();
+  if (Array.isArray(roles)) {
+    roles.forEach((role) => {
+      if (role.id && role.nombreRol) roleMap.set(role.id, role.nombreRol);
+    });
+  }
+
+  return Array.isArray(data) ? data.map((user) => mapBackendUser(user, roleMap)) : [];
 };
 
 export interface CreateUserPayload {

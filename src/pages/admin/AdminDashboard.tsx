@@ -6,7 +6,6 @@ import {
   UserCheck,
 } from 'lucide-react';
 import './AdminDashboard.css';
-import Loading from '../../components/common/Loading';
 import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
 import { getPatientsApi } from '../../services/patients.service';
@@ -65,14 +64,9 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const [appointments, professionals, patients] = await Promise.all([
-          getAppointmentsApi(),
-          getProfessionalsApi(),
-          getPatientsApi(),
-        ]);
-
+        const appointments = await getAppointmentsApi();
         const today = todayISO();
 
         // ── Tabla: todas las citas ──────────────────────────────────────
@@ -107,21 +101,22 @@ const AdminDashboard: React.FC = () => {
 
         setAgendaSlots(activeSlots);
         setTodayCitasCount(todayApps.length);
-        setTotalProfessionals(professionals.length);
-        setTotalPatients(patients.length);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Error fetching dashboard appointments:', error);
       } finally {
         setLoading(false);
       }
+
+      void getProfessionalsApi()
+        .then((professionals) => setTotalProfessionals(professionals.length))
+        .catch((error) => console.error('Error fetching dashboard professionals:', error));
+      void getPatientsApi()
+        .then((patients) => setTotalPatients(patients.length))
+        .catch((error) => console.error('Error fetching dashboard patients:', error));
     };
 
     fetchData();
   }, []);
-
-  if (loading) {
-    return <Loading text="Cargando panel de administración..." size="lg" />;
-  }
 
   return (
     <div className="admin-dashboard">
@@ -190,7 +185,11 @@ const AdminDashboard: React.FC = () => {
               <button type="button" className="table-card__link">Ver todas</button>
             </div>
             <div className="table-card__wrapper">
-              {citasData.length === 0 ? (
+              {loading ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                  Cargando citas...
+                </div>
+              ) : citasData.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
                   No hay citas disponibles
                 </div>

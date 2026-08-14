@@ -14,6 +14,9 @@ import {
   getAppointmentsApi,
   updateAppointmentStatusApi,
 } from '../../services/appointments.service';
+import { useAuth } from '../../context/AuthContext';
+import { resolveMedicoIdForUser } from '../../services/professionals.service';
+import { mergeStoredAppointmentNotes, saveAppointmentNote } from '../../services/appointmentNotes.service';
 import './DoctorCitas.css';
 
 // Hourly timetable slots (matching screenshot layout)
@@ -46,121 +49,13 @@ const CIE10_OPTIONS = [
   { value: 'Otro', label: 'Otro código CIE-10' },
 ];
 
-// Default Rich Mock Appointments for Doctor Consultas
-const initialDoctorAppointments: Appointment[] = [
-  {
-    id: 1,
-    patientId: 'p1',
-    patientName: 'Carlos Eduardo Mendoza',
-    patientDoc: '1098472635',
-    patientAge: 34,
-    patientGender: 'Masculino',
-    patientPhone: '+57 300 123 4567',
-    patientEmail: 'carlos.mendoza@email.com',
-    patientInitials: 'CM',
-    patientAvatarBg: '#00A896',
-    professionalId: 'doc1',
-    professionalName: 'Dra. Sarah Jenkins',
-    professionalSpecialty: 'Cardiología Intervencionista',
-    serviceId: 's1',
-    serviceName: 'Consulta Médica General',
-    date: '2026-08-13',
-    time: '1:00 p. m.', // 13:00
-    status: 'Agendada',
-    notes: 'Paciente refiere dolor de cabeza de 24h de evolución, malestar general y febrícula (37.8 °C).',
-  },
-  {
-    id: 2,
-    patientId: 'p2',
-    patientName: 'María Fernanda López',
-    patientDoc: '1023847561',
-    patientAge: 42,
-    patientGender: 'Femenino',
-    patientPhone: '+57 312 987 6543',
-    patientEmail: 'maria.lopez@email.com',
-    patientInitials: 'ML',
-    patientAvatarBg: '#3B82F6',
-    professionalId: 'doc1',
-    professionalName: 'Dra. Sarah Jenkins',
-    professionalSpecialty: 'Cardiología Intervencionista',
-    serviceId: 's2',
-    serviceName: 'Control de Hipertensión',
-    date: '2026-08-13',
-    time: '2:00 p. m.', // 14:00
-    status: 'Agendada',
-    notes: 'Chequeo rutinario de presión arterial y ajuste de medicación antihipertensiva.',
-  },
-  {
-    id: 3,
-    patientId: 'p3',
-    patientName: 'Roberto Gómez Bolaños',
-    patientDoc: '1049283746',
-    patientAge: 58,
-    patientGender: 'Masculino',
-    patientPhone: '+57 315 456 7890',
-    patientEmail: 'roberto.gomez@email.com',
-    patientInitials: 'RG',
-    patientAvatarBg: '#8B5CF6',
-    professionalId: 'doc1',
-    professionalName: 'Dra. Sarah Jenkins',
-    professionalSpecialty: 'Cardiología Intervencionista',
-    serviceId: 's3',
-    serviceName: 'Evaluación de Electrocardiograma',
-    date: '2026-08-13',
-    time: '3:00 p. m.', // 15:00
-    status: 'Agendada',
-    notes: 'Revisión de resultados de ECG previo y valoración de síntomas torácicos.',
-  },
-  {
-    id: 4,
-    patientId: 'p4',
-    patientName: 'Ana Lucía Martínez',
-    patientDoc: '1082749501',
-    patientAge: 29,
-    patientGender: 'Femenino',
-    patientPhone: '+57 318 234 5678',
-    patientEmail: 'ana.martinez@email.com',
-    patientInitials: 'AM',
-    patientAvatarBg: '#EC4899',
-    professionalId: 'doc1',
-    professionalName: 'Dra. Sarah Jenkins',
-    professionalSpecialty: 'Cardiología Intervencionista',
-    serviceId: 's1',
-    serviceName: 'Consulta Médica General',
-    date: '2026-08-13',
-    time: '4:00 p. m.', // 16:00
-    status: 'Agendada',
-    notes: 'Evaluación general por fatiga y dolores articulares.',
-  },
-  {
-    id: 5,
-    patientId: 'p5',
-    patientName: 'Jorge Ignacio Silva',
-    patientDoc: '1039482710',
-    patientAge: 51,
-    patientGender: 'Masculino',
-    patientPhone: '+57 301 876 5432',
-    patientEmail: 'jorge.silva@email.com',
-    patientInitials: 'JS',
-    patientAvatarBg: '#F59E0B',
-    professionalId: 'doc1',
-    professionalName: 'Dra. Sarah Jenkins',
-    professionalSpecialty: 'Cardiología Intervencionista',
-    serviceId: 's4',
-    serviceName: 'Control Cardiovascular',
-    date: '2026-08-13',
-    time: '5:00 p. m.', // 17:00
-    status: 'Agendada',
-    notes: 'Seguimiento post-procedimiento y revisión de perfil lipídico.',
-  },
-];
-
 const DoctorCitas: React.FC = () => {
   // Data States
-  const [appointments, setAppointments] = useState<Appointment[]>(initialDoctorAppointments);
+  const { user } = useAuth();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   
   // Set default selected appointment ID to 1 ("Carlos Eduardo Mendoza") so the form is populated on page load
-  const [selectedAppId, setSelectedAppId] = useState<number | string | null>(1);
+  const [selectedAppId, setSelectedAppId] = useState<number | string | null>(null);
 
   // Time Filter Mode: 'upcoming' (reads current PC hour) vs 'all'
   const [timeFilterMode, setTimeFilterMode] = useState<'upcoming' | 'all'>('upcoming');
@@ -191,12 +86,24 @@ const DoctorCitas: React.FC = () => {
   };
 
   useEffect(() => {
-    getAppointmentsApi().then((data) => {
-      if (data && data.length > 0) {
-        setAppointments((prev) => [...prev, ...data.filter((d) => !prev.some((p) => String(p.id) === String(d.id)))]);
-      }
-    });
-  }, []);
+    const loadAppointments = async () => {
+      const [data, medicoId] = await Promise.all([
+        getAppointmentsApi(),
+        resolveMedicoIdForUser(user),
+      ]);
+      const today = new Date();
+      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const doctorAppointments = mergeStoredAppointmentNotes(data).filter((appointment) =>
+        appointment.date === todayIso &&
+        (medicoId
+          ? String(appointment.professionalId) === medicoId
+          : appointment.professionalName.toLowerCase().includes((user?.name || '').toLowerCase())),
+      );
+      setAppointments(doctorAppointments);
+      setSelectedAppId(doctorAppointments[0]?.id ?? null);
+    };
+    void loadAppointments();
+  }, [user]);
 
   // READ CURRENT HOUR DYNAMICALLY FROM PC SYSTEM TIME
   const pcCurrentHour = new Date().getHours();
@@ -255,17 +162,19 @@ const DoctorCitas: React.FC = () => {
 
     try {
       await updateAppointmentStatusApi(selectedAppointment.id, 'Atendida');
+      let completedAppointment: Appointment | undefined;
       setAppointments((prev) =>
         prev.map((a) =>
           String(a.id) === String(selectedAppointment.id)
-            ? {
+            ? (completedAppointment = {
                 ...a,
                 status: 'Atendida',
                 notes: `[SÍNTOMAS]: ${sintomas} | [CIE-10 ${cie10Codigo}]: ${cie10Descripcion}`,
-              }
+              })
             : a
         )
       );
+      if (completedAppointment) saveAppointmentNote(completedAppointment);
 
       showToast(`🔒 Consulta clínica guardada y bloqueada de forma oficial.`);
     } catch (err) {

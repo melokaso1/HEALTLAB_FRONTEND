@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi } from '../../services/appointments.service';
+import { resolveMedicoIdForUser } from '../../services/professionals.service';
 import medicoAvatar from '../../assets/images/medico1.jpeg';
 import './DoctorInicio.css';
 
@@ -38,6 +39,14 @@ interface DoctorTask {
   priority: 'Alta' | 'Media' | 'Baja';
 }
 
+const todayIsoLocal = (): string => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+};
+
+const formatTodayLabel = (): string =>
+  new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+
 const DoctorInicio: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -45,11 +54,27 @@ const DoctorInicio: React.FC = () => {
 
   const [tasks, setTasks] = useState<DoctorTask[]>([]);
   const [todayApps, setTodayApps] = useState<TodayAppointment[]>([]);
+  const [followUpPatientCount, setFollowUpPatientCount] = useState(0);
 
   useEffect(() => {
-    getAppointmentsApi().then((apps) => {
+    const loadTodayAppointments = async () => {
+      const apps = await getAppointmentsApi();
+      const medicoId = await resolveMedicoIdForUser(user);
       if (Array.isArray(apps)) {
-        const mapped: TodayAppointment[] = apps.map((a) => ({
+        const today = todayIsoLocal();
+        const allDoctorApps = apps.filter((a) =>
+          (medicoId
+            ? String(a.professionalId) === medicoId
+            : a.professionalName.toLowerCase().includes(doctorName.toLowerCase())),
+        );
+        setFollowUpPatientCount(new Set(allDoctorApps.map((a) => String(a.patientId))).size);
+        const doctorApps = allDoctorApps.filter((a) =>
+          a.date === today &&
+          (medicoId
+            ? String(a.professionalId) === medicoId
+            : a.professionalName.toLowerCase().includes(doctorName.toLowerCase())),
+        );
+        const mapped: TodayAppointment[] = doctorApps.map((a) => ({
           id: a.id,
           time: a.time,
           patientName: a.patientName,
@@ -61,8 +86,12 @@ const DoctorInicio: React.FC = () => {
         }));
         setTodayApps(mapped);
       }
-    });
-  }, []);
+    };
+    void loadTodayAppointments();
+  }, [user, doctorName]);
+
+  const attendedToday = todayApps.filter((app) => app.status === 'Atendida').length;
+  const waitingToday = todayApps.filter((app) => app.status === 'Confirmada').length;
 
   const toggleTask = (id: number) => {
     setTasks((prev) =>
@@ -88,7 +117,7 @@ const DoctorInicio: React.FC = () => {
 
             <h1 className="doc-hero-banner__title">¡Bienvenido de nuevo, {doctorName}!</h1>
             <p className="doc-hero-banner__subtitle">
-              Cardiología Intervencionista • Consultorio 302 | Tiene <strong>4 citas programadas para hoy</strong>.
+              Cardiología Intervencionista • Consultorio 302 | Tiene <strong>{todayApps.length} citas programadas para hoy</strong>.
             </p>
 
             <div className="doc-hero-banner__tags">
@@ -116,8 +145,8 @@ const DoctorInicio: React.FC = () => {
           </div>
           <div className="doc-metric-card__details">
             <span className="doc-metric-card__label">Citas de Hoy</span>
-            <span className="doc-metric-card__value">4 Citas</span>
-            <span className="doc-metric-card__sub">2 atendidas • 1 en espera</span>
+            <span className="doc-metric-card__value">{todayApps.length} Citas</span>
+            <span className="doc-metric-card__sub">{attendedToday} atendidas • {waitingToday} en espera</span>
           </div>
         </div>
 
@@ -127,8 +156,8 @@ const DoctorInicio: React.FC = () => {
           </div>
           <div className="doc-metric-card__details">
             <span className="doc-metric-card__label">Pacientes en Seguimiento</span>
-            <span className="doc-metric-card__value">128 Pacientes</span>
-            <span className="doc-metric-card__sub">+12 este mes</span>
+            <span className="doc-metric-card__value">{followUpPatientCount} Pacientes</span>
+            <span className="doc-metric-card__sub">Con citas registradas a su cargo</span>
           </div>
         </div>
 
@@ -164,7 +193,7 @@ const DoctorInicio: React.FC = () => {
             <div className="doc-card__header">
               <div className="doc-card__title-group">
                 <h3 className="doc-card__title">Agenda y Atenciones de Hoy</h3>
-                <span className="doc-card__subtitle">Miércoles, 12 de Agosto de 2026</span>
+                <span className="doc-card__subtitle">{formatTodayLabel()}</span>
               </div>
               <button
                 type="button"
