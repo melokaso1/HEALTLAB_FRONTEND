@@ -55,50 +55,16 @@ const mapBackendResponse = (
 };
 
 // ─── Login ─────────────────────────────────────────────────────────────────
-/**
- * Autentica al usuario contra el backend .NET.
- * En caso de fallo de red provee autenticación de desarrollo.
- */
+/** Autentica al usuario contra el backend .NET. */
 export const loginApi = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-  try {
-    const raw = await apiFetch<BackendLoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        usernameOrEmail: credentials.email, // el backend acepta email o username
-        password: credentials.password,
-      }),
-    });
-
-    return mapBackendResponse(raw);
-  } catch (error) {
-    console.warn('[authService] Backend no disponible, usando autenticación de desarrollo:', error);
-
-    // ─── Fallback de desarrollo ──────────────────────────────────────────
-    const emailLower = credentials.email.toLowerCase();
-    let role: UserRole = 'admin';
-    let name = 'Admin Sistema';
-    let id = 'dev-admin-001';
-
-    if (emailLower.includes('recep') || emailLower.includes('ana')) {
-      role = 'receptionist';
-      name = 'Ana Martínez';
-      id = 'dev-recep-003';
-    } else if (
-      emailLower.includes('medico') ||
-      emailLower.includes('doctor') ||
-      emailLower.includes('profesional')
-    ) {
-      role = 'professional';
-      name = 'Dra. Sarah Jenkins';
-      id = 'dev-prof-002';
-    }
-
-    return {
-      token: `dev-access-token-${Date.now()}`,
-      refreshToken: `dev-refresh-token-${Date.now()}`,
-      user: { id, name, email: credentials.email, role },
-    };
-  }
+  const raw = await apiFetch<BackendLoginResponse>('/Auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      usernameOrEmail: credentials.email,
+      password: credentials.password,
+    }),
+  });
+  return mapBackendResponse(raw);
 };
 
 // ─── Refresh Token ─────────────────────────────────────────────────────────
@@ -110,11 +76,8 @@ export const refreshTokenApi = async (): Promise<AuthResponse | null> => {
   const refreshToken = getStoredRefreshToken();
   if (!refreshToken) return null;
 
-  // No enviar refreshes en sesiones de desarrollo
-  if (refreshToken.startsWith('dev-')) return null;
-
   try {
-    const raw = await apiFetch<BackendLoginResponse>('/auth/refresh', {
+    const raw = await apiFetch<BackendLoginResponse>('/Auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     });
@@ -133,15 +96,14 @@ export const refreshTokenApi = async (): Promise<AuthResponse | null> => {
 export const logoutApi = async (): Promise<void> => {
   const sesionId = getStoredSessionId();
 
-  // No llamar al backend en sesiones de desarrollo
   const token = getStoredToken();
-  if (!token || token.startsWith('dev-')) return;
+  if (!token) return;
 
   try {
     if (sesionId) {
-      await apiFetch(`/auth/logout/${sesionId}`, { method: 'POST' });
+      await apiFetch(`/Auth/logout/${sesionId}`, { method: 'POST' });
     } else {
-      await apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({}) });
+      await apiFetch('/Auth/logout', { method: 'POST', body: JSON.stringify({}) });
     }
   } catch (error) {
     // El logout local siempre procede aunque el backend falle

@@ -110,7 +110,7 @@ const saveStoredMedico = (prof: ProfessionalOption) => {
 export const getProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
   let backendList: ProfessionalOption[] = [];
   try {
-    const data = await apiFetch<BackendMedico[]>('/medicos');
+    const data = await apiFetch<BackendMedico[]>('/Medicos');
     if (Array.isArray(data)) {
       backendList = data.filter((m) => m.activo).map(mapBackendMedico);
     }
@@ -133,7 +133,7 @@ export const getProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
 
 export const getProfessionalById = async (id: string): Promise<ProfessionalOption | null> => {
   try {
-    const raw = await apiFetch<BackendMedico>(`/medicos/${id}`);
+    const raw = await apiFetch<BackendMedico>(`/Medicos/${id}`);
     return mapBackendMedico(raw);
   } catch (error) {
     console.warn(`[professionals.service] Error en GET /medicos/${id}:`, error);

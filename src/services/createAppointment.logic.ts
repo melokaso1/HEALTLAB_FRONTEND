@@ -21,11 +21,12 @@ export interface CreateAppointmentInput {
   professionalId: string;
   professionalName?: string;
   professionalSpecialty?: string;
-  serviceId?: string;
+  serviceId: string;
   serviceName?: string;
   date: string;
   time: string;
   notes?: string;
+  usuarioCreacionId?: string;
 }
 
 export type CreateAppointmentResult =
@@ -47,6 +48,12 @@ export async function createAppointmentFromInput(
   if (!String(input.professionalId ?? '').trim()) {
     return { ok: false, error: 'El profesional es requerido.' };
   }
+  if (!String(input.serviceId ?? '').trim()) {
+    return { ok: false, error: 'El tipo de cita es requerido.' };
+  }
+  if (!String(input.usuarioCreacionId ?? '').trim()) {
+    return { ok: false, error: 'No se encontró el usuario de la sesión.' };
+  }
   if (!String(input.date ?? '').trim()) {
     return { ok: false, error: 'La fecha es requerida.' };
   }
@@ -55,21 +62,17 @@ export async function createAppointmentFromInput(
   }
 
   try {
-    const payload: Partial<Appointment> = {
-      patientId,
-      patientName: input.patientName,
-      professionalId: input.professionalId,
-      professionalName: input.professionalName,
-      professionalSpecialty: input.professionalSpecialty,
-      serviceId: input.serviceId,
-      serviceName: input.serviceName,
-      date: input.date,
-      time: input.time,
-      notes: input.notes,
-      status: 'Agendada',
-    };
-
-    const appointment = await createAppointmentApi(payload as Appointment);
+    const appointment = await createAppointmentApi({
+      pacienteId: patientId,
+      medicoId: input.professionalId,
+      tipoCitaId: input.serviceId,
+      fecha: input.date,
+      horaInicio: input.time,
+      horaFin: input.time,
+      motivoConsulta: input.notes || input.serviceName || 'Consulta Médica',
+      observaciones: input.notes,
+      usuarioCreacionId: input.usuarioCreacionId!,
+    });
     return { ok: true, appointment };
   } catch (error) {
     const message =

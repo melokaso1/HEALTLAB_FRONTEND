@@ -81,18 +81,18 @@ const formatTimeSlot = (timeStr: string): string => {
   return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 };
 
-// Convierte "02:30 PM" o "14:30" → "14:30:00" para el backend
+// Convierte "02:30 PM" o "14:30" → "14:30" para el backend
 const parseTimeSlot = (slot: string): string => {
-  if (!slot) return '08:00:00';
+  if (!slot) return '08:00';
   const parts = slot.trim().split(' ');
   const [hStr, mStr] = parts[0].split(':');
   let h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
-  if (isNaN(h) || isNaN(m)) return '08:00:00';
+  if (isNaN(h) || isNaN(m)) return '08:00';
   const period = parts[1]?.toUpperCase();
   if (period === 'PM' && h !== 12) h += 12;
   if (period === 'AM' && h === 12) h = 0;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
@@ -160,57 +160,19 @@ export const checkScheduleConflict = (
       app.id !== excludeAppointmentId,
   );
 
-// ─── LocalStorage Persistence Helper ────────────────────────────────────
-const LOCAL_CITAS_KEY = 'HEALTLAB_PERSISTENT_CITAS';
-
-const getStoredAppointments = (): Appointment[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_CITAS_KEY);
-    return raw ? (JSON.parse(raw) as Appointment[]) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredAppointment = (app: Appointment) => {
-  try {
-    const current = getStoredAppointments();
-    const updated = [app, ...current.filter((a) => String(a.id) !== String(app.id))];
-    localStorage.setItem(LOCAL_CITAS_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Error al guardar cita en localStorage', e);
-  }
-};
-
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getAppointmentsApi = async (): Promise<Appointment[]> => {
-  let backendList: Appointment[] = [];
-  try {
-    const data = await apiFetch<BackendCita[]>('/citas');
-    if (Array.isArray(data)) {
-      backendList = data.map(mapBackendCita);
-    }
-  } catch (error) {
-    console.warn('[appointments.service] Conexión API /citas:', error);
-  }
-
-  const localList = getStoredAppointments();
-  const mergedMap = new Map<string, Appointment>();
-
-  localList.forEach((a) => mergedMap.set(String(a.id), a));
-  backendList.forEach((a) => mergedMap.set(String(a.id), a));
-
-  return Array.from(mergedMap.values());
+  const data = await apiFetch<BackendCita[]>('/Citas');
+  return Array.isArray(data) ? data.map(mapBackendCita) : [];
 };
 
 export const getAppointmentByIdApi = async (id: string): Promise<Appointment | null> => {
   try {
-    const raw = await apiFetch<BackendCita>(`/citas/${id}`);
+    const raw = await apiFetch<BackendCita>(`/Citas/${id}`);
     return mapBackendCita(raw);
   } catch (error) {
-    console.warn(`[appointments.service] Error en GET /citas/${id}:`, error);
-    const local = getStoredAppointments().find((a) => String(a.id) === String(id));
-    return local || null;
+    if ((error as { status?: number }).status === 404) return null;
+    throw error;
   }
 };
 
@@ -223,69 +185,39 @@ export interface CreateCitaPayload {
   medicoId: string;
   tipoCitaId: string;
   fecha: string;          // "YYYY-MM-DD"
-  horaInicio: string;     // "HH:mm" o "HH:mm:ss" — se normaliza aquí
+  horaInicio: string;
   horaFin: string;
   motivoConsulta: string;
   observaciones?: string;
-  usuarioCreacionId?: string;
+  usuarioCreacionId: string;
 }
 
 export const createAppointmentApi = async (
   payload: CreateCitaPayload | Appointment | Partial<Appointment>,
 ): Promise<Appointment> => {
   const appObj = payload as Partial<Appointment>;
-  const normPayload: CreateCitaPayload = 'pacienteId' in payload && (payload as CreateCitaPayload).pacienteId
-    ? (payload as CreateCitaPayload)
+  const normPayload: CreateCitaPayload = 'pacienteId' in payload
+    ? payload as CreateCitaPayload
     : {
-        pacienteId: String(appObj.patientId || '00000000-0000-0000-0000-000000000000'),
-        medicoId: String(appObj.professionalId || '00000000-0000-0000-0000-000000000000'),
-        tipoCitaId: String(appObj.serviceId || '00000000-0000-0000-0000-000000000000'),
-        fecha: appObj.date || new Date().toISOString().split('T')[0],
-        horaInicio: parseTimeSlot(appObj.time || '10:00 AM'),
-        horaFin: parseTimeSlot(appObj.time || '10:30 AM'),
-        motivoConsulta: appObj.notes || appObj.serviceName || 'Consulta Médica',
+        pacienteId: String(appObj.patientId ?? ''),
+        medicoId: String(appObj.professionalId ?? ''),
+        tipoCitaId: String(appObj.serviceId ?? ''),
+        fecha: appObj.date ?? '',
+        horaInicio: parseTimeSlot(appObj.time ?? ''),
+        horaFin: parseTimeSlot(appObj.time ?? ''),
+        motivoConsulta: appObj.notes ?? appObj.serviceName ?? 'Consulta Médica',
         observaciones: appObj.notes,
+        usuarioCreacionId: '',
       };
-
-  const fallbackApp: Appointment = {
-    id: Date.now(),
-    patientId: normPayload.pacienteId,
-    patientName: appObj.patientName || 'Paciente',
-    patientAge: appObj.patientAge || 30,
-    patientGender: appObj.patientGender || 'Femenino',
-    patientDoc: appObj.patientDoc || 'CC-00000',
-    patientPhone: appObj.patientPhone || '',
-    patientEmail: appObj.patientEmail || '',
-    patientInitials: appObj.patientInitials || 'PP',
-    professionalId: normPayload.medicoId,
-    professionalName: appObj.professionalName || 'Médico',
-    professionalSpecialty: appObj.professionalSpecialty || 'Medicina General',
-    serviceId: normPayload.tipoCitaId,
-    serviceName: appObj.serviceName || normPayload.motivoConsulta,
-    date: normPayload.fecha,
-    time: formatTimeSlot(normPayload.horaInicio),
-    status: 'Agendada',
-    notes: normPayload.observaciones ?? normPayload.motivoConsulta,
-  };
-
-  const normalize = (t: string) => (t.includes(':') && t.split(':').length === 2 ? `${t}:00` : t);
-  try {
-    const raw = await apiFetch<BackendCita>('/citas', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...normPayload,
-        horaInicio: normalize(normPayload.horaInicio),
-        horaFin: normalize(normPayload.horaFin),
-      }),
-    });
-    const createdBackend = mapBackendCita(raw);
-    saveStoredAppointment(createdBackend);
-    return createdBackend;
-  } catch (error) {
-    console.warn('[appointments.service] Error en POST /citas, guardando en persistencia local:', error);
-    saveStoredAppointment(fallbackApp);
-    return fallbackApp;
-  }
+  const raw = await apiFetch<BackendCita>('/Citas', {
+    method: 'POST',
+    body: JSON.stringify({
+      ...normPayload,
+      horaInicio: parseTimeSlot(normPayload.horaInicio),
+      horaFin: parseTimeSlot(normPayload.horaFin),
+    }),
+  });
+  return mapBackendCita(raw);
 };
 
 /**
@@ -295,19 +227,17 @@ export const rescheduleAppointmentApi = async (
   id: string | number,
   newDate: string,
   newTime: string,
+  observaciones?: string,
 ): Promise<void> => {
-  try {
-    await apiFetch(`/citas/${id}/reprogramar`, {
-      method: 'POST',
-      body: JSON.stringify({
-        fecha: newDate,
-        horaInicio: parseTimeSlot(newTime),
-        horaFin: parseTimeSlot(newTime), // el llamador puede pasar horaFin si la sabe
-      }),
-    });
-  } catch (error) {
-    console.warn(`[appointments.service] Error en POST /citas/${id}/reprogramar:`, error);
-  }
+  await apiFetch(`/Citas/${id}/reprogramar`, {
+    method: 'POST',
+    body: JSON.stringify({
+      fecha: newDate,
+      horaInicio: parseTimeSlot(newTime),
+      horaFin: parseTimeSlot(newTime),
+      observaciones,
+    }),
+  });
 };
 
 /**
@@ -316,15 +246,12 @@ export const rescheduleAppointmentApi = async (
 export const cancelAppointmentApi = async (
   id: string | number,
   motivoCancelacion: string = 'Cancelada por usuario',
+  usuarioCancelacionId?: string,
 ): Promise<void> => {
-  try {
-    await apiFetch(`/citas/${id}/cancelar`, {
-      method: 'POST',
-      body: JSON.stringify({ motivoCancelacion }),
-    });
-  } catch (error) {
-    console.warn(`[appointments.service] Error en POST /citas/${id}/cancelar:`, error);
-  }
+  await apiFetch(`/Citas/${id}/cancelar`, {
+    method: 'POST',
+    body: JSON.stringify({ motivoCancelacion, usuarioCancelacionId }),
+  });
 };
 
 /**
@@ -335,7 +262,7 @@ export const markNoShowApi = async (
   observaciones?: string,
 ): Promise<void> => {
   try {
-    await apiFetch(`/citas/${id}/no-asistio`, {
+    await apiFetch(`/Citas/${id}/no-asistio`, {
       method: 'POST',
       body: JSON.stringify({ observaciones: observaciones ?? '' }),
     });

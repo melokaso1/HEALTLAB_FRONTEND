@@ -45,48 +45,19 @@ const RecepPacientes: React.FC = () => {
       try {
         const response = await getPatientsApi();
         const colors: Array<'mint' | 'purple' | 'gray'> = ['mint', 'purple', 'gray'];
-        const mapped: PatientRecord[] = (response as unknown as Array<{
-          id: string;
-          activo: boolean;
-          persona?: {
-            nombre?: string;
-            apellido?: string;
-            numeroDocumento?: string;
-            fechaNacimiento?: string;
-            sexo?: { nombre?: string };
-            telefonos?: Array<{ numero?: string; principal?: boolean }>;
-          };
-        }>).map((raw, index) => {
-          const doc = raw.persona?.numeroDocumento ?? '';
-          const nombreStr = `${raw.persona?.nombre ?? ''} ${raw.persona?.apellido ?? ''}`.trim();
-          const nInitial = (raw.persona?.nombre ?? '').charAt(0).toUpperCase();
-          const aInitial = (raw.persona?.apellido ?? '').charAt(0).toUpperCase();
+        const mapped: PatientRecord[] = response.map((patient, index) => {
           const bg = colors[index % 3];
-          const sexoStr = (raw.persona?.sexo?.nombre ?? '').toLowerCase();
-          const genero: 'F' | 'M' = (sexoStr.includes('fem') || sexoStr === 'f') ? 'F' : 'M';
-          let edad = 0;
-          if (raw.persona?.fechaNacimiento) {
-            const birthDate = new Date(raw.persona.fechaNacimiento);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-            edad = age;
-          }
-          const telefonoPrincipal =
-            raw.persona?.telefonos?.find(t => t.principal)?.numero ??
-            raw.persona?.telefonos?.[0]?.numero ?? '';
           return {
-            id: raw.id,
-            documento: doc,
-            nombre: nombreStr,
-            iniciales: nInitial + aInitial,
+            id: String(patient.id),
+            documento: `${patient.documentType} ${patient.documentNumber}`,
+            nombre: patient.name,
+            iniciales: patient.initials,
             avatarBg: bg,
-            genero,
-            edad,
-            telefono: telefonoPrincipal,
-            email: '',
-            estado: raw.activo ? 'Activo' : 'Inactivo',
+            genero: patient.gender === 'Femenino' ? 'F' : 'M',
+            edad: patient.age,
+            telefono: patient.contact.phone,
+            email: patient.contact.email,
+            estado: patient.status === 'active' ? 'Activo' : 'Inactivo',
           } satisfies PatientRecord;
         });
         setPatients(mapped);
@@ -145,7 +116,7 @@ const RecepPacientes: React.FC = () => {
         name: newP.nombre,
         gender: newP.genero === 'F' ? 'Femenino' : 'Masculino',
         age: newP.edad,
-        documentType: 'CC',
+        documentType: newPatientDocType as 'CC' | 'TI' | 'CE' | 'PAS',
         documentNumber: newP.documento,
         contact: {
           phone: newP.telefono,
@@ -422,7 +393,6 @@ const RecepPacientes: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
-                const docType = newPatientDocType;
                 const docNum = (form.elements.namedItem('documento') as HTMLInputElement).value;
                 const nom = (form.elements.namedItem('nombre') as HTMLInputElement).value;
                 const gen = (form.elements.namedItem('genero') as HTMLSelectElement).value as 'F' | 'M';
@@ -439,7 +409,7 @@ const RecepPacientes: React.FC = () => {
                 }
 
                 handleCreatePatient({
-                  documento: `${docType} ${docNum}`,
+          documento: docNum,
                   nombre: nom,
                   genero: gen,
                   edad: calculatedEdad,

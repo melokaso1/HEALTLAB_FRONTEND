@@ -84,60 +84,6 @@ const RecepHistorial: React.FC = () => {
           });
         }
 
-        // Mock records if API returns empty
-        if (mapped.length === 0) {
-          mapped = [
-            {
-              id: 'h-1',
-              fecha: '2026-08-12',
-              hora: '10:30',
-              pacienteNombre: 'Ana María Torres',
-              pacienteDni: '1098765432',
-              profesionalNombre: 'Dr. Alejandro Silva',
-              especialidad: 'Cardiología',
-              estado: 'Atendido',
-              motivo: 'Control de presión arterial',
-              observaciones: 'Paciente evoluciona satisfactoriamente.',
-            },
-            {
-              id: 'h-2',
-              fecha: '2026-08-11',
-              hora: '14:00',
-              pacienteNombre: 'Carlos Eduardo Restrepo',
-              pacienteDni: '1020304050',
-              profesionalNombre: 'Dra. Elena Rostova',
-              especialidad: 'Medicina General',
-              estado: 'Atendido',
-              motivo: 'Chequeo general anual',
-              observaciones: 'Exámenes de laboratorio normales.',
-            },
-            {
-              id: 'h-3',
-              fecha: '2026-08-10',
-              hora: '09:00',
-              pacienteNombre: 'Juan Pablo Martínez',
-              pacienteDni: '1012345678',
-              profesionalNombre: 'Dr. Roberto Mendoza',
-              especialidad: 'Odontología',
-              estado: 'Cancelado',
-              motivo: 'Limpieza Dental',
-              observaciones: 'Cancelado por reprogramación laboral.',
-            },
-            {
-              id: 'h-4',
-              fecha: '2026-08-09',
-              hora: '16:00',
-              pacienteNombre: 'María Fernanda Gómez',
-              pacienteDni: '1040506070',
-              profesionalNombre: 'Dr. Alejandro Silva',
-              especialidad: 'Cardiología',
-              estado: 'Atendido',
-              motivo: 'Electrocardiograma de control',
-              observaciones: 'Ritmo sinusal normal.',
-            },
-          ];
-        }
-
         setRecords(mapped);
       } catch (error) {
         console.warn('[Historial.tsx] Error al cargar historial desde la API:', error);

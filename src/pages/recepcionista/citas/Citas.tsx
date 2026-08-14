@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,8 +12,13 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import './Citas.css';
-import { getAppointmentsApi } from '../../../services/appointments.service';
+import {
+  cancelAppointmentApi,
+  getAppointmentsApi,
+  rescheduleAppointmentApi,
+} from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
+import { getHorariosByMedicoApi, getTiposCitaApi, type CatalogOption } from '../../../services/catalogs.service';
 import {
   findPatientByCedula,
   createAppointmentFromInput,
@@ -21,6 +26,7 @@ import {
 import type { Appointment } from '../../../types/appointment.types';
 import type { ProfessionalOption } from '../../../types/appointment.types';
 import type { Patient } from '../../../types/patient.types';
+import { useAuth } from '../../../context/AuthContext';
 
 interface CalendarEventBlock {
   id: string;
@@ -42,6 +48,7 @@ interface CitaHoy {
 }
 
 const RecepCitas: React.FC = () => {
+  const { user } = useAuth();
   // Navigation Pills
   const [viewPill, setViewPill] = useState<'Semana' | 'Dia'>('Semana');
   const [monday, _setMonday] = useState<Date>(() => {
@@ -54,6 +61,8 @@ const RecepCitas: React.FC = () => {
   // API States
   const [_appointments, setAppointments] = useState<Appointment[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
+  const [tiposCita, setTiposCita] = useState<CatalogOption[]>([]);
+  const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [citasHoyList, setCitasHoyList] = useState<CitaHoy[]>([]);
@@ -81,91 +90,20 @@ const RecepCitas: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3200);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [apps, profs] = await Promise.all([
-          getAppointmentsApi(),
-          getProfessionalsApi(),
-        ]);
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [apps, profs, tipos] = await Promise.all([
+        getAppointmentsApi(),
+        getProfessionalsApi(),
+        getTiposCitaApi(),
+      ]);
+      setAppointments(apps);
+      setProfessionals(profs);
+      setTiposCita(tipos);
+      const todayStr = new Date().toISOString().split('T')[0];
 
-        setAppointments(apps);
-        setProfessionals(profs);
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        let finalApps = Array.isArray(apps) && apps.length > 0 ? apps : [];
-        
-        // Ensure mock appointments exist for today so the user can test Reprogramar/Cancelar
-        const mockDefaultApps: any[] = [
-          {
-            id: 101,
-            patientId: 'p-101',
-            patientName: 'Carlos Eduardo Restrepo (CC 1020304050)',
-            patientAge: 42,
-            patientGender: 'M',
-            patientDoc: '1020304050',
-            patientPhone: '3001234567',
-            patientEmail: 'carlos@example.com',
-            patientAvatar: '',
-            professionalId: '1',
-            professionalName: 'Dr. Alejandro Silva',
-            professionalSpecialty: 'Cardiología',
-            serviceName: 'Consulta Cardiológica',
-            date: todayStr,
-            time: '09:00',
-            status: 'Agendada',
-            notes: 'Control hipertensión arterial',
-          },
-          {
-            id: 102,
-            patientId: 'p-102',
-            patientName: 'María Fernanda Gómez (CC 1098765432)',
-            patientAge: 35,
-            patientGender: 'F',
-            patientDoc: '1098765432',
-            patientPhone: '3109876543',
-            patientEmail: 'maria@example.com',
-            patientAvatar: '',
-            professionalId: '2',
-            professionalName: 'Dra. Elena Rostova',
-            professionalSpecialty: 'Medicina General',
-            serviceName: 'Consulta Medicina General',
-            date: todayStr,
-            time: '11:00',
-            status: 'Agendada',
-            notes: 'Revisión de exámen general',
-          },
-          {
-            id: 103,
-            patientId: 'p-103',
-            patientName: 'Juan Pablo Martínez (TI 1012345678)',
-            patientAge: 16,
-            patientGender: 'M',
-            patientDoc: '1012345678',
-            patientPhone: '3201234567',
-            patientEmail: 'juan@example.com',
-            patientAvatar: '',
-            professionalId: '3',
-            professionalName: 'Dr. Roberto Mendoza',
-            professionalSpecialty: 'Odontología',
-            serviceName: 'Limpieza Dental',
-            date: todayStr,
-            time: '14:00',
-            status: 'Agendada',
-            notes: 'Limpieza de rutina y profilaxis',
-          },
-        ];
-
-        // Merge mock apps if list is empty or doesn't have today's appointments
-        const todayAppsInApi = finalApps.filter(a => a.date === todayStr);
-        if (todayAppsInApi.length === 0) {
-          finalApps = [...mockDefaultApps, ...finalApps];
-        }
-
-        setAppointments(finalApps);
-
-        const hoyMapped = finalApps
+      const hoyMapped = apps
           .filter((a) => a.date === todayStr)
           .map((app) => {
             let estado: 'Agendada' | 'Atendida' | 'Cancelada' = 'Agendada';
@@ -182,10 +120,10 @@ const RecepCitas: React.FC = () => {
             };
           });
 
-        setCitasHoyList(hoyMapped);
+      setCitasHoyList(hoyMapped);
 
         // Map to agenda timetable blocks
-        const agendaMapped: CalendarEventBlock[] = finalApps.map((app) => {
+      const agendaMapped: CalendarEventBlock[] = apps.map((app) => {
           const d = new Date(app.date);
           const dayIndex = (d.getDay() + 6) % 7;
 
@@ -206,27 +144,32 @@ const RecepCitas: React.FC = () => {
           };
         });
 
-        setAgendaEvents(agendaMapped);
-
-        // Auto-select the first appointment so Reprogramar/Cancelar buttons are visible immediately!
-        if (hoyMapped.length > 0) {
-          const first = hoyMapped[0];
-          setSelectedCita(first);
-          setIsNuevaCitaOpen(true);
-          setCedulaQuery('');
-          setSelectedPatient(null);
-          setServicioSelect(first.servicio);
-          setHoraInput(first.hora);
-          setNotasInput(`Gestionando cita #${first.id}`);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+      setAgendaEvents(agendaMapped);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudieron cargar las citas.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (!profesionalSelect) {
+      setAvailableHours([]);
+      return;
+    }
+    void getHorariosByMedicoApi(profesionalSelect)
+      .then((horarios) => setAvailableHours(
+        horarios
+          .map((horario) => (horario as CatalogOption & { horaInicio?: string }).horaInicio ?? horario.nombre)
+          .map((hora) => hora.slice(0, 5))
+          .filter(Boolean),
+      ))
+      .catch((error) => showToast(error instanceof Error ? error.message : 'No se pudieron cargar los horarios.'));
+  }, [profesionalSelect]);
 
   const handleClearForm = () => {
     setSelectedCita(null);
@@ -258,7 +201,7 @@ const RecepCitas: React.FC = () => {
       showToast(`Paciente encontrado: ${patient.name}`);
     } catch (error) {
       console.error('[Citas.tsx] Error al buscar paciente:', error);
-      showToast('Error al buscar el paciente. Intente de nuevo.');
+      showToast(error instanceof Error ? error.message : 'Error al buscar el paciente. Intente de nuevo.');
     } finally {
       setIsSearchingPatient(false);
     }
@@ -286,34 +229,14 @@ const RecepCitas: React.FC = () => {
     const selectedProf = professionals.find((p) => p.id.toString() === profesionalSelect);
 
     if (selectedCita) {
-      // Reprogramming an existing appointment
-      setCitasHoyList((prev) =>
-        prev.map((c) =>
-          c.id === selectedCita.id
-            ? {
-                ...c,
-                hora: horaInput,
-                profesional: selectedProf?.name || c.profesional,
-                servicio: servicioSelect || c.servicio,
-                estado: 'Agendada',
-              }
-            : c
-        )
-      );
-      setAgendaEvents((prev) =>
-        prev.map((ev) =>
-          ev.id === selectedCita.id
-            ? {
-                ...ev,
-                hour: `${horaInput.split(':')[0].padStart(2, '0')}:00`,
-                horaLabel: horaInput,
-                servicio: servicioSelect || ev.servicio,
-              }
-            : ev
-        )
-      );
-      showToast(`Cita de ${selectedCita.paciente} reprogramada con éxito.`);
-      handleClearForm();
+      try {
+        await rescheduleAppointmentApi(selectedCita.id, fechaInput, horaInput, notasInput);
+        await loadData();
+        showToast(`Cita de ${selectedCita.paciente} reprogramada con éxito.`);
+        handleClearForm();
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'No se pudo reprogramar la cita.');
+      }
       return;
     }
 
@@ -328,10 +251,12 @@ const RecepCitas: React.FC = () => {
       professionalId: profesionalSelect,
       professionalName: selectedProf?.name || 'Médico no asignado',
       professionalSpecialty: selectedProf?.specialty || 'Medicina General',
-      serviceName: servicioSelect || 'Consulta Medicina General',
+      serviceId: servicioSelect,
+      serviceName: tiposCita.find((tipo) => tipo.id === servicioSelect)?.nombre,
       date: fechaInput || new Date().toISOString().split('T')[0],
       time: horaInput || '09:00',
       notes: notasInput,
+      usuarioCreacionId: user?.id ?? '',
     });
 
     if (!result.ok) {
@@ -339,46 +264,21 @@ const RecepCitas: React.FC = () => {
       return;
     }
 
-    const newId = String(result.appointment.id);
-    const patientLabel = selectedPatient.name;
-    const newHoy: CitaHoy = {
-      id: newId,
-      hora: horaInput,
-      paciente: patientLabel,
-      profesional: selectedProf?.name || 'Médico no asignado',
-      servicio: servicioSelect || 'Consulta Medicina General',
-      estado: 'Agendada',
-    };
-    setCitasHoyList((prev) => [newHoy, ...prev]);
-
-    const hourPart = horaInput.split(':')[0] || '09';
-    setAgendaEvents((prev) => [
-      {
-        id: newId,
-        dayIndex: (new Date().getDay() + 6) % 7,
-        hour: `${hourPart.padStart(2, '0')}:00`,
-        paciente: patientLabel,
-        servicio: servicioSelect || 'Consulta Medicina General',
-        horaLabel: horaInput,
-        color: 'teal',
-      },
-      ...prev,
-    ]);
-
+    await loadData();
     handleClearForm();
-    showToast(`Cita agendada para ${patientLabel} con éxito.`);
+    showToast(`Cita agendada para ${selectedPatient.name} con éxito.`);
   };
 
-  const handleCancelarCita = () => {
+  const handleCancelarCita = async () => {
     if (!selectedCita) return;
-    setCitasHoyList((prev) =>
-      prev.map((c) => (c.id === selectedCita.id ? { ...c, estado: 'Cancelada' } : c))
-    );
-    setAgendaEvents((prev) =>
-      prev.map((ev) => (ev.id === selectedCita.id ? { ...ev, color: 'red' } : ev))
-    );
-    showToast(`Cita de ${selectedCita.paciente} fue cancelada.`);
-    handleClearForm();
+    try {
+      await cancelAppointmentApi(selectedCita.id, 'Cancelada por recepción', user?.id);
+      await loadData();
+      showToast(`Cita de ${selectedCita.paciente} fue cancelada.`);
+      handleClearForm();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo cancelar la cita.');
+    }
   };
 
   const daysHeader = Array.from({ length: 7 }, (_, i) => {
@@ -663,9 +563,9 @@ const RecepCitas: React.FC = () => {
                       <option value="">
                         {profesionalSelect ? 'Seleccione servicio' : 'Seleccione primero el profesional'}
                       </option>
-                      <option value="Consulta Medicina General">Consulta Medicina General</option>
-                      <option value="Consulta Cardiológica">Consulta Cardiológica</option>
-                      <option value="Limpieza Dental">Limpieza Dental</option>
+                      {tiposCita.map((tipo) => (
+                        <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -683,12 +583,22 @@ const RecepCitas: React.FC = () => {
 
                     <div className="form-field-group">
                       <label className="field-label">Hora</label>
-                      <input
-                        type="time"
-                        className="field-input"
-                        value={horaInput}
-                        onChange={(e) => setHoraInput(e.target.value)}
-                      />
+                      {availableHours.length > 0 ? (
+                        <select
+                          className="field-select"
+                          value={horaInput}
+                          onChange={(e) => setHoraInput(e.target.value)}
+                        >
+                          {availableHours.map((hora) => <option key={hora} value={hora}>{hora}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type="time"
+                          className="field-input"
+                          value={horaInput}
+                          onChange={(e) => setHoraInput(e.target.value)}
+                        />
+                      )}
                     </div>
                   </div>
 

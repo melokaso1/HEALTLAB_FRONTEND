@@ -1,5 +1,6 @@
 import type { Patient, GenderType } from '../types/patient.types';
 import { apiFetch, type ApiError } from './api';
+import { getTiposDocumentoApi } from './catalogs.service';
 
 // ─── Tipos de respuesta del backend ───────────────────────────────────────
 /**
@@ -125,69 +126,19 @@ const mapBackendPatient = (raw: BackendPaciente & { name?: string; nombre?: stri
   };
 };
 
-// ─── LocalStorage Persistence Helper ────────────────────────────────────
-const LOCAL_PACIENTES_KEY = 'HEALTLAB_PERSISTENT_PACIENTES';
-
-const getStoredPatients = (): Patient[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_PACIENTES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Patient[];
-    // Descartar elementos sin nombre quemados del historial local
-    return parsed.filter((p) => p.name && p.name !== 'Paciente sin nombre');
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredPatient = (patient: Patient) => {
-  try {
-    if (!patient.name || patient.name === 'Paciente sin nombre') return;
-    const current = getStoredPatients();
-    const updated = [patient, ...current.filter((p) => String(p.id) !== String(patient.id))];
-    localStorage.setItem(LOCAL_PACIENTES_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Error al guardar paciente en localStorage', e);
-  }
-};
-
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getPatientsApi = async (): Promise<Patient[]> => {
-  let backendList: Patient[] = [];
-  try {
-    const data = await apiFetch<BackendPaciente[]>('/pacientes');
-    if (Array.isArray(data)) {
-      backendList = data.map(mapBackendPatient);
-    }
-  } catch (error) {
-    console.warn('[patients.service] Conexión API /pacientes:', error);
-  }
-
-  const localList = getStoredPatients();
-  const mergedMap = new Map<string, Patient>();
-
-  localList.forEach((p) => {
-    if (p.name !== 'Paciente sin nombre') mergedMap.set(String(p.id), p);
-  });
-  backendList.forEach((p) => {
-    if (p.name !== 'Paciente sin nombre' || !mergedMap.has(String(p.id))) {
-      const existing = mergedMap.get(String(p.id));
-      if (existing && p.name === 'Paciente sin nombre') return;
-      mergedMap.set(String(p.id), p);
-    }
-  });
-
-  return Array.from(mergedMap.values());
+  const data = await apiFetch<BackendPaciente[]>('/Pacientes');
+  return Array.isArray(data) ? data.map(mapBackendPatient) : [];
 };
 
 export const getPatientByIdApi = async (id: string): Promise<Patient | null> => {
   try {
-    const data = await apiFetch<BackendPaciente>(`/pacientes/${id}`);
+    const data = await apiFetch<BackendPaciente>(`/Pacientes/${id}`);
     return mapBackendPatient(data);
   } catch (error) {
-    console.warn(`[patients.service] Error en GET /pacientes/${id}:`, error);
-    const local = getStoredPatients().find((p) => String(p.id) === String(id));
-    return local || null;
+    if ((error as ApiError).status === 404) return null;
+    throw error;
   }
 };
 
@@ -206,14 +157,35 @@ export const getPatientByDocumentApi = async (
 
   try {
     const data = await apiFetch<BackendPaciente>(
-      `/pacientes/por-documento/${encodeURIComponent(doc)}`,
+      `/Pacientes/por-documento/${encodeURIComponent(doc)}`,
     );
     return mapBackendPatient(data);
   } catch (error) {
     const apiError = error as ApiError;
-    if (apiError.status === 404) {
-      return null;
-    }
+    if (apiError.status === 409) throw error;
+    if (apiError.status !== 404) throw error;
+
+    const tipos = await getTiposDocumentoApi();
+    const cc = tipos.find((tipo) =>
+      tipo.codigo?.toUpperCase() === 'CC' || tipo.nombre.toUpperCase() === 'CC' ||
+      tipo.nombre.toUpperCase().includes('CÉDULA'),
+    );
+    if (!cc) return null;
+    return searchPatientApi(cc.id, doc);
+  }
+};
+
+export const searchPatientApi = async (
+  tipoDocumentoId: string,
+  numeroDocumento: string,
+): Promise<Patient | null> => {
+  try {
+    const data = await apiFetch<BackendPaciente>(
+      `/Pacientes/buscar?tipoDocumento=${encodeURIComponent(tipoDocumentoId)}&numeroDocumento=${encodeURIComponent(numeroDocumento.trim())}`,
+    );
+    return mapBackendPatient(data);
+  } catch (error) {
+    if ((error as ApiError).status === 404) return null;
     throw error;
   }
 };
@@ -222,100 +194,41 @@ export const createPatientApi = async (
   patient: Partial<Patient> & { personaId?: string },
 ): Promise<Patient> => {
   const parts = (patient.name ?? '').trim().split(/\s+/);
-  const initials = buildInitials(parts[0] ?? 'Nuevo', parts[1] ?? 'Paciente');
-  const fallbackId = Date.now();
+  // 1. Obtener TipoDocumentoId real del backend
+  const tiposDoc = await getTiposDocumentoApi();
+  const tipoDoc = tiposDoc.find((tipo) =>
+    tipo.codigo?.toUpperCase() === (patient.documentType ?? 'CC').toUpperCase() ||
+    tipo.nombre.toUpperCase() === (patient.documentType ?? 'CC').toUpperCase(),
+  );
+  if (!tipoDoc) throw new Error('No se encontró el tipo de documento seleccionado.');
 
-  const localPatient: Patient = {
-    id: fallbackId,
-    name: patient.name ?? 'Nuevo Paciente',
-    gender: patient.gender ?? 'Femenino',
-    age: Number(patient.age) || 30,
-    documentType: patient.documentType ?? 'CC',
-    documentNumber: patient.documentNumber ?? String(Date.now()),
-    contact: {
-      phone: patient.contact?.phone ?? '+57 300 000 0000',
-      email: patient.contact?.email ?? '',
-      address: patient.contact?.address ?? 'Dirección no registrada',
-    },
-    lastVisitDate: 'Hoy',
-    lastVisitSpecialty: 'Medicina General',
-    specialtyBadgeColor: 'green',
-    status: 'active',
-    initials,
-    avatarBg: '#0A9396',
-    medicalData: {
-      bloodType: patient.medicalData?.bloodType ?? 'O+',
-      allergies: patient.medicalData?.allergies ?? ['Ninguna'],
-    },
-    recentActivity: [],
-    history: [],
-    notes: [],
-  };
-
-  try {
-    // 1. Obtener TipoDocumentoId real del backend
-    let tipoDocId = '';
-    try {
-      const tiposDoc = await apiFetch<Array<{ id: string }>>('/TiposDocumento');
-      if (Array.isArray(tiposDoc) && tiposDoc[0]) tipoDocId = tiposDoc[0].id;
-    } catch (err) {
-      console.warn('[patients.service] Error consultando TiposDocumento:', err);
-    }
-
-    // 2. Crear Persona en /Personas si no existe
-    let personaId = patient.personaId && patient.personaId.length === 36 ? patient.personaId : '';
-    if (!personaId && tipoDocId) {
-      try {
-        const personaRes = await apiFetch<{ id: string }>('/Personas', {
-          method: 'POST',
-          body: JSON.stringify({
-            nombre: parts[0] ?? 'Nuevo',
-            apellido: parts.slice(1).join(' ') || 'Paciente',
-            tipoDocumentoId: tipoDocId,
-            numeroDocumento: patient.documentNumber || String(Date.now()),
-          }),
-        });
-        if (personaRes?.id) personaId = personaRes.id;
-      } catch (err) {
-        console.warn('[patients.service] Error al crear Persona para Paciente:', err);
-      }
-    }
-
-    // 3. Crear Paciente en /Pacientes
-    if (personaId) {
-      const raw = await apiFetch<BackendPaciente>('/Pacientes', {
-        method: 'POST',
-        body: JSON.stringify({
-          personaId,
-          activo: patient.status !== 'inactive',
-        }),
-      });
-      const createdBackend = mapBackendPatient(raw);
-      const result: Patient = {
-        ...localPatient,
-        ...createdBackend,
-        id: createdBackend.id || fallbackId,
-        name: (createdBackend.name !== 'Paciente sin nombre' ? createdBackend.name : localPatient.name) || 'Paciente Registrado',
-        documentNumber: createdBackend.documentNumber || localPatient.documentNumber,
-        gender: createdBackend.gender !== 'Otro' ? createdBackend.gender : localPatient.gender,
-        age: createdBackend.age || localPatient.age,
-        contact: {
-          phone: createdBackend.contact?.phone || localPatient.contact?.phone || '',
-          email: createdBackend.contact?.email || localPatient.contact?.email || '',
-          address: createdBackend.contact?.address || localPatient.contact?.address || '',
-        },
-      };
-      saveStoredPatient(result);
-      return result;
-    }
-
-    saveStoredPatient(localPatient);
-    return localPatient;
-  } catch (error) {
-    console.warn('[patients.service] Error en flujo de creación de pacientes:', error);
-    saveStoredPatient(localPatient);
-    return localPatient;
+  // 2. Crear Persona en /Personas si no existe
+  let personaId = patient.personaId && patient.personaId.length === 36 ? patient.personaId : '';
+  if (!personaId) {
+    const personaRes = await apiFetch<{ id: string }>('/Personas', {
+      method: 'POST',
+      body: JSON.stringify({
+        nombre: parts[0] ?? 'Nuevo',
+        apellido: parts.slice(1).join(' ') || 'Paciente',
+        tipoDocumentoId: tipoDoc.id,
+        numeroDocumento: patient.documentNumber,
+        telefonos: patient.contact?.phone
+          ? [{ numero: patient.contact.phone, principal: true }]
+          : [],
+        direcciones: patient.contact?.address
+          ? [{ descripcion: patient.contact.address, principal: true }]
+          : [],
+      }),
+    });
+    personaId = personaRes.id;
   }
+
+  // 3. Crear Paciente en /Pacientes
+  const raw = await apiFetch<BackendPaciente>('/Pacientes', {
+    method: 'POST',
+    body: JSON.stringify({ personaId, activo: patient.status !== 'inactive' }),
+  });
+  return mapBackendPatient(raw);
 };
 
 export const updatePatientApi = async (
@@ -323,14 +236,13 @@ export const updatePatientApi = async (
   patient: Partial<Patient>,
 ): Promise<Partial<Patient>> => {
   try {
-    await apiFetch<void>(`/pacientes/${id}`, {
+    await apiFetch<void>(`/Pacientes/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ activo: patient.status !== 'inactive' }),
     });
     return patient;
   } catch (error) {
-    console.warn(`[patients.service] Error en PUT /pacientes/${id}:`, error);
-    return patient;
+    throw error;
   }
 };
 
@@ -340,14 +252,13 @@ export const togglePatientStatusApi = async (
 ): Promise<'active' | 'inactive'> => {
   const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
   try {
-    await apiFetch(`/pacientes/${id}`, {
+    await apiFetch(`/Pacientes/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ activo: newStatus === 'active' }),
     });
     return newStatus;
   } catch (error) {
-    console.warn(`[patients.service] Error cambiando estado del paciente ${id}:`, error);
-    return newStatus;
+    throw error;
   }
 };
 

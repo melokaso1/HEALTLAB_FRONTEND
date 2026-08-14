@@ -43,6 +43,8 @@ const RecepInicio: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const waitingCount = citasList.filter((cita) => cita.estado === 'Esperando').length;
+  const cancelledCount = citasList.filter((cita) => cita.estado === 'Cancelada').length;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -164,7 +166,7 @@ const RecepInicio: React.FC = () => {
               <span className="recep-stat-number">{citasList.length}</span>
               <span className="recep-stat-badge success">
                 <TrendingUp size={12} />
-                +4 de ayer
+                Agenda actual
               </span>
             </div>
           </div>
@@ -178,7 +180,7 @@ const RecepInicio: React.FC = () => {
           <div className="recep-stat-info">
             <span className="recep-stat-label">Pacientes en Espera</span>
             <div className="recep-stat-number-group">
-              <span className="recep-stat-number">5</span>
+              <span className="recep-stat-number">{waitingCount}</span>
             </div>
             <span className="recep-stat-subtext">T. Promedio: 12 min</span>
           </div>
@@ -192,7 +194,7 @@ const RecepInicio: React.FC = () => {
           <div className="recep-stat-info">
             <span className="recep-stat-label">Cancelaciones</span>
             <div className="recep-stat-number-group">
-              <span className="recep-stat-number">2</span>
+              <span className="recep-stat-number">{cancelledCount}</span>
             </div>
             <span className="recep-stat-subtext danger">Revisar agenda</span>
           </div>
