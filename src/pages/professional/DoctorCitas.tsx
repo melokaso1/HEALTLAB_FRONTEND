@@ -568,10 +568,10 @@ const DoctorCitas: React.FC = () => {
               <div className="doc-empty-icon-bg">
                 <User size={28} />
               </div>
-              <h3 style={{ margin: '8px 0 4px 0', fontSize: '16px', color: '#0F172A' }}>
+              <h3 className="doc-empty-title">
                 Seleccione un paciente de la lista de horas
               </h3>
-              <p style={{ margin: 0, fontSize: '13px' }}>
+              <p className="doc-empty-subtitle">
                 Haga clic en una cita de la tabla de la izquierda para cargar la ficha de atención clínica.
               </p>
             </div>
