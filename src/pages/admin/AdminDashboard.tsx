@@ -120,18 +120,17 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="admin-dashboard">
-      <div className="admin-dashboard__grid">
+      {/* Header */}
+      <div className="admin-dashboard__header-row">
+        <div className="admin-dashboard__title-group">
+          <h1 className="admin-dashboard__title">Inicio</h1>
+          <p className="admin-dashboard__subtitle">{todayLabel()}</p>
+        </div>
+      </div>
 
+      <div className="admin-dashboard__grid">
         {/* ── Left Section ─────────────────────────────────────────────── */}
         <div className="admin-dashboard__left-col">
-
-          {/* Header */}
-          <div className="admin-dashboard__header-row">
-            <div className="admin-dashboard__title-group">
-              <h1 className="admin-dashboard__title">Inicio</h1>
-              <p className="admin-dashboard__subtitle">{todayLabel()}</p>
-            </div>
-          </div>
 
           {/* KPI Cards */}
           <div className="admin-dashboard__kpi-row">

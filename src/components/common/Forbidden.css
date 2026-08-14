@@ -1,0 +1,165 @@
+.forbidden-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100vh - 180px);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.forbidden-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+  padding: 40px 32px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.forbidden-card__image-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.forbidden-card__img {
+  max-width: 260px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.2));
+  animation: pulseFloat 3s ease-in-out infinite;
+}
+
+@keyframes pulseFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+.forbidden-card__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.forbidden-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.forbidden-card__title {
+  font-size: 42px;
+  font-weight: 800;
+  color: #EF4444;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.forbidden-card__subtitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.forbidden-card__description {
+  font-size: 14.5px;
+  color: #64748B;
+  margin: 8px 0 24px 0;
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+.forbidden-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.forbidden-card__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.forbidden-card__btn--primary {
+  background: #00A896;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 168, 150, 0.25);
+}
+
+.forbidden-card__btn--primary:hover {
+  background: #008f80;
+  transform: translateY(-1px);
+}
+
+.forbidden-card__btn--secondary {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.forbidden-card__btn--secondary:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+/* Dark mode adjustments */
+.dark-mode .forbidden-card {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+.dark-mode .forbidden-card__subtitle {
+  color: #F8FAFC;
+}
+
+.dark-mode .forbidden-card__description {
+  color: #94A3B8;
+}
+
+.dark-mode .forbidden-card__btn--secondary {
+  background: #334155;
+  color: #E2E8F0;
+  border-color: #475569;
+}
+
+.dark-mode .forbidden-card__btn--secondary:hover {
+  background: #475569;
+  color: #FFFFFF;
+}

@@ -26,6 +26,7 @@ import DoctorCitas from '../pages/professional/DoctorCitas';
 import ProfessionalHistory from '../pages/professional/ProfessionalHistory';
 
 import NotFound from '../components/common/NotFound';
+import Forbidden from '../components/common/Forbidden';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
@@ -45,7 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
       (r) => r.toLowerCase() === userRole || (r === 'profesional' && userRole === 'professional')
     );
     if (!hasPermission) {
-      return <Navigate to="/inicio" replace />;
+      return <Navigate to="/403" replace />;
     }
   }
 
@@ -173,6 +174,9 @@ const DashboardContainer: React.FC = () => {
           path="estadisticas"
           element={isReceptionist ? <Navigate to="/inicio" replace /> : <AdminReportes />}
         />
+
+        <Route path="403" element={<Forbidden />} />
+        <Route path="forbidden" element={<Forbidden />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
