@@ -19,11 +19,13 @@ import {
   getRoleLabel,
   getUsersApi,
   createUserApi,
-  updateUserApi,
+  changeUserRoleApi,
+  getRoleIdForType,
   toggleUserStatusApi,
   canDeactivateOrDemoteAdmin,
 } from '../../../services/users.service';
 import { getPermisosApi, getRolPermisosByRolIdApi } from '../../../services/permissions.service';
+import { createProfessionalApi } from '../../../services/professionals.service';
 import CustomSelect from '../../../components/common/CustomSelect';
 import './UsersManagement.css';
 
@@ -156,7 +158,9 @@ const UsersManagement: React.FC = () => {
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserDocument, setNewUserDocument] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRoleType>('professional');
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false);
 
   // Edit role form state
   const [editTargetUser, setEditTargetUser] = useState<ManagedUser | null>(null);
@@ -242,9 +246,9 @@ const UsersManagement: React.FC = () => {
     setIsEditRoleModalOpen(true);
   };
 
-  const handleSaveRole = (e: React.FormEvent) => {
+  const handleSaveRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editTargetUser) return;
+    if (!editTargetUser || isSubmittingUser) return;
 
     if (editTargetUser.role === 'admin' && targetRole !== 'admin') {
       const guard = canDeactivateOrDemoteAdmin(users, editTargetUser);
@@ -254,20 +258,27 @@ const UsersManagement: React.FC = () => {
       }
     }
 
-    // Note: role change requires rolId (Guid). Updating local state only until rolId is available.
-    updateUserApi(editTargetUser.id, {});
-
-    setUsers((prev) =>
-      prev.map((u) => (u.id === editTargetUser.id ? { ...u, role: targetRole } : u))
-    );
-    setIsEditRoleModalOpen(false);
-    showToast(`Rol de ${editTargetUser.name} actualizado a ${getRoleLabel(targetRole)}`);
+    try {
+      setIsSubmittingUser(true);
+      const rolId = await getRoleIdForType(targetRole);
+      await changeUserRoleApi(editTargetUser.id, targetRole, rolId);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editTargetUser.id ? { ...u, role: targetRole } : u))
+      );
+      setIsEditRoleModalOpen(false);
+      showToast(`Rol de ${editTargetUser.name} actualizado a ${getRoleLabel(targetRole)}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo actualizar el rol.');
+    } finally {
+      setIsSubmittingUser(false);
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) {
-      showToast('Por favor completa el nombre, correo y contraseña');
+    if (isSubmittingUser) return;
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || !newUserDocument.trim()) {
+      showToast('Por favor completa el nombre, documento, correo y contraseña');
       return;
     }
 
@@ -284,14 +295,40 @@ const UsersManagement: React.FC = () => {
       .toUpperCase();
 
     try {
+      setIsSubmittingUser(true);
       const created = await createUserApi({
         username: newUserName,
         email: newUserEmail,
         password: newUserPassword,
+        numeroDocumento: newUserDocument,
         empleadoId: '',
         rolId: '',
         roleType: newUserRole,
       });
+
+      // Si el rol creado es Médico/Profesional, se registra automáticamente en el directorio de profesionales de la agenda
+      if (
+        (newUserRole as string) === 'professional' ||
+        (newUserRole as string) === 'Médico' ||
+        (newUserRole as string) === 'Doctor'
+      ) {
+        try {
+          const nameClean = newUserName.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '').trim();
+          const parts = nameClean.split(' ');
+          const nombre = parts[0] || nameClean;
+          const apellido = parts.slice(1).join(' ') || '';
+
+          await createProfessionalApi({
+            nombre,
+            apellido,
+            especialidad: 'Medicina General',
+            registroProfesional: `REG-${Date.now().toString().slice(-6)}`,
+            consultorio: 'Consultorio Principal',
+          });
+        } catch (profErr) {
+          console.warn('[UsersManagement] Registro de profesional en agenda:', profErr);
+        }
+      }
 
       const newUser: ManagedUser = {
         ...created,
@@ -306,11 +343,14 @@ const UsersManagement: React.FC = () => {
       setNewUserName('');
       setNewUserEmail('');
       setNewUserPassword('');
+      setNewUserDocument('');
       setIsCreateModalOpen(false);
       showToast(`Usuario ${newUser.name} creado exitosamente`);
     } catch (error: any) {
       console.error('[UsersManagement] Error al crear usuario:', error);
       showToast(error.message || 'Error al registrar usuario en el servidor.');
+    } finally {
+      setIsSubmittingUser(false);
     }
   };
 
@@ -780,6 +820,18 @@ const UsersManagement: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Documento</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Documento de identidad"
+                    value={newUserDocument}
+                    onChange={(e) => setNewUserDocument(e.target.value)}
+                    required
+                    maxLength={30}
+                  />
+                </div>
+                <div className="form-group">
                   <label className="form-label">Correo Electrónico</label>
                   <input
                     type="email"
@@ -824,8 +876,8 @@ const UsersManagement: React.FC = () => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  Guardar Usuario
+                <button type="submit" className="btn-primary" disabled={isSubmittingUser}>
+                  {isSubmittingUser ? 'Guardando...' : 'Guardar Usuario'}
                 </button>
               </div>
             </form>
@@ -874,8 +926,8 @@ const UsersManagement: React.FC = () => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  Actualizar Rol
+                <button type="submit" className="btn-primary" disabled={isSubmittingUser}>
+                  {isSubmittingUser ? 'Actualizando...' : 'Actualizar Rol'}
                 </button>
               </div>
             </form>

@@ -15,7 +15,7 @@ interface HistorialRecord {
   pacienteDni: string;
   profesionalNombre: string;
   especialidad: string;
-  estado: 'Atendido' | 'Cancelado' | 'No asistió';
+  estado: 'Agendada' | 'Atendida' | 'Cancelada' | 'No asistió';
   motivo: string;
   observaciones?: string;
 }
@@ -65,8 +65,9 @@ const RecepHistorial: React.FC = () => {
         let mapped: HistorialRecord[] = [];
         if (Array.isArray(appsData) && appsData.length > 0) {
           mapped = appsData.map((app: Appointment) => {
-            let estadoMapped: 'Atendido' | 'Cancelado' | 'No asistió' = 'Atendido';
-            if (app.status === 'Cancelada') estadoMapped = 'Cancelado';
+            let estadoMapped: HistorialRecord['estado'] = 'Agendada';
+            if (app.status === 'Atendida') estadoMapped = 'Atendida';
+            else if (app.status === 'Cancelada') estadoMapped = 'Cancelada';
             else if (app.status === 'No asistió') estadoMapped = 'No asistió';
 
             return {
@@ -265,8 +266,9 @@ const RecepHistorial: React.FC = () => {
                 onChange={(e) => setEstadoFilter(e.target.value)}
               >
                 <option value="Todos">Todos</option>
-                <option value="Atendido">Atendido</option>
-                <option value="Cancelado">Cancelado</option>
+                <option value="Atendida">Atendida</option>
+                <option value="Agendada">Agendada</option>
+                <option value="Cancelada">Cancelada</option>
                 <option value="No asistió">No asistió</option>
               </select>
             </div>
@@ -331,9 +333,9 @@ const RecepHistorial: React.FC = () => {
                     <td>
                       <span
                         className={`historial-status-badge ${
-                          rec.estado === 'Atendido'
+                          rec.estado === 'Atendida'
                             ? 'atendido'
-                            : rec.estado === 'Cancelado'
+                            : rec.estado === 'Cancelada'
                             ? 'cancelado'
                             : 'no-asistio'
                         }`}
@@ -425,9 +427,9 @@ const RecepHistorial: React.FC = () => {
                   <div>
                     <span
                       className={`historial-status-badge ${
-                        selectedRecord.estado === 'Atendido'
+                        selectedRecord.estado === 'Atendida'
                           ? 'atendido'
-                          : selectedRecord.estado === 'Cancelado'
+                          : selectedRecord.estado === 'Cancelada'
                           ? 'cancelado'
                           : 'no-asistio'
                       }`}

@@ -19,7 +19,7 @@ export interface MedicalAppointment {
   fecha: string; // '2026-08-12'
   horaInicio: string; // '08:00'
   horaFin: string; // '09:00'
-  estado: 'Confirmada' | 'Atendida' | 'Pendiente' | 'Cancelada';
+  estado: 'Confirmada' | 'Atendida' | 'Pendiente' | 'Cancelada' | 'No asistió';
   consultorio?: string;
 }
 
@@ -36,6 +36,7 @@ export interface Professional {
   citasHoy: number;
   disponibleHoy: boolean;
   foto: string;
+  numeroDocumento?: string;
   telefono?: string;
   email?: string;
   disponibilidad: ScheduleSlot[];

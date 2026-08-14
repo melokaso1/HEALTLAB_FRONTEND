@@ -29,8 +29,8 @@ interface PatientRecord {
 
 const isValidDocument = (type: string, value: string): boolean =>
   type === 'PAS'
-    ? /^[a-z0-9]+$/i.test(value) && value.length <= 20
-    : /^\d{6,12}$/.test(value);
+    ? /^[a-z0-9]+$/i.test(value) && value.length <= 30
+    : /^\d{6,30}$/.test(value);
 
 const RecepPacientes: React.FC = () => {
   const [patients, setPatients] = useState<PatientRecord[]>([]);
@@ -78,6 +78,7 @@ const RecepPacientes: React.FC = () => {
 
   // Modal States
   const [isNewPatientOpen, setIsNewPatientOpen] = useState(false);
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -121,13 +122,15 @@ const RecepPacientes: React.FC = () => {
     alergias?: string;
     fechaNacimiento?: string;
   }) => {
+    if (isCreatingPatient) return;
     if (!isValidDocument(newPatientDocType, newP.documento)) {
       showToast(newPatientDocType === 'PAS'
-        ? 'El pasaporte debe ser alfanumérico y tener máximo 20 caracteres.'
-        : 'CC, TI y CE deben contener entre 6 y 12 dígitos.');
+        ? 'El pasaporte debe ser alfanumérico y tener máximo 30 caracteres.'
+        : 'CC, TI y CE deben contener entre 6 y 30 dígitos.');
       return;
     }
     try {
+      setIsCreatingPatient(true);
       const created = await createPatientApi({
         name: newP.nombre,
         gender: newP.genero === 'F' ? 'Femenino' : 'Masculino',
@@ -181,6 +184,8 @@ const RecepPacientes: React.FC = () => {
     } catch (error) {
       console.error('[Pacientes.tsx] Error al crear paciente:', error);
       showToast('Error al registrar el paciente en la API');
+    } finally {
+      setIsCreatingPatient(false);
     }
   };
 
@@ -416,20 +421,20 @@ const RecepPacientes: React.FC = () => {
 
       {/* Modal 1: Nuevo Paciente */}
       {isNewPatientOpen && (
-        <div className="modal-overlay" onClick={() => setIsNewPatientOpen(false)}>
+        <div className="modal-overlay" onClick={() => !isCreatingPatient && setIsNewPatientOpen(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 <UserCheck size={18} color="#00A896" />
                 Registrar Nuevo Paciente
               </h3>
-              <button className="btn-icon" type="button" onClick={() => setIsNewPatientOpen(false)}>
+              <button className="btn-icon" type="button" onClick={() => setIsNewPatientOpen(false)} disabled={isCreatingPatient}>
                 <X size={16} />
               </button>
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
                 const docNum = (form.elements.namedItem('documento') as HTMLInputElement).value;
@@ -453,7 +458,7 @@ const RecepPacientes: React.FC = () => {
                   calculatedEdad = Math.max(0, age);
                 }
 
-                handleCreatePatient({
+                await handleCreatePatient({
                   documento: docNum,
                   nombre: nom,
                   genero: gen,
@@ -501,11 +506,11 @@ const RecepPacientes: React.FC = () => {
                         required
                         placeholder="Número de documento..."
                         inputMode={newPatientDocType === 'PAS' ? 'text' : 'numeric'}
-                        maxLength={newPatientDocType === 'PAS' ? 20 : 12}
+                        maxLength={30}
                         onChange={(e) => {
                           e.target.value = newPatientDocType === 'PAS'
-                            ? e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 20)
-                            : e.target.value.replace(/\D/g, '').slice(0, 12);
+                            ? e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 30)
+                            : e.target.value.replace(/\D/g, '').slice(0, 30);
                         }}
                       />
                     </div>
@@ -606,12 +611,13 @@ const RecepPacientes: React.FC = () => {
                   type="button"
                   className="btn-recep-outline"
                   onClick={() => setIsNewPatientOpen(false)}
+                  disabled={isCreatingPatient}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-nuevo-paciente">
+                <button type="submit" className="btn-nuevo-paciente" disabled={isCreatingPatient}>
                   <Check size={16} />
-                  Guardar Paciente
+                  {isCreatingPatient ? 'Guardando…' : 'Guardar Paciente'}
                 </button>
               </div>
             </form>

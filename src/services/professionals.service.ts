@@ -78,61 +78,12 @@ const mapBackendMedico = (
   };
 };
 
-// ─── LocalStorage Persistence Helper ────────────────────────────────────
-const LOCAL_MEDICOS_KEY = 'HEALTLAB_PERSISTENT_MEDICOS';
-
-const getStoredMedicos = (): ProfessionalOption[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_MEDICOS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as ProfessionalOption[];
-    // Filtrar entradas genericas quemadas del historial de navegacion local
-    return parsed.filter(
-      (m) =>
-        m.name &&
-        !m.name.includes('Dr. Médico') &&
-        !m.name.includes('Dr. medico') &&
-        !m.name.includes('Nuevo Médico')
-    );
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredMedico = (prof: ProfessionalOption) => {
-  try {
-    if (prof.name.includes('Dr. Médico') || prof.name.includes('Nuevo Médico')) return;
-    const current = getStoredMedicos();
-    const updated = [prof, ...current.filter((p) => String(p.id) !== String(prof.id))];
-    localStorage.setItem(LOCAL_MEDICOS_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Error al guardar médico en localStorage', e);
-  }
-};
-
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getProfessionalsApi = async (): Promise<ProfessionalOption[]> => {
-  let backendList: ProfessionalOption[] = [];
-  try {
-    const data = await apiFetch<BackendMedico[]>('/Medicos');
-    if (Array.isArray(data)) {
-      backendList = data.filter((m) => m.activo).map(mapBackendMedico);
-    }
-  } catch (error) {
-    console.warn('[professionals.service] Conexión API /medicos:', error);
-  }
-
-  const localList = getStoredMedicos();
-  const mergedMap = new Map<string, ProfessionalOption>();
-
-  localList.forEach((m) => {
-    if (!m.name.includes('Dr. Médico')) mergedMap.set(String(m.id), m);
-  });
-  backendList.forEach((m) => {
-    if (!m.name.includes('Dr. Médico')) mergedMap.set(String(m.id), m);
-  });
-
-  return Array.from(mergedMap.values());
+  const data = await apiFetch<BackendMedico[]>('/Medicos');
+  return Array.isArray(data)
+    ? data.filter((medico) => medico.activo).map(mapBackendMedico)
+    : [];
 };
 
 export const getProfessionalById = async (id: string): Promise<ProfessionalOption | null> => {
@@ -141,8 +92,8 @@ export const getProfessionalById = async (id: string): Promise<ProfessionalOptio
     return mapBackendMedico(raw);
   } catch (error) {
     console.warn(`[professionals.service] Error en GET /medicos/${id}:`, error);
-    const local = getStoredMedicos().find((m) => String(m.id) === String(id));
-    return local || null;
+    if ((error as { status?: number }).status === 404) return null;
+    throw error;
   }
 };
 
@@ -180,6 +131,8 @@ export const resolveMedicoIdForUser = async (user: Record<string, unknown> | nul
 export interface CreateProfessionalPayload {
   nombre: string;
   apellido: string;
+  numeroDocumento: string;
+  tipoDocumento?: string;
   especialidad?: string;
   registroProfesional?: string;
   consultorio?: string;
@@ -191,52 +144,46 @@ export const createProfessionalApi = async (
   const p = payload as Record<string, string>;
   const nameInput = String(p.nombre ? `${p.nombre} ${p.apellido || ''}`.trim() : (p.name || 'Nuevo Médico'));
   if (!nameInput.trim()) throw new Error('El nombre del profesional es requerido.');
+  const numeroDocumento = String(p.numeroDocumento || '').trim();
+  if (!numeroDocumento || numeroDocumento.length > 30) {
+    throw new Error('El documento del profesional es requerido y debe tener máximo 30 caracteres.');
+  }
 
-  // 1. Consultar catálogos requeridos por el backend.
-  const [tiposDoc, cargos] = await Promise.all([
-    apiFetch<Array<{ id: string }>>('/TiposDocumento'),
+  // The transactional endpoint creates Persona, Empleado, and Médico together.
+  const [tiposDoc, cargos, especialidades] = await Promise.all([
+    apiFetch<Array<{ id: string; codigo?: string; nombre?: string }>>('/TiposDocumento'),
     apiFetch<Array<{ id: string; codigo?: string }>>('/Cargos'),
+    apiFetch<Array<{ id: string; nombre?: string }>>('/Especialidades'),
   ]);
-  const tipoDocId = Array.isArray(tiposDoc) ? tiposDoc[0]?.id : '';
+  const tipoDoc = Array.isArray(tiposDoc)
+    ? tiposDoc.find((tipo) => tipo.codigo?.toUpperCase() === (p.tipoDocumento || 'CC').toUpperCase()) || tiposDoc[0]
+    : undefined;
   const medCargo = Array.isArray(cargos)
     ? cargos.find((cargo) => cargo.codigo === 'MED') || cargos[0]
     : undefined;
-  if (!tipoDocId || !medCargo?.id) {
+  const especialidad = Array.isArray(especialidades)
+    ? especialidades.find((item) => item.nombre?.trim().toLowerCase() === p.especialidad?.trim().toLowerCase()) || especialidades[0]
+    : undefined;
+  if (!tipoDoc?.id || !medCargo?.id || !especialidad?.id) {
     throw new Error('No se encontraron los catálogos requeridos para registrar el profesional.');
   }
 
-  // 2. Crear Persona, 3. Empleado y 4. Médico. Cualquier fallo se propaga.
-  const personaRes = await apiFetch<{ id: string }>('/Personas', {
+  const raw = await apiFetch<BackendMedico>('/Medicos/completo', {
     method: 'POST',
     body: JSON.stringify({
-      nombre: p.nombre || 'Nuevo',
-      apellido: p.apellido || 'Médico',
-      tipoDocumentoId: tipoDocId,
-      numeroDocumento: String(Date.now()),
-    }),
-  });
-  if (!personaRes?.id) throw new Error('El servidor no devolvió la persona creada.');
-
-  const empRes = await apiFetch<{ id: string }>('/Empleados', {
-    method: 'POST',
-    body: JSON.stringify({
-      personaId: personaRes.id,
+      persona: {
+        nombre: p.nombre || 'Nuevo',
+        apellido: p.apellido || 'Médico',
+        tipoDocumentoId: tipoDoc.id,
+        numeroDocumento,
+      },
       cargoId: medCargo.id,
-      fechaIngreso: new Date().toISOString().split('T')[0],
-      activo: true,
-    }),
-  });
-  if (!empRes?.id) throw new Error('El servidor no devolvió el empleado creado.');
-
-  const raw = await apiFetch<BackendMedico>('/Medicos', {
-    method: 'POST',
-    body: JSON.stringify({
-      empleadoId: empRes.id,
-      registroProfesional: p.registroProfesional || `REG-${Date.now().toString().slice(-6)}`,
+      fechaIngreso: new Date().toLocaleDateString('en-CA'),
+      registroProfesional: p.registroProfesional || '',
+      especialidadId: especialidad.id,
       activo: true,
     }),
   });
   const createdBackend = mapBackendMedico(raw);
-  saveStoredMedico(createdBackend);
   return createdBackend;
 };

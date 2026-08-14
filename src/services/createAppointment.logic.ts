@@ -7,12 +7,15 @@ import { getPatientByDocumentApi } from './patients.service';
  * Busca paciente por cédula. Documento vacío → null.
  * Delega en getPatientByDocumentApi (404 → null; otros errores se propagan).
  */
-export async function findPatientByCedula(cedula: string): Promise<Patient | null> {
+export async function findPatientByCedula(
+  cedula: string,
+  documentType: Patient['documentType'] = 'CC',
+): Promise<Patient | null> {
   const doc = cedula.trim();
   if (!doc) {
     return null;
   }
-  return getPatientByDocumentApi(doc);
+  return getPatientByDocumentApi(doc, documentType);
 }
 
 export interface CreateAppointmentInput {
@@ -34,6 +37,10 @@ export type CreateAppointmentResult =
   | { ok: false; error: string; appointment?: undefined };
 
 const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
+const isValidGuid = (value: string | number | undefined): boolean =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) &&
+  value !== EMPTY_GUID;
 
 /**
  * Valida input y crea la cita vía createAppointmentApi con pacienteId real.
@@ -42,17 +49,17 @@ export async function createAppointmentFromInput(
   input: CreateAppointmentInput,
 ): Promise<CreateAppointmentResult> {
   const patientId = String(input.patientId ?? '').trim();
-  if (!patientId || patientId === EMPTY_GUID) {
+  if (!isValidGuid(patientId)) {
     return { ok: false, error: 'El paciente es requerido. Busque por cédula antes de agendar.' };
   }
-  if (!String(input.professionalId ?? '').trim()) {
-    return { ok: false, error: 'El profesional es requerido.' };
+  if (!isValidGuid(input.professionalId)) {
+    return { ok: false, error: 'El profesional seleccionado no es válido.' };
   }
-  if (!String(input.serviceId ?? '').trim()) {
-    return { ok: false, error: 'El tipo de cita es requerido.' };
+  if (!isValidGuid(input.serviceId)) {
+    return { ok: false, error: 'Seleccione un tipo de cita válido.' };
   }
-  if (!String(input.usuarioCreacionId ?? '').trim()) {
-    return { ok: false, error: 'No se encontró el usuario de la sesión.' };
+  if (!isValidGuid(input.usuarioCreacionId)) {
+    return { ok: false, error: 'No se encontró el usuario de la sesión para crear la cita.' };
   }
   if (!String(input.date ?? '').trim()) {
     return { ok: false, error: 'La fecha es requerida.' };

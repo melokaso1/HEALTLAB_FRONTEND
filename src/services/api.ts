@@ -1,3 +1,5 @@
+import { BACKEND_ROLE_MAP, type UserRole } from '../types/auth';
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5077/api';
 const AUTH_STORAGE_KEYS = ['token', 'refreshToken', 'user', 'sesionId'] as const;
 
@@ -57,7 +59,7 @@ export async function apiFetch<T = unknown>(
             id: refreshed.usuarioId,
             name: refreshed.username,
             email: refreshed.email,
-            role: refreshed.rolNombre,
+            role: (BACKEND_ROLE_MAP[refreshed.rolNombre] as UserRole | undefined) ?? 'receptionist',
             sesionId: refreshed.sesionId,
             debeCambiarPassword: refreshed.debeCambiarPassword,
           }));

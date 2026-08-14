@@ -47,7 +47,7 @@ interface BackendCita {
   estadoCitaId: string;
   tipoCitaId: string;
   fecha: string;            // DateOnly → "YYYY-MM-DD"
-  horaInicio: string;       // TimeOnly → "HH:mm:ss"
+  horaInicio: string;       // TimeOnly → "HH:mm"
   horaFin: string;
   motivoConsulta: string;
   observaciones?: string;
@@ -60,8 +60,8 @@ interface BackendCita {
       nombre: string;
       apellido: string;
       numeroDocumento: string;
-      tipoDocumento?: { nombre: string };
-      sexo?: { nombre: string };
+      tipoDocumento?: string | { nombre: string };
+      sexo?: string | { nombre: string };
       telefonos?: Array<{ numero: string; principal?: boolean }>;
     };
   };
@@ -92,6 +92,9 @@ const MAP_ESTADO: Record<string, AppointmentStatus> = {
 const mapEstado = (nombre?: string): AppointmentStatus =>
   MAP_ESTADO[nombre ?? ''] ?? 'Agendada';
 
+const backendName = (value?: string | { nombre: string }): string =>
+  typeof value === 'string' ? value : value?.nombre ?? '';
+
 // ─── Formateo de hora ──────────────────────────────────────────────────────
 const formatTimeSlot = (timeStr: string): string => {
   if (!timeStr) return '08:00 AM';
@@ -104,10 +107,10 @@ const formatTimeSlot = (timeStr: string): string => {
   return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 };
 
-// Convierte "02:30 PM" o "14:30" → "14:30" para el backend
-const parseTimeSlot = (slot: string): string => {
+/** Converts display/API input to the API's strictly required HH:mm format. */
+export const toApiTime = (slot: string): string => {
   if (!slot) return '08:00';
-  const parts = slot.trim().split(' ');
+  const parts = slot.trim().split(/\s+/);
   const [hStr, mStr] = parts[0].split(':');
   let h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
@@ -115,7 +118,20 @@ const parseTimeSlot = (slot: string): string => {
   const period = parts[1]?.toUpperCase();
   if (period === 'PM' && h !== 12) h += 12;
   if (period === 'AM' && h === 12) h = 0;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return '08:00';
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+const addMinutesToApiTime = (time: string, minutes: number): string => {
+  const [hours, mins] = toApiTime(time).split(':').map(Number);
+  const total = (hours * 60 + mins + minutes) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
+const localDateISO = (): string => {
+  const date = new Date();
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 };
 
 // ─── Mapeo Backend → Frontend ─────────────────────────────────────────────
@@ -148,7 +164,7 @@ const mapBackendCita = (raw: BackendCita): Appointment => {
     patientId: raw.pacienteId,
     patientName: patientNombre,
     patientAge: 0,
-    patientGender: persona?.sexo?.nombre ?? '',
+    patientGender: backendName(persona?.sexo),
     patientDoc: persona?.numeroDocumento ?? '',
     patientPhone: telefonoPrincipal,
     patientEmail: '',
@@ -182,28 +198,6 @@ export const checkScheduleConflict = (
       app.status !== 'Cancelada' &&
       app.id !== excludeAppointmentId,
   );
-
-// ─── LocalStorage Persistence Helper ────────────────────────────────────
-const LOCAL_CITAS_KEY = 'HEALTLAB_PERSISTENT_CITAS';
-
-const getStoredAppointments = (): Appointment[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_CITAS_KEY);
-    return raw ? (JSON.parse(raw) as Appointment[]) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredAppointment = (app: Appointment) => {
-  try {
-    const current = getStoredAppointments();
-    const updated = [app, ...current.filter((a) => String(a.id) !== String(app.id))];
-    localStorage.setItem(LOCAL_CITAS_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Error al guardar cita en localStorage', e);
-  }
-};
 
 // ─── API ──────────────────────────────────────────────────────────────────
 export const getAppointmentsApi = async (): Promise<Appointment[]> => {
@@ -248,98 +242,32 @@ export const createAppointmentApi = async (
   payload: CreateCitaPayload | Appointment | Partial<Appointment>,
 ): Promise<Appointment> => {
   const appObj = payload as Partial<Appointment>;
-  let pacienteId = String((payload as any).pacienteId || appObj.patientId || '');
-  let medicoId = String((payload as any).medicoId || appObj.professionalId || '');
-  let tipoCitaId = String((payload as any).tipoCitaId || appObj.serviceId || '');
-  let usuarioCreacionId = String((payload as any).usuarioCreacionId || '');
+  const pacienteId = String((payload as any).pacienteId || appObj.patientId || '').trim();
+  const medicoId = String((payload as any).medicoId || appObj.professionalId || '').trim();
+  const tipoCitaId = String((payload as any).tipoCitaId || appObj.serviceId || '').trim();
+  const usuarioCreacionId = String((payload as any).usuarioCreacionId || '').trim();
 
-  // 1. Resolver PacienteId si no es Guid válido
-  if (!isValidGuid(pacienteId)) {
-    try {
-      const { getPatientsApi } = await import('./patients.service');
-      const patients = await getPatientsApi();
-      const validPatient = patients.find((p) => isValidGuid(String(p.id)));
-      if (validPatient) {
-        pacienteId = String(validPatient.id);
-      } else {
-        const { createPatientApi } = await import('./patients.service');
-        const newP = await createPatientApi({
-          name: appObj.patientName || 'Paciente Sistema',
-          documentNumber: '1096539188',
-        });
-        if (isValidGuid(String(newP.id))) {
-          pacienteId = String(newP.id);
-        }
-      }
-    } catch (e) {
-      console.warn('[createAppointmentApi] Error resolviendo PacienteId:', e);
-    }
+  const requiredIds: Array<[string, string]> = [
+    ['paciente', pacienteId],
+    ['médico', medicoId],
+    ['tipo de cita', tipoCitaId],
+    ['usuario de creación', usuarioCreacionId],
+  ];
+  const missing = requiredIds.find(([, id]) => !isValidGuid(id));
+  if (missing) {
+    throw new Error(`Se requiere un GUID válido para ${missing[0]}.`);
   }
 
-  // 2. Resolver MedicoId si no es Guid válido
-  if (!isValidGuid(medicoId)) {
-    try {
-      const medicosRaw = await apiFetch<Array<{ id: string; activo?: boolean }>>('/medicos');
-      const validM = medicosRaw.find((m) => isValidGuid(m.id) && (m.activo === undefined || m.activo));
-      if (validM) {
-        medicoId = validM.id;
-      }
-    } catch (e) {
-      console.warn('[createAppointmentApi] Error resolviendo MedicoId:', e);
-    }
-  }
-
-  // 3. Resolver TipoCitaId si no es Guid válido
-  if (!isValidGuid(tipoCitaId)) {
-    try {
-      const tiposRaw = await apiFetch<Array<{ id: string; activo?: boolean }>>('/tiposcita');
-      const validT = tiposRaw.find((t) => isValidGuid(t.id) && (t.activo === undefined || t.activo));
-      if (validT) {
-        tipoCitaId = validT.id;
-      }
-    } catch (e) {
-      console.warn('[createAppointmentApi] Error resolviendo TipoCitaId:', e);
-    }
-  }
-
-  // 4. Resolver UsuarioCreacionId si no es Guid válido
-  if (!isValidGuid(usuarioCreacionId)) {
-    try {
-      const usersRaw = await apiFetch<Array<{ id: string }>>('/usuarios');
-      const validU = usersRaw.find((u) => isValidGuid(u.id));
-      if (validU) {
-        usuarioCreacionId = validU.id;
-      }
-    } catch (e) {
-      console.warn('[createAppointmentApi] Error resolviendo UsuarioCreacionId:', e);
-    }
-  }
-
-  // Normalizar horario
-  const startTimeRaw = (payload as any).horaInicio || parseTimeSlot(appObj.time || '09:00 AM');
-  const endTimeRaw = (payload as any).horaFin || parseTimeSlot(appObj.time || '10:00 AM');
-
-  const normalizeTime = (t: string) => {
-    if (!t) return '09:00:00';
-    if (t.split(':').length === 2) return `${t}:00`;
-    return t;
-  };
-
-  let normStart = normalizeTime(startTimeRaw);
-  let normEnd = normalizeTime(endTimeRaw);
-
-  if (normEnd <= normStart) {
-    const [h, m] = normStart.split(':').map((x) => parseInt(x, 10));
-    const nextH = String(h + 1).padStart(2, '0');
-    const minStr = String(m).padStart(2, '0');
-    normEnd = `${nextH}:${minStr}:00`;
-  }
+  // The API accepts HH:mm only—never AM/PM or seconds.
+  const normStart = toApiTime((payload as any).horaInicio || appObj.time || '09:00');
+  let normEnd = toApiTime((payload as any).horaFin || appObj.time || normStart);
+  if (normEnd <= normStart) normEnd = addMinutesToApiTime(normStart, 30);
 
   const finalPayload: CreateCitaPayload = {
     pacienteId,
     medicoId,
     tipoCitaId,
-    fecha: (payload as any).fecha || appObj.date || new Date().toISOString().split('T')[0],
+    fecha: (payload as any).fecha || appObj.date || localDateISO(),
     horaInicio: normStart,
     horaFin: normEnd,
     motivoConsulta: (payload as any).motivoConsulta || appObj.notes || appObj.serviceName || 'Consulta Médica Especializada',
@@ -352,9 +280,7 @@ export const createAppointmentApi = async (
     body: JSON.stringify(finalPayload),
   });
 
-  const createdBackend = mapBackendCita(raw);
-  saveStoredAppointment(createdBackend);
-  return createdBackend;
+  return mapBackendCita(raw);
 };
 
 export interface RescheduleAppointmentOptions {
@@ -366,56 +292,27 @@ export interface RescheduleAppointmentOptions {
 }
 
 /**
- * Reprograma una cita — actualiza fecha, hora, profesional, servicio y persiste en localStorage/backend.
+ * Reprograma una cita. El DTO de la API solo admite fecha, horas y observaciones.
  */
 export const rescheduleAppointmentApi = async (
   id: string | number,
   newDate: string,
   newTime: string,
   optionsOrObs?: RescheduleAppointmentOptions | string,
-): Promise<Appointment | undefined> => {
-  const options = typeof optionsOrObs === 'object' ? optionsOrObs : undefined;
+): Promise<Appointment | null> => {
+  // Professional and service options are UI-only because the backend DTO does not accept them.
+  void (typeof optionsOrObs === 'object' ? optionsOrObs : undefined);
   const observaciones = typeof optionsOrObs === 'string' ? optionsOrObs : undefined;
-
-  const currentStored = getStoredAppointments();
-  let app = currentStored.find((a) => String(a.id) === String(id));
-
-  if (!app) {
-    const fromApi = await getAppointmentByIdApi(String(id));
-    if (fromApi) app = fromApi;
-  }
-
-  let updatedApp: Appointment | undefined = undefined;
-
-  if (app) {
-    updatedApp = {
-      ...app,
-      date: newDate,
-      time: newTime,
-      professionalId: options?.professionalId || app.professionalId,
-      professionalName: options?.professionalName || app.professionalName,
-      professionalSpecialty: options?.professionalSpecialty || app.professionalSpecialty,
-      serviceId: options?.serviceId || app.serviceId,
-      serviceName: options?.serviceName || app.serviceName,
-    };
-    saveStoredAppointment(updatedApp);
-  }
-
-  try {
-    await apiFetch(`/Citas/${id}/reprogramar`, {
-      method: 'POST',
-      body: JSON.stringify({
-        fecha: newDate,
-        horaInicio: parseTimeSlot(newTime),
-        horaFin: parseTimeSlot(newTime),
-        observaciones,
-      }),
-    });
-  } catch (error) {
-    console.warn(`[appointments.service] Error en POST /Citas/${id}/reprogramar:`, error);
-  }
-
-  return updatedApp;
+  await apiFetch(`/Citas/${id}/reprogramar`, {
+    method: 'POST',
+    body: JSON.stringify({
+      fecha: newDate,
+      horaInicio: toApiTime(newTime),
+      horaFin: addMinutesToApiTime(toApiTime(newTime), 30),
+      observaciones,
+    }),
+  });
+  return getAppointmentByIdApi(String(id));
 };
 
 /**
@@ -425,22 +322,12 @@ export const cancelAppointmentApi = async (
   id: string | number,
   motivoCancelacion: string = 'Cancelada por usuario',
   usuarioCancelacionId?: string,
-): Promise<void> => {
-  const currentStored = getStoredAppointments();
-  const app = currentStored.find((a) => String(a.id) === String(id)) || (await getAppointmentByIdApi(String(id)));
-
-  if (app) {
-    saveStoredAppointment({ ...app, status: 'Cancelada' });
-  }
-
-  try {
-    await apiFetch(`/Citas/${id}/cancelar`, {
-      method: 'POST',
-      body: JSON.stringify({ motivoCancelacion, usuarioCancelacionId }),
-    });
-  } catch (error) {
-    console.warn(`[appointments.service] Error en POST /Citas/${id}/cancelar:`, error);
-  }
+): Promise<Appointment | null> => {
+  await apiFetch(`/Citas/${id}/cancelar`, {
+    method: 'POST',
+    body: JSON.stringify({ citaId: String(id), motivoCancelacion, usuarioCancelacionId }),
+  });
+  return getAppointmentByIdApi(String(id));
 };
 
 /**
@@ -448,23 +335,14 @@ export const cancelAppointmentApi = async (
  */
 export const markNoShowApi = async (
   id: string | number,
-  observaciones?: string,
-): Promise<void> => {
-  const currentStored = getStoredAppointments();
-  const app = currentStored.find((a) => String(a.id) === String(id)) || (await getAppointmentByIdApi(String(id)));
-
-  if (app) {
-    saveStoredAppointment({ ...app, status: 'No asistió' });
-  }
-
-  try {
-    await apiFetch(`/Citas/${id}/no-asistio`, {
-      method: 'POST',
-      body: JSON.stringify({ observaciones: observaciones ?? '' }),
-    });
-  } catch (error) {
-    console.warn(`[appointments.service] Error en POST /citas/${id}/no-asistio:`, error);
-  }
+  observacion?: string,
+  usuarioId?: string,
+): Promise<Appointment | null> => {
+  await apiFetch(`/Citas/${id}/no-asistio`, {
+    method: 'POST',
+    body: JSON.stringify({ observacion: observacion ?? '', usuarioId }),
+  });
+  return getAppointmentByIdApi(String(id));
 };
 
 /**
@@ -474,21 +352,13 @@ export const updateAppointmentStatusApi = async (
   id: string | number,
   status: AppointmentStatus,
 ): Promise<AppointmentStatus> => {
-  const currentStored = getStoredAppointments();
-  const app = currentStored.find((a) => String(a.id) === String(id)) || (await getAppointmentByIdApi(String(id)));
-
-  if (app) {
-    saveStoredAppointment({ ...app, status });
+  if (status === 'Cancelada') {
+    await cancelAppointmentApi(id);
+    return status;
   }
-
-  try {
-    if (status === 'Cancelada') {
-      await cancelAppointmentApi(id);
-    } else if (status === 'No asistió') {
-      await markNoShowApi(id);
-    }
-  } catch (error) {
-    console.warn(`[appointments.service] Error al cambiar estado de cita ${id}:`, error);
+  if (status === 'No asistió') {
+    await markNoShowApi(id);
+    return status;
   }
-  return status;
+  throw new Error(`La API no admite cambiar una cita directamente a "${status}".`);
 };

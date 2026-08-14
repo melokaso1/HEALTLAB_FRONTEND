@@ -14,10 +14,16 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import './Citas.css';
+
+const localDateISO = (): string => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 import {
   cancelAppointmentApi,
   getAppointmentsApi,
   rescheduleAppointmentApi,
+  toApiTime,
 } from '../../../services/appointments.service';
 import { getProfessionalsApi } from '../../../services/professionals.service';
 import { getHorariosByMedicoApi, getTiposCitaApi, type CatalogOption } from '../../../services/catalogs.service';
@@ -85,9 +91,10 @@ const RecepCitas: React.FC = () => {
   const [cedulaQuery, setCedulaQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [profesionalSelect, setProfesionalSelect] = useState('');
   const [servicioSelect, setServicioSelect] = useState('');
-  const [fechaInput, setFechaInput] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaInput, setFechaInput] = useState(localDateISO());
   const [horaInput, setHoraInput] = useState('09:00');
   const [notasInput, setNotasInput] = useState('');
 
@@ -123,14 +130,15 @@ const RecepCitas: React.FC = () => {
       setAppointments(apps);
       setProfessionals(profs);
       setTiposCita(tipos);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = localDateISO();
 
       const hoyMapped = apps
           .filter((a) => a.date === todayStr)
           .map((app) => {
-            let estado: 'Agendada' | 'Atendida' | 'Cancelada' = 'Agendada';
+            let estado: CitaHoy['estado'] = 'Agendada';
             if (app.status === 'Atendida') estado = 'Atendida';
             else if (app.status === 'Cancelada') estado = 'Cancelada';
+            else if (app.status === 'No asistió') estado = 'No asistió';
 
             return {
               id: app.id.toString(),
@@ -153,7 +161,7 @@ const RecepCitas: React.FC = () => {
           if (app.status === 'Cancelada') color = 'red';
           else if (app.status === 'Atendida') color = 'blue';
 
-          const hourPart = app.time.split(':')[0] || '08';
+          const hourPart = toApiTime(app.time).split(':')[0] || '08';
 
           return {
             id: app.id.toString(),
@@ -200,7 +208,7 @@ const RecepCitas: React.FC = () => {
     setSelectedPatient(null);
     setProfesionalSelect('');
     setServicioSelect('');
-    setFechaInput(new Date().toISOString().split('T')[0]);
+    setFechaInput(localDateISO());
     setHoraInput('09:00');
     setNotasInput('');
     setIsNuevaCitaOpen(false);
@@ -215,7 +223,7 @@ const RecepCitas: React.FC = () => {
     setIsSearchingPatient(true);
     setSelectedPatient(null);
     try {
-      const patient = await findPatientByCedula(doc);
+      const patient = await findPatientByCedula(doc, docType as Patient['documentType']);
       if (!patient) {
         showToast('Paciente no encontrado con esa cédula.');
         return;
@@ -248,52 +256,57 @@ const RecepCitas: React.FC = () => {
 
   const handleAgendarCita = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const selectedProf = professionals.find((p) => p.id.toString() === profesionalSelect);
 
-    if (selectedCita) {
-      try {
+    setIsSubmitting(true);
+    try {
+      if (selectedCita) {
         await rescheduleAppointmentApi(selectedCita.id, fechaInput, horaInput, notasInput);
         await loadData();
         showToast(`Cita de ${selectedCita.paciente} reprogramada con éxito.`);
         handleClearForm();
-      } catch (error) {
-        showToast(error instanceof Error ? error.message : 'No se pudo reprogramar la cita.');
+        return;
       }
-      return;
+
+      if (!selectedPatient) {
+        showToast('Busque y seleccione un paciente por cédula antes de agendar.');
+        return;
+      }
+
+      const result = await createAppointmentFromInput({
+        patientId: selectedPatient.id,
+        patientName: selectedPatient.name,
+        professionalId: profesionalSelect,
+        professionalName: selectedProf?.name || 'Médico no asignado',
+        professionalSpecialty: selectedProf?.specialty || 'Medicina General',
+        serviceId: servicioSelect,
+        serviceName: tiposCita.find((tipo) => tipo.id === servicioSelect)?.nombre,
+        date: fechaInput || localDateISO(),
+        time: horaInput || '09:00',
+        notes: notasInput,
+        usuarioCreacionId: user?.id,
+      });
+
+      if (!result.ok) {
+        showToast('error' in result && result.error ? result.error : 'Error al agendar la cita');
+        return;
+      }
+
+      await loadData();
+      handleClearForm();
+      showToast(`Cita agendada para ${selectedPatient.name} con éxito.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo guardar la cita.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (!selectedPatient) {
-      showToast('Busque y seleccione un paciente por cédula antes de agendar.');
-      return;
-    }
-
-    const result = await createAppointmentFromInput({
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      professionalId: profesionalSelect,
-      professionalName: selectedProf?.name || 'Médico no asignado',
-      professionalSpecialty: selectedProf?.specialty || 'Medicina General',
-      serviceId: servicioSelect,
-      serviceName: tiposCita.find((tipo) => tipo.id === servicioSelect)?.nombre,
-      date: fechaInput || new Date().toISOString().split('T')[0],
-      time: horaInput || '09:00',
-      notes: notasInput,
-      usuarioCreacionId: user?.id ?? '',
-    });
-
-    if (!result.ok) {
-      showToast('error' in result && result.error ? result.error : 'Error al agendar la cita');
-      return;
-    }
-
-    await loadData();
-    handleClearForm();
-    showToast(`Cita agendada para ${selectedPatient.name} con éxito.`);
   };
 
   const handleCancelarCita = async () => {
-    if (!selectedCita) return;
+    if (!selectedCita || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await cancelAppointmentApi(selectedCita.id, 'Cancelada por recepción', user?.id);
       await loadData();
@@ -301,6 +314,8 @@ const RecepCitas: React.FC = () => {
       handleClearForm();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo cancelar la cita.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -309,7 +324,7 @@ const RecepCitas: React.FC = () => {
     d.setDate(monday.getDate() + i);
     const names = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
     const isTodayStr = d.toDateString() === new Date().toDateString();
-    const dateISO = d.toISOString().split('T')[0];
+    const dateISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     return { name: names[i], num: d.getDate(), isToday: isTodayStr, dateISO };
   });
 
@@ -701,12 +716,13 @@ const RecepCitas: React.FC = () => {
                               type="button"
                               className="btn-cancelar-cita"
                               onClick={handleCancelarCita}
+                              disabled={isSubmitting}
                             >
                               <Trash2 size={14} />
                               <span>Cancelar</span>
                             </button>
 
-                            <button type="submit" className="btn-agendar-main">
+                            <button type="submit" className="btn-agendar-main" disabled={isSubmitting}>
                               <RefreshCw size={14} />
                               <span>Reprogramar Cita</span>
                             </button>
@@ -720,8 +736,8 @@ const RecepCitas: React.FC = () => {
                             >
                               Limpiar
                             </button>
-                            <button type="submit" className="btn-agendar-main">
-                              Agendar Cita
+                            <button type="submit" className="btn-agendar-main" disabled={isSubmitting}>
+                              {isSubmitting ? 'Guardando...' : 'Agendar Cita'}
                             </button>
                           </>
                         )}
@@ -778,6 +794,8 @@ const RecepCitas: React.FC = () => {
                                 ? 'atendida'
                                 : c.estado === 'Cancelada'
                                 ? 'cancelada'
+                                : c.estado === 'No asistió'
+                                  ? 'no-asistio'
                                 : 'agendada'
                             }`}
                           >
@@ -794,7 +812,7 @@ const RecepCitas: React.FC = () => {
                                 handleSelectCita(c);
                               }}
                             >
-                              {c.estado === 'Cancelada' ? <Eye size={15} /> : <Edit size={15} />}
+                              {c.estado === 'Cancelada' || c.estado === 'No asistió' ? <Eye size={15} /> : <Edit size={15} />}
                             </button>
                           </div>
                         </td>
