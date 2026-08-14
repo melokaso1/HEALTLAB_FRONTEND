@@ -687,7 +687,7 @@ const RecepCitas: React.FC = () => {
                         </div>
 
                         <div className="form-field-group">
-                          <label className="field-label">Hora</label>
+                          <label className="field-label">Hora (30 min)</label>
                           {availableHours.length > 0 ? (
                             <select
                               className="field-select"

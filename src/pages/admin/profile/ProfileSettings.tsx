@@ -21,6 +21,12 @@ import './ProfileSettings.css';
 
 const ProfileSettings: React.FC = () => {
   const { user } = useAuth();
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor =
+    role === 'professional' ||
+    role === 'profesional' ||
+    role === 'medico' ||
+    role === 'doctor';
 
   // Personal Info Form State
   const [fullName, setFullName] = useState<string>(user?.name || 'Dr. María García');
@@ -210,18 +216,20 @@ const ProfileSettings: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Especialidad</label>
-                  <div className="profile-input-wrapper">
-                    <Stethoscope size={16} className="profile-input-icon" />
-                    <input
-                      type="text"
-                      className="profile-input"
-                      value={specialty}
-                      onChange={(e) => setSpecialty(e.target.value)}
-                    />
+                {isDoctor && (
+                  <div className="profile-field">
+                    <label className="profile-label">Especialidad</label>
+                    <div className="profile-input-wrapper">
+                      <Stethoscope size={16} className="profile-input-icon" />
+                      <input
+                        type="text"
+                        className="profile-input"
+                        value={specialty}
+                        onChange={(e) => setSpecialty(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="profile-card__footer">

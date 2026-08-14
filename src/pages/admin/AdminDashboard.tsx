@@ -10,6 +10,7 @@ import { getAppointmentsApi } from '../../services/appointments.service';
 import { getProfessionalsApi } from '../../services/professionals.service';
 import { getPatientsApi } from '../../services/patients.service';
 import { useSignalR } from '../../context/SignalRContext';
+import Loading from '../../components/common/Loading';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────
 interface CitaTabla {
@@ -57,7 +58,7 @@ const timeToSortable = (slot: string): string => {
 
 // ─── Componente ───────────────────────────────────────────────────────────
 const AdminDashboard: React.FC = () => {
-  const { recentActivities } = useSignalR();
+  const { recentActivities, isConnected } = useSignalR();
   const [citasData, setCitasData] = useState<CitaTabla[]>([]);
   const [agendaSlots, setAgendaSlots] = useState<AgendaSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,9 +188,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="table-card__wrapper">
               {loading ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
-                  Cargando citas...
-                </div>
+                <Loading text="Cargando citas..." size="sm" />
               ) : citasData.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
                   No hay citas disponibles
@@ -236,21 +235,34 @@ const AdminDashboard: React.FC = () => {
 
           {/* Actividad Reciente */}
           <div className="card activity-card">
-            <h2 className="activity-card__title">Actividad Reciente</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <h2 className="activity-card__title">Actividad Reciente</h2>
+              {!isConnected && (
+                <span style={{ color: '#64748B', fontSize: '12px' }}>
+                  Actualizaciones en vivo no disponibles.
+                </span>
+              )}
+            </div>
             <div className="activity-list">
-              {recentActivities.map((act) => (
-                <div key={act.id} className="activity-item">
-                  <div className="activity-item__avatar" style={{ backgroundColor: act.avatarBg || '#00A896' }}>
-                    <UserCheck size={16} />
-                  </div>
-                  <div className="activity-item__details">
-                    <p className="activity-item__text">
-                      <strong>{act.user}</strong> {act.action} <strong>{act.target}</strong>.
-                    </p>
-                    <span className="activity-item__time">{act.timeAgo}</span>
-                  </div>
+              {recentActivities.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                  No hay actividad reciente.
                 </div>
-              ))}
+              ) : (
+                recentActivities.map((act) => (
+                  <div key={act.id} className="activity-item">
+                    <div className="activity-item__avatar" style={{ backgroundColor: act.avatarBg || '#00A896' }}>
+                      <UserCheck size={16} />
+                    </div>
+                    <div className="activity-item__details">
+                      <p className="activity-item__text">
+                        <strong>{act.user}</strong> {act.action} <strong>{act.target}</strong>.
+                      </p>
+                      <span className="activity-item__time">{act.timeAgo}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

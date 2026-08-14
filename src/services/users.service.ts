@@ -2,8 +2,6 @@ import type { ManagedUser, PermissionGroup, UserRoleType } from '../types/user.t
 import { apiFetch, type ApiError } from './api';
 import { BACKEND_ROLE_MAP, FRONTEND_ROLE_MAP } from '../types/auth';
 
-export const mockUsers: ManagedUser[] = [];
-
 // ─── Tipo del backend (UsuarioDto) ─────────────────────────────────────────
 interface BackendUsuario {
   id?: string;

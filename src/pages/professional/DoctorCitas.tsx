@@ -18,6 +18,45 @@ import { useAuth } from '../../context/AuthContext';
 import { saveAppointmentNote } from '../../services/appointmentNotes.service';
 import './DoctorCitas.css';
 
+/** Local calendar date YYYY-MM-DD from the PC clock (never UTC/ISO shift). */
+const localTodayIso = (): string => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+};
+
+/** Local hour 0–23 from the PC clock (`Date#getHours`, not UTC). */
+const localPcHour = (): number => new Date().getHours();
+
+/**
+ * Parse appointment display/API times to a 0–23 hour.
+ * Supports "14:00", "02:00 PM", "2:00 p. m.", "2:00 p.m.", etc.
+ */
+const extractHourInt = (timeStr: string): number => {
+  if (!timeStr) return 8;
+  const trimmed = timeStr.trim();
+  const match = trimmed.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 8;
+
+  let h = parseInt(match[1], 10);
+  if (!Number.isFinite(h)) return 8;
+
+  // Already 24h (e.g. API HH:mm before formatting) — keep as-is.
+  if (h > 12) return Math.min(h, 23);
+
+  const upper = trimmed.toUpperCase();
+  const isPM = /\bP\.?\s*M\.?\b/.test(upper);
+  const isAM = /\bA\.?\s*M\.?\b/.test(upper);
+
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+
+  return h;
+};
+
+/** Citas que ocupan cupo en Consultas (Cancelada / No asistió liberan el horario). */
+const isActiveConsultSlot = (status: AppointmentStatus): boolean =>
+  status === 'Agendada' || status === 'Atendida';
+
 // Hourly timetable slots (matching screenshot layout)
 const TIME_SLOTS_TIMETABLE = [
   { hour: 7, label: '7:00 a. m.' },
@@ -36,6 +75,7 @@ const TIME_SLOTS_TIMETABLE = [
 
 // Common CIE-10 Options
 const CIE10_OPTIONS = [
+  { value: '', label: 'Seleccione un código CIE-10' },
   { value: 'J00', label: 'J00 - Nasofaringitis aguda (resfriado común)' },
   { value: 'J02.9', label: 'J02.9 - Faringitis aguda, no especificada' },
   { value: 'J20.9', label: 'J20.9 - Bronquitis aguda, no especificada' },
@@ -53,29 +93,30 @@ const DoctorCitas: React.FC = () => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
-  // Set default selected appointment ID to 1 ("Carlos Eduardo Mendoza") so the form is populated on page load
   const [selectedAppId, setSelectedAppId] = useState<number | string | null>(null);
 
   // Time Filter Mode: 'upcoming' (reads current PC hour) vs 'all'
   const [timeFilterMode, setTimeFilterMode] = useState<'upcoming' | 'all'>('upcoming');
+  // Kept in state + interval so the visible window tracks the PC clock without a full remount.
+  const [pcCurrentHour, setPcCurrentHour] = useState<number>(localPcHour);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Clinical Form Fields (Pre-populated by default with rich mock data)
-  const [sintomas, setSintomas] = useState('Paciente refiere cefalea intensa holocraneana de 24 horas de evolución, acompañada de malestar general, astenia y febrícula (37.8 °C). No presenta tos ni disnea.');
-  const [resumenConsulta, setResumenConsulta] = useState('Paciente masculino de 34 años en aceptables condiciones generales. Orientado en tiempo, espacio y persona. Presión arterial: 125/82 mmHg, Frecuencia cardíaca: 76 bpm, Temperatura: 37.5 °C. Auscultación cardiopulmonar normal. Faringe levemente congestiva sin exudados.');
+  // Clinical Form Fields (empty until the doctor fills them)
+  const [sintomas, setSintomas] = useState('');
+  const [resumenConsulta, setResumenConsulta] = useState('');
   
   // Tratamiento
-  const [tratamientoNombre, setTratamientoNombre] = useState('Amoxicilina 500mg cápsulas + Paracetamol 500mg');
-  const [tratamientoDescripcion, setTratamientoDescripcion] = useState('Antibiótico bactericida de amplio espectro y analgésico antipirético.');
-  const [tratamientoDosis, setTratamientoDosis] = useState('1 cápsula / tableta (500 mg)');
-  const [tratamientoFrecuencia, setTratamientoFrecuencia] = useState('Cada 8 horas (3 veces al día)');
-  const [tratamientoDuracion, setTratamientoDuracion] = useState('7 días consecutivos');
-  const [tratamientoIndicaciones, setTratamientoIndicaciones] = useState('Ingerir con abundante agua después de las comidas principales. No suspender el esquema médico antes del periodo indicado.');
+  const [tratamientoNombre, setTratamientoNombre] = useState('');
+  const [tratamientoDescripcion, setTratamientoDescripcion] = useState('');
+  const [tratamientoDosis, setTratamientoDosis] = useState('');
+  const [tratamientoFrecuencia, setTratamientoFrecuencia] = useState('');
+  const [tratamientoDuracion, setTratamientoDuracion] = useState('');
+  const [tratamientoIndicaciones, setTratamientoIndicaciones] = useState('');
 
   // Diagnóstico
-  const [cie10Codigo, setCie10Codigo] = useState('J00');
+  const [cie10Codigo, setCie10Codigo] = useState('');
   const [customCie10, setCustomCie10] = useState('');
-  const [cie10Descripcion, setCie10Descripcion] = useState('J00 - Nasofaringitis aguda (resfriado común) con síndrome febril leve de evolución favorable.');
+  const [cie10Descripcion, setCie10Descripcion] = useState('');
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -87,49 +128,67 @@ const DoctorCitas: React.FC = () => {
   useEffect(() => {
     const loadAppointments = async () => {
       const data = await getAppointmentsApi();
-      const today = new Date();
-      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const doctorAppointments = data.filter((appointment) =>
-        appointment.date === todayIso &&
-        (!user?.medicoId || String(appointment.professionalId) === user.medicoId),
-      );
+      const todayIso = localTodayIso();
+      const doctorAppointments = data.filter((appointment) => {
+        const appDate = (appointment.date || '').slice(0, 10);
+        return (
+          appDate === todayIso &&
+          (!user?.medicoId || String(appointment.professionalId) === user.medicoId)
+        );
+      });
       setAppointments(doctorAppointments);
-      setSelectedAppId(doctorAppointments[0]?.id ?? null);
+      const firstActive = doctorAppointments.find((a) => isActiveConsultSlot(a.status));
+      setSelectedAppId(firstActive?.id ?? null);
     };
     void loadAppointments();
   }, [user?.medicoId]);
 
-  // READ CURRENT HOUR DYNAMICALLY FROM PC SYSTEM TIME
-  const pcCurrentHour = new Date().getHours();
+  // Refresh local PC hour while this view is open (and when returning to the tab).
+  useEffect(() => {
+    const syncHour = () => setPcCurrentHour(localPcHour());
+    syncHour();
+    const intervalId = window.setInterval(syncHour, 30_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncHour();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
-  // Helper to extract integer hour from appointment time string (e.g. "1:00 p. m." -> 13, "10:00 a. m." -> 10)
-  const extractHourInt = (timeStr: string): number => {
-    if (!timeStr) return 8;
-    const cleanStr = timeStr.trim().toUpperCase();
-    const isPM = cleanStr.includes('P. M.') || cleanStr.includes('PM') || cleanStr.includes('P.M.');
-    const numbersOnly = cleanStr.replace(/[^\d:]/g, '');
-    const parts = numbersOnly.split(':');
-    let h = parseInt(parts[0], 10) || 8;
-    if (isPM && h < 12) h += 12;
-    if (!isPM && h === 12) h = 0;
-    return h;
-  };
-
-  // Visible Hour Timetable Slots based on PC Time
+  // Visible Hour Timetable Slots based on PC local time
   const visibleHourSlots = useMemo(() => {
     if (timeFilterMode === 'all') {
       return TIME_SLOTS_TIMETABLE;
     }
-    // Filter hours from current PC hour onwards (e.g., if PC is 13:00, show slots from 13 to 18)
+    // From the current local hour onwards (e.g. 9:15 → start at 9:00; 16:00 → start at 16:00, not 14:00).
     const filtered = TIME_SLOTS_TIMETABLE.filter((slot) => slot.hour >= pcCurrentHour);
     return filtered.length > 0 ? filtered : TIME_SLOTS_TIMETABLE;
   }, [timeFilterMode, pcCurrentHour]);
 
-  // Selected Appointment Object
+  const activeAppointments = useMemo(
+    () => appointments.filter((a) => isActiveConsultSlot(a.status)),
+    [appointments]
+  );
+
+  // Selected Appointment Object (never auto-select Cancelada / No asistió)
   const selectedAppointment = useMemo(() => {
-    if (!selectedAppId) return appointments[0] || null;
-    return appointments.find((a) => String(a.id) === String(selectedAppId)) || appointments[0] || null;
-  }, [appointments, selectedAppId]);
+    if (selectedAppId) {
+      const byId = appointments.find((a) => String(a.id) === String(selectedAppId));
+      if (byId && isActiveConsultSlot(byId.status)) return byId;
+    }
+    return activeAppointments[0] || null;
+  }, [appointments, activeAppointments, selectedAppId]);
+
+  // If the selected cita becomes Cancelada / No asistió, move to next active or clear.
+  useEffect(() => {
+    if (!selectedAppId) return;
+    const current = appointments.find((a) => String(a.id) === String(selectedAppId));
+    if (current && isActiveConsultSlot(current.status)) return;
+    setSelectedAppId(activeAppointments[0]?.id ?? null);
+  }, [appointments, activeAppointments, selectedAppId]);
 
   // Determine if Form is Locked (when status is 'Atendida')
   const isFormLocked = selectedAppointment?.status === 'Atendida';
@@ -137,16 +196,17 @@ const DoctorCitas: React.FC = () => {
   // Update Form fields when selected appointment changes
   const handleSelectAppointment = (app: Appointment) => {
     setSelectedAppId(app.id);
-    setSintomas(app.notes || `Paciente refiere malestar general y dolor en consulta de ${app.serviceName}.`);
-    setResumenConsulta(`Evaluación clínica realizada a ${app.patientName}. Signos vitales normales. Paciente clínicamente estable.`);
-    setTratamientoNombre(`Tratamiento indicado para ${app.serviceName}`);
-    setTratamientoDescripcion('Medicamento prescrito según protocolo médico.');
-    setTratamientoDosis('1 dosis cada 8 horas');
-    setTratamientoFrecuencia('Cada 8 horas (3 veces al día)');
-    setTratamientoDuracion('7 días');
-    setTratamientoIndicaciones('Tomar con alimentos. Mantener hidratación adecuada.');
-    setCie10Codigo('J00');
-    setCie10Descripcion(`Diagnóstico preliminar para ${app.serviceName}`);
+    setSintomas(app.notes || '');
+    setResumenConsulta('');
+    setTratamientoNombre('');
+    setTratamientoDescripcion('');
+    setTratamientoDosis('');
+    setTratamientoFrecuencia('');
+    setTratamientoDuracion('');
+    setTratamientoIndicaciones('');
+    setCie10Codigo('');
+    setCustomCie10('');
+    setCie10Descripcion('');
   };
 
   // Submit Consultation Form (Locks Form upon Completion)
@@ -170,7 +230,7 @@ const DoctorCitas: React.FC = () => {
       );
       if (completedAppointment) saveAppointmentNote(completedAppointment);
 
-      showToast(`🔒 Consulta clínica guardada y bloqueada de forma oficial.`);
+      showToast(`Consulta clínica guardada y bloqueada de forma oficial.`);
     } catch (err) {
       showToast('Error al guardar la consulta médica.');
     }
@@ -220,7 +280,10 @@ const DoctorCitas: React.FC = () => {
                 <button
                   type="button"
                   className={`doc-timetable-filter-btn${timeFilterMode === 'upcoming' ? ' doc-timetable-filter-btn--active' : ''}`}
-                  onClick={() => setTimeFilterMode('upcoming')}
+                  onClick={() => {
+                    setPcCurrentHour(localPcHour());
+                    setTimeFilterMode('upcoming');
+                  }}
                   title="Filtrar horas desde la hora actual del PC"
                 >
                   Desde hora actual
@@ -259,18 +322,26 @@ const DoctorCitas: React.FC = () => {
               </thead>
               <tbody>
                 {visibleHourSlots.map((slot) => {
-                  const matchingApps = appointments.filter((app) => {
-                    const appHour = extractHourInt(app.time);
-                    if (appHour !== slot.hour) return false;
+                  const matchingApps = appointments
+                    .filter((app) => {
+                      if (!isActiveConsultSlot(app.status)) return false;
 
-                    const q = searchTerm.toLowerCase().trim();
-                    if (!q) return true;
-                    return (
-                      app.patientName.toLowerCase().includes(q) ||
-                      (app.patientDoc && app.patientDoc.includes(q)) ||
-                      app.serviceName.toLowerCase().includes(q)
-                    );
-                  });
+                      const appHour = extractHourInt(app.time);
+                      if (appHour !== slot.hour) return false;
+
+                      const q = searchTerm.toLowerCase().trim();
+                      if (!q) return true;
+                      return (
+                        app.patientName.toLowerCase().includes(q) ||
+                        (app.patientDoc && app.patientDoc.includes(q)) ||
+                        app.serviceName.toLowerCase().includes(q)
+                      );
+                    })
+                    .sort((a, b) => {
+                      const minA = parseInt((a.time.match(/:(\d{2})/) || [])[1] || '0', 10);
+                      const minB = parseInt((b.time.match(/:(\d{2})/) || [])[1] || '0', 10);
+                      return minA - minB;
+                    });
 
                   return (
                     <tr key={`slot-${slot.hour}`}>
@@ -288,9 +359,10 @@ const DoctorCitas: React.FC = () => {
                                 onClick={() => handleSelectAppointment(app)}
                               >
                                 <div className="doc-slot-card__top">
-                                  <span className="doc-slot-patient-name">{app.patientName}</span>
+                                  <span className="doc-slot-card__time">{app.time}</span>
                                   {renderStatusBadge(app.status)}
                                 </div>
+                                <span className="doc-slot-patient-name">{app.patientName}</span>
                                 <div className="doc-slot-service">
                                   DNI: {app.patientDoc || '1098472635'} • {app.serviceName}
                                 </div>
@@ -327,7 +399,7 @@ const DoctorCitas: React.FC = () => {
                 </div>
 
                 <div className="doc-patient-status-chip">
-                  Estado: {selectedAppointment.status} {isFormLocked && '🔒'}
+                  Estado: {selectedAppointment.status} {isFormLocked}
                 </div>
               </div>
 

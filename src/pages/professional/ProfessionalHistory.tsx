@@ -44,6 +44,12 @@ const splitAttentionNote = (note?: string) => {
 
 const ProfessionalHistory: React.FC = () => {
   const { user } = useAuth();
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor =
+    role === 'professional' ||
+    role === 'profesional' ||
+    role === 'medico' ||
+    role === 'doctor';
   const [history, setHistory] = useState<ConsultationRecord[]>([]);
 
   useEffect(() => {
@@ -165,14 +171,16 @@ const ProfessionalHistory: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="prof-history__btn-export"
-          onClick={handleExportCSV}
-        >
-          <Download size={15} />
-          <span>Exportar CSV</span>
-        </button>
+        {isDoctor && (
+          <button
+            type="button"
+            className="prof-history__btn-export"
+            onClick={handleExportCSV}
+          >
+            <Download size={15} />
+            <span>Exportar CSV</span>
+          </button>
+        )}
       </div>
 
       {/* Main Filter Bar Card */}

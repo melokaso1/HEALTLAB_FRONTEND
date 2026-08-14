@@ -16,6 +16,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAppointmentsApi, updateAppointmentStatusApi } from '../../services/appointments.service';
 import type { Appointment } from '../../types/appointment.types';
+import Loading from '../../components/common/Loading';
 import './ProfessionalDashboard.css';
 
 export interface DoctorAppointmentEvent {
@@ -24,8 +25,8 @@ export interface DoctorAppointmentEvent {
   dayAbrev: 'DOM' | 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB';
   dayNum: number;
   date: string;
-  timeSlot: string; // e.g. '08:00', '09:00', '10:00'
-  timeDisplay: string; // e.g. '08:00 - 09:00'
+  timeSlot: string; // hourly bucket for grid rows, e.g. '08:00', '16:00' (minutes zeroed)
+  timeDisplay: string; // exact API time with minutes, e.g. '04:30 PM'
   service: string;
   patientName: string;
   patientDoc: string;
@@ -60,6 +61,31 @@ const hoursAxisList = [
   '6:00 p. m.',
 ];
 
+/**
+ * Parse appointment/API/display times to a 0–23 hour for hourly row grouping.
+ * Supports "14:30", "02:30 PM", "2:30 p. m.", etc. Minutes are ignored here.
+ */
+const extractHourInt = (timeStr: string): number => {
+  if (!timeStr) return 8;
+  const trimmed = timeStr.trim();
+  const match = trimmed.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 8;
+
+  let h = parseInt(match[1], 10);
+  if (!Number.isFinite(h)) return 8;
+
+  if (h > 12) return Math.min(h, 23);
+
+  const upper = trimmed.toUpperCase();
+  const isPM = /\bP\.?\s*M\.?\b/.test(upper);
+  const isAM = /\bA\.?\s*M\.?\b/.test(upper);
+
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+
+  return h;
+};
+
 const parseLocalDate = (value: string): Date => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
@@ -72,7 +98,7 @@ const ProfessionalDashboard: React.FC = () => {
   const doctorName = user?.name || 'Dr. Julian Moore';
 
   const [events, setEvents] = useState<DoctorAppointmentEvent[]>([]);
-  const [, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -96,10 +122,10 @@ const ProfessionalDashboard: React.FC = () => {
           const appDate = parseLocalDate(app.date);
           const dayIndex = isNaN(appDate.getDay()) ? 1 : appDate.getDay();
 
-          // Formateo de la hora (ej: "08:00 AM" -> "08:00")
-          const timeParts = app.time.split(' ')[0] || '08:00';
-          const timeHour = timeParts.split(':')[0]?.padStart(2, '0') || '08';
-          const timeSlot = `${timeHour}:00`;
+          // Hourly bucket for the grid row (minutes discarded here only).
+          // Exact minutes stay on timeDisplay for the card.
+          const hour24 = extractHourInt(app.time);
+          const timeSlot = `${String(hour24).padStart(2, '0')}:00`;
 
           return {
             id: typeof app.id === 'number' ? app.id : index + 1,
@@ -341,6 +367,10 @@ const ProfessionalDashboard: React.FC = () => {
     showToast(`Cita programada para ${newPatientName} el ${newDayAbrev} a las ${newTimeSlot}`);
   };
 
+  if (loading) {
+    return <Loading text="Cargando agenda..." />;
+  }
+
   return (
     <div className="prof-agenda-view">
       {/* Top Header Title Row */}
@@ -464,7 +494,8 @@ const ProfessionalDashboard: React.FC = () => {
           {/* Body Scrollable Timetable Area */}
           <div className="calendar-grid-body">
             {hoursAxisList.map((hourLabel) => {
-              const hourNumberStr = hourLabel.split(':')[0].padStart(2, '0');
+              const rowHour = extractHourInt(hourLabel);
+              const hourNumberStr = String(rowHour).padStart(2, '0');
 
               return (
                 <div key={hourLabel} className="calendar-hour-row">
@@ -473,11 +504,17 @@ const ProfessionalDashboard: React.FC = () => {
 
                   {/* 7 Days Columns */}
                   {currentDaysHeaderList.map((dayObj) => {
-                    const matchingEvents = filteredEvents.filter(
-                      (ev) =>
-                        ev.dayAbrev === dayObj.abrev &&
-                        ev.timeSlot.startsWith(hourNumberStr)
-                    );
+                    const matchingEvents = filteredEvents
+                      .filter(
+                        (ev) =>
+                          ev.dayAbrev === dayObj.abrev &&
+                          ev.timeSlot.startsWith(hourNumberStr)
+                      )
+                      .sort((a, b) => {
+                        const minA = parseInt((a.timeDisplay.match(/:(\d{2})/) || [])[1] || '0', 10);
+                        const minB = parseInt((b.timeDisplay.match(/:(\d{2})/) || [])[1] || '0', 10);
+                        return minA - minB;
+                      });
 
                     return (
                       <div

@@ -15,7 +15,6 @@ import {
 import type { Patient, GenderType } from '../../../types/patient.types';
 import Pagination from '../../../components/common/Pagination';
 import {
-  mockPatients,
   getPatientsApi,
   createPatientApi,
   updatePatientApi,
@@ -69,7 +68,7 @@ const PatientsManagement: React.FC = () => {
   const { user } = useAuth();
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico' || (user?.role as string) === 'profesional';
 
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [doctorPatientIds, setDoctorPatientIds] = useState<Set<string> | null>(null);
 
   useEffect(() => {

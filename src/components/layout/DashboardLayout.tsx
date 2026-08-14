@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderDashboard from './HeaderDashboard';
 import HeaderNavbar from './HeaderNavbar';
 import { useTheme } from '../../context/ThemeContext';
+import Loading from '../common/Loading';
 import './DashboardLayout.css';
 
 interface DashboardLayoutProps {
@@ -46,16 +47,25 @@ const tabRouteMap: Record<string, string> = {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
   userName = 'Juan Perez',
-  userRole = 'Director Médico',
+  userRole = 'Administrador',
 }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const activeTab = routeTabMap[location.pathname] || 'inicio';
 
+  useEffect(() => {
+    if (!isNavigating) return;
+    const timer = window.setTimeout(() => setIsNavigating(false), 180);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, isNavigating]);
+
   const handleSelectTab = (tabId: string) => {
     const targetRoute = tabRouteMap[tabId] || '/admin';
+    if (targetRoute === location.pathname) return;
+    setIsNavigating(true);
     navigate(targetRoute);
   };
 
@@ -79,6 +89,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* Content Viewport */}
         <main className="dashboard-layout__content">{children}</main>
+        {isNavigating && <Loading overlay text="Cargando sección..." />}
       </div>
     </div>
   );

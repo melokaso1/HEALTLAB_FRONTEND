@@ -65,8 +65,10 @@ const DashboardContainer: React.FC = () => {
 
   const getRoleLabel = (role?: string) => {
     const r = (role || '').toLowerCase();
-    if (r === 'admin') return 'Director Médico';
-    if (r === 'profesional' || r === 'professional') return 'Médico / Profesional';
+    if (r === 'admin') return 'Administrador';
+    if (r === 'profesional' || r === 'professional' || r === 'medico' || r === 'doctor') {
+      return 'Médico / Profesional';
+    }
     if (r === 'recepcionista' || r === 'receptionist') return 'Recepcionista';
     return role || 'Usuario';
   };

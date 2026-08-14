@@ -25,8 +25,7 @@ import type {
   Jornada,
   ScheduleSlot,
 } from './profesional.types';
-import { initialProfesionales } from './mockProfesionales';
-import { getSchedulableProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
+import { getProfessionalsApi, createProfessionalApi } from '../../../services/professionals.service';
 import { getAppointmentsApi, getServicesApi } from '../../../services/appointments.service';
 import { createAppointmentFromInput } from '../../../services/createAppointment.logic';
 import { getPatientByDocumentApi } from '../../../services/patients.service';
@@ -98,10 +97,10 @@ const mapBackendProfToLocal = (p: ProfessionalOption): Professional => {
 const AdminProfesionales: React.FC = () => {
   const { user } = useAuth();
   // State
-  const [profesionales, setProfesionales] = useState<Professional[]>(initialProfesionales);
+  const [profesionales, setProfesionales] = useState<Professional[]>([]);
 
   useEffect(() => {
-    Promise.all([getSchedulableProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
+    Promise.all([getProfessionalsApi(), getAppointmentsApi()]).then(([profs, apps]) => {
       if (Array.isArray(profs)) {
         const localProfs = profs.map(mapBackendProfToLocal);
 
@@ -145,7 +144,7 @@ const AdminProfesionales: React.FC = () => {
       }
     });
   }, []);
-  const [selectedId, setSelectedId] = useState<string>(initialProfesionales[0]?.id || '');
+  const [selectedId, setSelectedId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeSpecialty, setActiveSpecialty] = useState<string>('Todos');
 

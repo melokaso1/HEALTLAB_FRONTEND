@@ -5,7 +5,6 @@ import {
   LogOut,
   Settings,
   Smile,
-  ArrowRightLeft,
   CheckCheck,
   Trash2,
   CheckCircle,
@@ -31,16 +30,23 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
   darkMode,
   onToggleDarkMode,
   userName = 'Juan Perez',
-  userRole = 'Director Médico',
+  userRole = 'Administrador',
 }) => {
   const { logout, user } = useAuth();
-   const { notifications, unreadCount, markAllNotificationsAsRead, clearNotifications } = useSignalR();
+  const { notifications, unreadCount, markAllNotificationsAsRead, clearNotifications } = useSignalR();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userStatus, setUserStatus] = useState('Disponible');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  const role = (user?.role || '').toLowerCase();
+  const isDoctor =
+    role === 'professional' ||
+    role === 'profesional' ||
+    role === 'medico' ||
+    role === 'doctor';
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -209,28 +215,23 @@ const HeaderDashboard: React.FC<HeaderDashboardProps> = ({
                     </span>
                     <span className="github-profile-card__role">{userRole}</span>
                   </div>
-                  <button
-                    type="button"
-                    className="github-profile-card__switch-btn"
-                    title="Cambiar cuenta"
-                  >
-                    <ArrowRightLeft size={14} />
-                  </button>
                 </div>
 
-                {/* Status bar button */}
-                <button
-                  type="button"
-                  className="github-profile-card__status-btn"
-                  onClick={() =>
-                    setUserStatus((prev) =>
-                      prev === 'Disponible' ? 'En Consulta' : 'Disponible'
-                    )
-                  }
-                >
-                  <Smile size={14} className="github-status-icon" />
-                  <span>{userStatus}</span>
-                </button>
+                {/* Status: only for doctors / professionals */}
+                {isDoctor && (
+                  <button
+                    type="button"
+                    className="github-profile-card__status-btn"
+                    onClick={() =>
+                      setUserStatus((prev) =>
+                        prev === 'Disponible' ? 'En Consulta' : 'Disponible'
+                      )
+                    }
+                  >
+                    <Smile size={14} className="github-status-icon" />
+                    <span>{userStatus}</span>
+                  </button>
+                )}
               </div>
 
               <div className="github-dropdown-divider" />

@@ -421,6 +421,3 @@ export const addPatientNoteApi = async (
   console.info(`[patients.service] Nota guardada localmente para paciente ${patientId}`);
   return { id: Date.now(), date: new Date().toLocaleDateString('es-CO'), ...note };
 };
-
-// Alias de compatibilidad con código existente
-export const mockPatients: Patient[] = [];

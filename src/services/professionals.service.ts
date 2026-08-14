@@ -1,8 +1,6 @@
 import type { ProfessionalOption } from '../types/appointment.types';
 import { apiFetch } from './api';
 
-export const mockProfessionals: ProfessionalOption[] = [];
-
 // ─── Tipo del backend (MedicoEntity con relaciones) ───────────────────────
 interface BackendMedico {
   id: string;

@@ -1,6 +1,9 @@
 import type { Appointment } from '../types/appointment.types';
 import type { Patient } from '../types/patient.types';
-import { createAppointmentApi } from './appointments.service';
+import {
+  appointmentEndFromStart,
+  createAppointmentApi,
+} from './appointments.service';
 import { getPatientByDocumentApi } from './patients.service';
 
 /**
@@ -44,6 +47,7 @@ const isValidGuid = (value: string | number | undefined): boolean =>
 
 /**
  * Valida input y crea la cita vía createAppointmentApi con pacienteId real.
+ * Siempre envía una ventana de 30 minutos (HoraFin = HoraInicio + 30).
  */
 export async function createAppointmentFromInput(
   input: CreateAppointmentInput,
@@ -75,7 +79,7 @@ export async function createAppointmentFromInput(
       tipoCitaId: input.serviceId,
       fecha: input.date,
       horaInicio: input.time,
-      horaFin: input.time,
+      horaFin: appointmentEndFromStart(input.time),
       motivoConsulta: input.notes || input.serviceName || 'Consulta Médica',
       observaciones: input.notes,
       usuarioCreacionId: input.usuarioCreacionId!,

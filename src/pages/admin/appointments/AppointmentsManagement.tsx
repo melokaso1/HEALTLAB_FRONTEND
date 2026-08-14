@@ -24,8 +24,6 @@ import type {
 } from '../../../types/appointment.types';
 import type { Patient } from '../../../types/patient.types';
 import {
-  mockAppointments,
-  mockServices,
   AVAILABLE_TIME_SLOTS,
   checkScheduleConflict,
   getAppointmentsApi,
@@ -56,13 +54,13 @@ const toLocalDateInput = (date = new Date()): string => {
 const AppointmentsManagement: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const { addNotification, addActivity } = useSignalR();
+  const { addNotification, addActivity, isConnected } = useSignalR();
   const isDoctor = user?.role === 'professional' || (user?.role as string) === 'medico';
 
   // Main Data States
-  const [appointments, setPatientsAppointments] = useState<Appointment[]>(mockAppointments);
+  const [appointments, setPatientsAppointments] = useState<Appointment[]>([]);
   const [professionalsList, setProfessionalsList] = useState<ProfessionalOption[]>([]);
-  const [servicesList, setServicesList] = useState<ServiceOption[]>(mockServices);
+  const [servicesList, setServicesList] = useState<ServiceOption[]>([]);
 
   const [filterByDate, setFilterByDate] = useState<boolean>(true);
   const [selectedAppId, setSelectedAppId] = useState<string | number | null>(null);
@@ -230,12 +228,11 @@ const AppointmentsManagement: React.FC = () => {
     if (selectedAppointment) {
       setRescheduleProfId(selectedAppointment.professionalId || (professionalsList[0]?.id ? String(professionalsList[0].id) : 'prof-1'));
       
-      const currentServices = servicesList.length > 0 ? servicesList : mockServices;
-      const matchedService = currentServices.find(
+      const matchedService = servicesList.find(
         (s) => String(s.id) === String(selectedAppointment.serviceId) ||
                s.name.toLowerCase() === selectedAppointment.serviceName.toLowerCase()
       );
-      setRescheduleServiceId(matchedService ? String(matchedService.id) : (currentServices[0]?.id ? String(currentServices[0].id) : 'srv-1'));
+      setRescheduleServiceId(matchedService ? String(matchedService.id) : (servicesList[0]?.id ? String(servicesList[0].id) : ''));
       
       setRescheduleDate(selectedAppointment.date || toLocalDateInput());
       setRescheduleTime(selectedAppointment.time || '10:00 AM');
@@ -309,8 +306,10 @@ const AppointmentsManagement: React.FC = () => {
       }
       const targetApp = appointments.find((a) => String(a.id) === String(appId));
       const pName = targetApp?.patientName || 'Paciente';
-      addNotification(`Estado de cita: ${newStatus}`, `Cita de ${pName} marcada como ${newStatus}.`, newStatus === 'Cancelada' ? 'warning' : 'info');
-      addActivity('Usuario', `cambió estado de cita de ${pName} a`, newStatus, newStatus === 'Cancelada' ? '#EC4899' : '#6366F1');
+      if (!isConnected) {
+        addNotification(`Estado de cita: ${newStatus}`, `Cita de ${pName} marcada como ${newStatus}.`, newStatus === 'Cancelada' ? 'warning' : 'info');
+        addActivity('Usuario', `cambió estado de cita de ${pName} a`, newStatus, newStatus === 'Cancelada' ? '#EC4899' : '#6366F1');
+      }
       showToast(`Estado de cita cambiado a ${newStatus}`);
     } catch (error) {
       console.error('[AppointmentsManagement] Error al cambiar estado de cita:', error);
@@ -328,9 +327,8 @@ const AppointmentsManagement: React.FC = () => {
       return;
     }
     try {
-      const currentServices = servicesList.length > 0 ? servicesList : mockServices;
       const profObj = professionalsList.find((p) => String(p.id) === String(rescheduleProfId));
-      const serviceObj = currentServices.find((s) => String(s.id) === String(rescheduleServiceId));
+      const serviceObj = servicesList.find((s) => String(s.id) === String(rescheduleServiceId));
 
       const updatedLocally: Appointment = {
         ...selectedAppointment,
@@ -369,8 +367,10 @@ const AppointmentsManagement: React.FC = () => {
         );
       }
 
-      addNotification('Cita reprogramada', `La cita de ${selectedAppointment.patientName} fue reprogramada para ${rescheduleDate}.`, 'info');
-      addActivity('Usuario', 'reprogramó cita médica de', selectedAppointment.patientName, '#6366F1');
+      if (!isConnected) {
+        addNotification('Cita reprogramada', `La cita de ${selectedAppointment.patientName} fue reprogramada para ${rescheduleDate}.`, 'info');
+        addActivity('Usuario', 'reprogramó cita médica de', selectedAppointment.patientName, '#6366F1');
+      }
       showToast(`Cita reprogramada exitosamente para ${rescheduleDate} a las ${rescheduleTime}`);
     } catch (error) {
       console.error('[AppointmentsManagement] Error al reprogramar cita:', error);
@@ -489,8 +489,10 @@ const AppointmentsManagement: React.FC = () => {
     setSelectedPatient(null);
     setNewNotes('');
     const pName = created.patientName || targetPatient.name;
-    addNotification('Nueva cita agendada', `Cita para ${pName} agendada con éxito.`, 'success');
-    addActivity('Sistema de Citas', 'agendó una cita médica para', pName, '#00A896');
+    if (!isConnected) {
+      addNotification('Nueva cita agendada', `Cita para ${pName} agendada con éxito.`, 'success');
+      addActivity('Sistema de Citas', 'agendó una cita médica para', pName, '#00A896');
+    }
     showToast(`Nueva cita agendada para ${pName} con ${created.professionalName}`);
   };
 
@@ -1013,7 +1015,7 @@ const AppointmentsManagement: React.FC = () => {
                       value={rescheduleServiceId}
                       onChange={(e) => setRescheduleServiceId(e.target.value)}
                     >
-                      {(servicesList.length > 0 ? servicesList : mockServices).map((s) => (
+                      {servicesList.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name} (${s.price.toLocaleString('es-CO')})
                         </option>
@@ -1033,7 +1035,7 @@ const AppointmentsManagement: React.FC = () => {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Hora</label>
+                      <label className="form-label">Hora (30 min)</label>
                       <select
                         className="citas-select"
                         style={{ width: '100%' }}
@@ -1070,7 +1072,7 @@ const AppointmentsManagement: React.FC = () => {
             ) : (
               <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', marginTop: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
-                  🔒 Modo de Solo Lectura (Médico): La modificación, cancelación o reprogramación de citas está reservada al personal de Recepción y Administración.
+                   Modo de Solo Lectura (Médico): La modificación, cancelación o reprogramación de citas está reservada al personal de Recepción y Administración.
                 </span>
               </div>
             )}
@@ -1199,7 +1201,7 @@ const AppointmentsManagement: React.FC = () => {
                     onChange={(e) => setNewServiceId(e.target.value)}
                     required
                   >
-                    {(servicesList.length > 0 ? servicesList : mockServices).map((s) => (
+                    {servicesList.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} (${s.price.toLocaleString('es-CO')})
                       </option>
@@ -1220,7 +1222,7 @@ const AppointmentsManagement: React.FC = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Hora Disponibilidad</label>
+                    <label className="form-label">Hora (30 min)</label>
                     <select
                       className="citas-select"
                       style={{ width: '100%' }}

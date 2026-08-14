@@ -14,7 +14,6 @@ import {
 import type { ManagedUser, UserRoleType, PermissionGroup, PermissionItem } from '../../../types/user.types';
 import Pagination from '../../../components/common/Pagination';
 import {
-  mockUsers,
   getRolePermissions,
   getRoleLabel,
   getUsersApi,
@@ -113,7 +112,7 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const UsersManagement: React.FC = () => {
-  const [users, setUsers] = useState<ManagedUser[]>(mockUsers);
+  const [users, setUsers] = useState<ManagedUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
 

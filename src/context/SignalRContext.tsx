@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../services/api';
-
+import { useAuth } from './AuthContext';
 import { getAppointmentsApi } from '../services/appointments.service';
 import { getPatientsApi } from '../services/patients.service';
 
@@ -40,13 +40,24 @@ interface SignalRContextType {
 const SignalRContext = createContext<SignalRContextType | undefined>(undefined);
 
 export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
 
-  // ─── Carga inicial de actividades reales ────────────────────────────────
   useEffect(() => {
+    if (!token) {
+      const resetTimer = window.setTimeout(() => {
+        setConnection(null);
+        setIsConnected(false);
+        setNotifications([]);
+        setRecentActivities([]);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+
+    let isCurrent = true;
     const loadRealActivities = async () => {
       try {
         const [apps, patients] = await Promise.all([
@@ -81,7 +92,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         });
 
-        if (mapped.length > 0) {
+        if (isCurrent && mapped.length > 0) {
           setRecentActivities((prev) => (prev.length === 0 ? mapped : prev));
         }
       } catch (e) {
@@ -90,16 +101,13 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     loadRealActivities();
-  }, []);
 
-  useEffect(() => {
     const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
     const hubUrl = `${baseUrl}/hubs/notifications`;
 
-    const token = localStorage.getItem('token');
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => token || '',
+        accessTokenFactory: () => localStorage.getItem('token') || '',
         skipNegotiation: false,
         transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
       })
@@ -107,37 +115,45 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
-    setConnection(newConnection);
-
     newConnection.on('ReceiveNotification', (notification: NotificationItem) => {
-      setNotifications((prev) => [notification, ...prev]);
+      setNotifications((prev) =>
+        prev.some((item) => item.id === notification.id) ? prev : [notification, ...prev],
+      );
     });
 
     newConnection.on('LoadActivities', (activities: ActivityItem[]) => {
-      if (Array.isArray(activities) && activities.length > 0) {
+      if (Array.isArray(activities) && isCurrent) {
         setRecentActivities(activities);
       }
     });
 
     newConnection.on('ReceiveActivity', (activity: ActivityItem) => {
-      setRecentActivities((prev) => [activity, ...prev.filter((a) => a.id !== activity.id)]);
+      if (isCurrent) {
+        setRecentActivities((prev) => [activity, ...prev.filter((a) => a.id !== activity.id)]);
+      }
     });
 
     newConnection
       .start()
       .then(() => {
+        if (!isCurrent) return;
+        setConnection(newConnection);
         setIsConnected(true);
         console.info('[SignalR] Conectado exitosamente al Hub de Notificaciones');
       })
       .catch((err) => {
+        if (!isCurrent) return;
         console.warn('[SignalR] Modo local / SignalR:', err?.message || err);
         setIsConnected(false);
       });
 
     return () => {
-      newConnection.stop();
+      isCurrent = false;
+      setIsConnected(false);
+      setConnection((current) => (current === newConnection ? null : current));
+      void newConnection.stop();
     };
-  }, []);
+  }, [token]);
 
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) =>

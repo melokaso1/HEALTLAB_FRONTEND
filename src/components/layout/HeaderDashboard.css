@@ -210,25 +210,6 @@
   margin-top: 1px;
 }
 
-.github-profile-card__switch-btn {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  color: #64748B;
-  border-radius: 8px;
-  padding: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.github-profile-card__switch-btn:hover {
-  background: #F1F5F9;
-  color: #0F172A;
-  border-color: #CBD5E1;
-}
-
 .github-profile-card__status-btn {
   display: flex;
   align-items: center;
@@ -483,18 +464,6 @@
 
 .dark-mode .github-profile-card__role {
   color: #0A9396;
-}
-
-.dark-mode .github-profile-card__switch-btn {
-  background: transparent;
-  border-color: #30363D;
-  color: #8B949E;
-}
-
-.dark-mode .github-profile-card__switch-btn:hover {
-  background: #21262D;
-  color: #F0F6FC;
-  border-color: #8B949E;
 }
 
 .dark-mode .github-profile-card__status-btn {

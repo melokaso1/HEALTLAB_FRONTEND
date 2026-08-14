@@ -1,13 +1,8 @@
 import type { Appointment, AppointmentStatus, ServiceOption } from '../types/appointment.types';
 import { apiFetch } from './api';
 
-// ─── Mock estático (servicios/horarios) ───
-export const mockServices: ServiceOption[] = [
-  { id: 'srv-1', name: 'Consulta Medicina General', category: 'Consulta', durationMinutes: 30, price: 50000 },
-  { id: 'srv-2', name: 'Consulta Especializada', category: 'Especialidad', durationMinutes: 45, price: 80000 },
-  { id: 'srv-3', name: 'Lectura de Exámenes', category: 'Laboratorio', durationMinutes: 15, price: 30000 },
-  { id: 'srv-4', name: 'Consulta de Control', category: 'Control', durationMinutes: 20, price: 40000 },
-];
+/** Duración estándar/máxima de una cita (minutos). */
+export const APPOINTMENT_DURATION_MINUTES = 30;
 
 export const getServicesApi = async (): Promise<ServiceOption[]> => {
   try {
@@ -17,14 +12,14 @@ export const getServicesApi = async (): Promise<ServiceOption[]> => {
         id: t.id,
         name: t.nombre || 'Consulta Médica',
         category: t.codigo || 'Consulta',
-        durationMinutes: t.duracionMinutos || 30,
+        durationMinutes: Math.min(Math.max(t.duracionMinutos || APPOINTMENT_DURATION_MINUTES, 1), APPOINTMENT_DURATION_MINUTES),
         price: 50000 + idx * 10000,
       }));
     }
   } catch (error) {
     console.warn('[appointments.service] Error consultando /tiposcita:', error);
   }
-  return mockServices;
+  return [];
 };
 
 export const AVAILABLE_TIME_SLOTS = [
@@ -33,8 +28,6 @@ export const AVAILABLE_TIME_SLOTS = [
   '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
   '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM',
 ];
-
-export const mockAppointments: Appointment[] = [];
 
 // ─── Tipos del backend ────────────────────────────────────────────────────
 /**
@@ -154,10 +147,30 @@ export const toApiTime = (slot: string): string => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
-const addMinutesToApiTime = (time: string, minutes: number): string => {
+export const addMinutesToApiTime = (time: string, minutes: number): string => {
   const [hours, mins] = toApiTime(time).split(':').map(Number);
   const total = (hours * 60 + mins + minutes) % (24 * 60);
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
+/** Ventana de cita de a lo sumo APPOINTMENT_DURATION_MINUTES a partir de la hora de inicio. */
+export const appointmentEndFromStart = (start: string): string =>
+  addMinutesToApiTime(start, APPOINTMENT_DURATION_MINUTES);
+
+const apiTimeToMinutes = (time: string): number => {
+  const [h, m] = toApiTime(time).split(':').map(Number);
+  return h * 60 + m;
+};
+
+/** Normaliza fin: si falta/inválido → +30; si supera 30 min → clamp a +30. */
+export const normalizeAppointmentEnd = (horaInicio: string, horaFin?: string): string => {
+  const start = toApiTime(horaInicio);
+  const end = toApiTime(horaFin || start);
+  if (end <= start) return appointmentEndFromStart(start);
+  if (apiTimeToMinutes(end) - apiTimeToMinutes(start) > APPOINTMENT_DURATION_MINUTES) {
+    return appointmentEndFromStart(start);
+  }
+  return end;
 };
 
 const localDateISO = (): string => {
@@ -206,7 +219,7 @@ const mapBackendCita = (raw: BackendCita): Appointment => {
     professionalSpecialty: especialidad,
     serviceId: raw.tipoCitaId,
     serviceName: raw.tipoCita?.nombre ?? 'Consulta',
-    date: raw.fecha,
+    date: (raw.fecha || '').slice(0, 10),
     time: formatTimeSlot(raw.horaInicio),
     status: mapEstado(raw.estadoCita),
     notes: raw.observaciones ?? raw.motivoConsulta,
@@ -313,11 +326,12 @@ export const createAppointmentApi = async (
     throw new Error(`Se requiere un GUID válido para ${missing[0]}.`);
   }
 
-  // The API accepts HH:mm only—never AM/PM or seconds.
+  // The API accepts HH:mm only—never AM/PM or seconds. Ventana máx. 30 min.
   const normStart = toApiTime((payload as any).horaInicio || appObj.time || '09:00');
-  let normEnd = toApiTime((payload as any).horaFin || appObj.time || normStart);
-  if (normEnd <= normStart) normEnd = addMinutesToApiTime(normStart, 30);
-
+  const normEnd = normalizeAppointmentEnd(
+    normStart,
+    (payload as any).horaFin || undefined,
+  );
   const finalPayload: CreateCitaPayload = {
     pacienteId,
     medicoId,
@@ -363,7 +377,7 @@ export const rescheduleAppointmentApi = async (
     body: JSON.stringify({
       fecha: newDate,
       horaInicio: toApiTime(newTime),
-      horaFin: addMinutesToApiTime(toApiTime(newTime), 30),
+      horaFin: appointmentEndFromStart(newTime),
       observaciones,
     }),
   });
