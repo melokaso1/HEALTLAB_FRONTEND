@@ -778,7 +778,7 @@ const AdminProfesionales: React.FC = () => {
 
                                   <div className="appointment-time-badge">
                                     <span>
-                                      {app.horaInicio} - {app.horaFin}
+                                      {app.horaInicio === app.horaFin ? app.horaInicio : `${app.horaInicio} - ${app.horaFin}`}
                                     </span>
                                     <span
                                       className={`status-chip-mini ${app.estado.toLowerCase()}`}

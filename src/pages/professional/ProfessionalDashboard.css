@@ -265,14 +265,16 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
+  overflow-x: auto;
   background-color: #FFFFFF;
   box-sizing: border-box;
 }
 
-/* Header Row: 72px for Y-axis hour, repeat(7, minmax(0, 1fr)) for 7 days */
+/* Header Row: 60px for Y-axis hour, repeat(7, minmax(95px, 1fr)) for 7 days */
 .calendar-grid-header {
   display: grid;
-  grid-template-columns: 72px repeat(7, minmax(0, 1fr));
+  grid-template-columns: 60px repeat(7, minmax(95px, 1fr));
+  min-width: 725px;
   border-bottom: 1px solid #E2E8F0;
   background-color: #F8FAFC;
   box-sizing: border-box;
@@ -339,7 +341,8 @@
 
 .calendar-hour-row {
   display: grid;
-  grid-template-columns: 72px repeat(7, minmax(0, 1fr));
+  grid-template-columns: 60px repeat(7, minmax(95px, 1fr));
+  min-width: 725px;
   border-bottom: 1px solid #E2E8F0;
   min-height: 58px;
   box-sizing: border-box;
@@ -368,6 +371,8 @@
   transition: background-color 0.15s ease;
   min-width: 0;
   cursor: pointer;
+  overflow: hidden;
+  max-height: 100%;
   box-sizing: border-box;
 }
 
@@ -385,15 +390,16 @@
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 5px 6px 5px 10px;
+  padding: 4px 6px 4px 8px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  box-shadow: inset 4px 0 0 #0A9396, 0 1px 3px rgba(0, 0, 0, 0.04);
+  gap: 1px;
+  box-shadow: inset 3px 0 0 #0A9396, 0 1px 3px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
   max-width: 100%;
+  max-height: 100%;
   box-sizing: border-box;
 }
 
